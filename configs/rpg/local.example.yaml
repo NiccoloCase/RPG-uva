@@ -1,0 +1,7 @@
+# Copy this file to configs/rpg/local.yaml for untracked machine-specific overrides.
+run_id: rpg_local
+# num_proc: 8
+# train_batch_size: 128
+# eval_batch_size: 64
+# faiss_omp_num_threads: 8
+# openai_api_key: "..."

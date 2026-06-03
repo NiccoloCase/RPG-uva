@@ -1,0 +1,5 @@
+run_id: rpg_root
+cache_dir: artifacts/rpg/cache
+log_dir: artifacts/rpg/logs
+tensorboard_log_dir: artifacts/rpg/tensorboard
+ckpt_dir: artifacts/rpg/ckpt

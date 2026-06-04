@@ -30,3 +30,24 @@ If `third_party/` appears empty after cloning, run:
 ```bash
 git submodule update --init --recursive
 ```
+
+## Job Submission Policy
+
+This repo uses a strict split between job definitions, scheduler logs, and runtime artifacts.
+
+### Rules
+
+- Submit Slurm jobs from the job's own directory under `jobs/`.
+- Do not submit jobs from the repo root, `$HOME`, or any other directory.
+- Keep job scripts under `jobs/`, preserving a meaningful tree such as `jobs/init/env/` or `jobs/reproduction/beauty/`.
+- Write scheduler stdout/stderr logs under `output/`, mirroring the `jobs/` tree. Example:
+  - job script: `jobs/init/env/setup_env.sh`
+  - log dir: `output/init/env/`
+- Write artifacts such as checkpoints, caches, tensorboard files, generated data, and result files under the repo-root `artifacts/` tree.
+- Do not write job logs into `jobs/` or artifacts into `output/`.
+
+### Expectations for agents
+
+- Before changing or adding a job, read this file and keep the layout above intact.
+- Job scripts should fail early if they are launched from the wrong working directory.
+- When adding a new job folder under `jobs/...`, create the matching `output/...` directory shape as needed.

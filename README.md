@@ -60,6 +60,37 @@ python3 scripts/rpg.py \
   --run_id beauty_debug
 ```
 
+## Performance Profiling
+
+The repo also includes a repo-owned profiling layer for reproducing the RPG side of the paper's inference-efficiency study without modifying `third_party/`.
+
+Validate the exact sparse graph on the original Sports pool:
+
+```bash
+python3 scripts/rpg_perf.py \
+  validate-graph \
+  --checkpoint /abs/path/to/checkpoint.pth \
+  --config configs/rpg/perf/sports.yaml
+```
+
+Prebuild enlarged-pool adjacency caches and then run inference-only profiling:
+
+```bash
+python3 scripts/rpg_perf.py \
+  profile \
+  --checkpoint /abs/path/to/checkpoint.pth \
+  --config configs/rpg/perf/sports.yaml \
+  --prepare-only
+
+python3 scripts/rpg_perf.py \
+  profile \
+  --checkpoint /abs/path/to/checkpoint.pth \
+  --config configs/rpg/perf/sports.yaml \
+  --profile-only
+```
+
+More detailed usage, artifact layout, and Snellius job wrappers are documented in [docs/perf_profiling.md](/Users/niccolocaselli/Desktop/uni/Reccomender%20Systems/Project/RPG-uva/docs/perf_profiling.md:1).
+
 ## Config Overrides
 
 The root wrapper loads configs in this order:

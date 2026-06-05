@@ -1,0 +1,24 @@
+run_id: rpg_perf_sports
+category: Sports_and_Outdoors
+metadata: sentence
+lr: 0.003
+temperature: 0.03
+n_codebook: 16
+num_beams: 10
+n_edges: 100
+propagation_steps: 2
+
+pool_sizes: [20000, 50000, 100000, 200000, 500000]
+dummy_pool_seed: 2024
+graph_backend: hnsw
+graph_topk: 100
+graph_cache_dir: artifacts/rpg/perf/sports/graphs
+perf_output_dir: artifacts/rpg/perf/sports
+graph_build_mode: offline_precompute
+graph_vector_batch_size: 512
+graph_hnsw_m: 32
+graph_hnsw_ef_construction: 200
+graph_hnsw_ef_search: 256
+repeats: 3
+warmup_batches: 2
+measure_cuda_memory: true

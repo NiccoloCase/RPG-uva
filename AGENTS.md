@@ -35,6 +35,10 @@ git submodule update --init --recursive
 
 This repo uses a strict split between job definitions, scheduler logs, and runtime artifacts.
 
+Snellius reference guide for job creation and partition usage:
+
+`https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial1/Lisa_Cluster.html`
+
 ### Rules
 
 - Submit Slurm jobs from the job's own directory under `jobs/`.
@@ -49,5 +53,6 @@ This repo uses a strict split between job definitions, scheduler logs, and runti
 ### Expectations for agents
 
 - Before changing or adding a job, read this file and keep the layout above intact.
+- For Snellius GPU jobs, request an explicit partition such as `gpu_a100` or `gpu_h100` and size CPU and host-memory requests to that partition.
 - Job scripts should fail early if they are launched from the wrong working directory.
 - When adding a new job folder under `jobs/...`, create the matching `output/...` directory shape as needed.

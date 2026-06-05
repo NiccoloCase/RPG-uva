@@ -6,6 +6,14 @@ This directory contains Slurm job definitions only.
 
 Always submit a job from its own folder.
 
+Before creating or changing Snellius jobs, check the UvA guide:
+
+`https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial1/Lisa_Cluster.html`
+
+For GPU jobs on this project, always request an explicit partition with `#SBATCH --partition=...`.
+For the course setup, both `gpu_a100` and `gpu_h100` are available. Match `--cpus-per-task`
+and `--mem` to the chosen partition instead of relying on implicit defaults.
+
 Example:
 
 ```bash

@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import os
 import statistics
 import time
 from dataclasses import asdict
@@ -28,8 +29,16 @@ def _session_root(config: dict[str, Any], output_root: str | None = None) -> Pat
     path = Path(raw_root)
     if not path.is_absolute():
         path = Path.cwd() / path
-    timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
-    session_root = path.resolve() / timestamp
+    timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S%fZ")
+    slurm_job_id = os.environ.get("SLURM_JOB_ID")
+    session_name = timestamp
+    if slurm_job_id:
+        session_name = f"{session_name}_job{slurm_job_id}"
+    session_root = path.resolve() / session_name
+    suffix = 1
+    while session_root.exists():
+        session_root = path.resolve() / f"{session_name}_{suffix:02d}"
+        suffix += 1
     (session_root / "raw").mkdir(parents=True, exist_ok=True)
     (session_root / "summaries").mkdir(parents=True, exist_ok=True)
     (session_root / "graphs").mkdir(parents=True, exist_ok=True)

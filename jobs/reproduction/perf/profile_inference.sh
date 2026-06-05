@@ -31,6 +31,10 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/perf"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/perf/sports.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
+shift_count=0
+if [[ $# -ge 1 ]]; then
+  shift_count=1
+fi
 PERF_CONFIG="${PERF_CONFIG:-${PERF_CONFIG_DEFAULT}}"
 
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
@@ -50,6 +54,10 @@ if [[ ! -f "${CHECKPOINT_PATH}" ]]; then
   exit 5
 fi
 
+if [[ ${shift_count} -eq 1 ]]; then
+  shift
+fi
+
 mkdir -p "${OUTPUT_DIR}"
 
 module purge
@@ -62,4 +70,5 @@ conda run -n rpg-uva python scripts/rpg_perf.py \
   profile \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${PERF_CONFIG}" \
-  --profile-only
+  --profile-only \
+  "$@"

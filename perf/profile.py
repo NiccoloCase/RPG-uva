@@ -97,10 +97,10 @@ def _profile_epoch(
     baseline_allocated = float("nan")
     baseline_reserved = float("nan")
     if device.type == "cuda" and measure_cuda_memory:
+        _maybe_cuda_synchronize(device)
         baseline_allocated = _bytes_to_gib(torch.cuda.memory_allocated(device=device))
         baseline_reserved = _bytes_to_gib(torch.cuda.memory_reserved(device=device))
         torch.cuda.reset_peak_memory_stats(device=device)
-    _maybe_cuda_synchronize(device)
 
     start_time = time.perf_counter()
     results = harness.evaluate()

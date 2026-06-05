@@ -75,13 +75,21 @@ def _maybe_cuda_synchronize(device: torch.device) -> None:
         torch.cuda.synchronize(device=device)
 
 
+def _bytes_to_gib(value: int) -> float:
+    return float(value) / (1024 ** 3)
+
+
 def _profile_epoch(
     harness: EvaluationHarness,
     measure_cuda_memory: bool,
-) -> tuple[dict[str, float], float, float, float]:
+) -> tuple[dict[str, float], float, float, float, float, float, float, float]:
     device = harness.config["device"]
 
+    baseline_allocated = float("nan")
+    baseline_reserved = float("nan")
     if device.type == "cuda" and measure_cuda_memory:
+        baseline_allocated = _bytes_to_gib(torch.cuda.memory_allocated(device=device))
+        baseline_reserved = _bytes_to_gib(torch.cuda.memory_reserved(device=device))
         torch.cuda.reset_peak_memory_stats(device=device)
     _maybe_cuda_synchronize(device)
 
@@ -91,13 +99,26 @@ def _profile_epoch(
     elapsed_seconds = time.perf_counter() - start_time
 
     if device.type == "cuda" and measure_cuda_memory:
-        peak_allocated = torch.cuda.max_memory_allocated(device=device) / (1024 ** 3)
-        peak_reserved = torch.cuda.max_memory_reserved(device=device) / (1024 ** 3)
+        peak_allocated = _bytes_to_gib(torch.cuda.max_memory_allocated(device=device))
+        peak_reserved = _bytes_to_gib(torch.cuda.max_memory_reserved(device=device))
+        runtime_delta_allocated = max(0.0, peak_allocated - baseline_allocated)
+        runtime_delta_reserved = max(0.0, peak_reserved - baseline_reserved)
     else:
         peak_allocated = float("nan")
         peak_reserved = float("nan")
+        runtime_delta_allocated = float("nan")
+        runtime_delta_reserved = float("nan")
 
-    return results, elapsed_seconds, peak_allocated, peak_reserved
+    return (
+        results,
+        elapsed_seconds,
+        peak_allocated,
+        peak_reserved,
+        baseline_allocated,
+        baseline_reserved,
+        runtime_delta_allocated,
+        runtime_delta_reserved,
+    )
 
 
 def _resolve_pool_sizes(config: dict[str, Any], pool_sizes_override: list[int] | None) -> list[int]:
@@ -233,10 +254,16 @@ def run_profile_command(
             harness.warmup(warmup_batches)
             _set_repeat_seed(harness.config["rand_seed"], repeat_index)
 
-            eval_results, elapsed_seconds, peak_allocated, peak_reserved = _profile_epoch(
-                harness=harness,
-                measure_cuda_memory=measure_cuda_memory,
-            )
+            (
+                eval_results,
+                elapsed_seconds,
+                peak_allocated,
+                peak_reserved,
+                baseline_allocated,
+                baseline_reserved,
+                runtime_delta_allocated,
+                runtime_delta_reserved,
+            ) = _profile_epoch(harness=harness, measure_cuda_memory=measure_cuda_memory)
 
             visited_items = float(eval_results["n_visited_items"])
             visited_ratio = visited_items / float(pool_size)
@@ -251,8 +278,12 @@ def run_profile_command(
                 "repeat_index": repeat_index,
                 "repeat_seed": repeat_seed,
                 "epoch_time_s": elapsed_seconds,
+                "baseline_cuda_allocated_gb": baseline_allocated,
+                "baseline_cuda_reserved_gb": baseline_reserved,
                 "peak_cuda_allocated_gb": peak_allocated,
                 "peak_cuda_reserved_gb": peak_reserved,
+                "peak_cuda_runtime_delta_allocated_gb": runtime_delta_allocated,
+                "peak_cuda_runtime_delta_reserved_gb": runtime_delta_reserved,
                 "n_visited_items": visited_items,
                 "visited_ratio": visited_ratio,
                 "ndcg_at_10": float(eval_results.get("ndcg@10", float("nan"))),
@@ -278,11 +309,23 @@ def run_profile_command(
                     "epoch_time_s_median": statistics.median(
                         row["epoch_time_s"] for row in pool_repeat_rows
                     ),
+                    "baseline_cuda_allocated_gb_median": _median_or_nan(
+                        [row["baseline_cuda_allocated_gb"] for row in pool_repeat_rows]
+                    ),
+                    "baseline_cuda_reserved_gb_median": _median_or_nan(
+                        [row["baseline_cuda_reserved_gb"] for row in pool_repeat_rows]
+                    ),
                     "peak_cuda_allocated_gb_median": _median_or_nan(
                         [row["peak_cuda_allocated_gb"] for row in pool_repeat_rows]
                     ),
                     "peak_cuda_reserved_gb_median": _median_or_nan(
                         [row["peak_cuda_reserved_gb"] for row in pool_repeat_rows]
+                    ),
+                    "peak_cuda_runtime_delta_allocated_gb_median": _median_or_nan(
+                        [row["peak_cuda_runtime_delta_allocated_gb"] for row in pool_repeat_rows]
+                    ),
+                    "peak_cuda_runtime_delta_reserved_gb_median": _median_or_nan(
+                        [row["peak_cuda_runtime_delta_reserved_gb"] for row in pool_repeat_rows]
                     ),
                     "n_visited_items_median": statistics.median(
                         row["n_visited_items"] for row in pool_repeat_rows

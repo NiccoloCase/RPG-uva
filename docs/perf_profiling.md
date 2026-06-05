@@ -8,6 +8,7 @@ This repo ships a repo-owned profiling layer for reproducing the RPG side of the
 - offline sparse decoding-graph construction
 - inference-only epoch time
 - peak CUDA allocated and reserved memory
+- peak CUDA runtime delta above the loaded model-plus-graph baseline
 - average visited items and visited-item ratio
 
 The implementation keeps the original test user histories and ground-truth labels unchanged. Dummy items are added only to the candidate universe used at inference time.
@@ -101,6 +102,11 @@ Each session contains:
 - `graphs/graph_builds.csv`
 - `graphs/graph_builds.jsonl`
 - `manifest.json`
+
+For memory, the CSVs now expose both:
+
+- total peak CUDA memory (`peak_cuda_allocated_gb*`), which includes persistent GPU-resident structures such as the decoding graph
+- runtime delta memory (`peak_cuda_runtime_delta_allocated_gb*`), which subtracts the post-load baseline and is the paper-faithful metric for Figure 3 style plots
 
 Adjacency caches are stored separately under:
 

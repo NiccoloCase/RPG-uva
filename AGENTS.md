@@ -1,17 +1,21 @@
 # Agent Guidelines
 
-## Third-Party Dependencies
+This file defines the repo-local rules that matter most for safe changes and reproducible Snellius runs.
 
-The `third_party/` directory contains **Git submodules** — external repositories pinned to specific commits. These are not part of this codebase and must not be modified directly.
+## 1. Third-Party Code
 
-### Rules
+### 1.1 What `third_party/` is
+
+The `third_party/` directory contains **Git submodules** pinned to external commits. They are dependencies, not repo-owned code.
+
+### 1.2 Rules
 
 - **Do not edit, create, or delete files** inside `third_party/` or any of its subdirectories.
 - **Do not run `git add` or `git commit`** on anything inside `third_party/`.
 - **Do not upgrade or change submodule pointers** unless explicitly instructed by a human.
 - If a task requires changes to a third-party library, flag it to the user instead of modifying the submodule directly.
 
-### How to use third-party code
+### 1.3 Allowed usage
 
 You may **read** and **import** from `third_party/` freely. Only direct modification is prohibited.
 
@@ -23,7 +27,7 @@ from third_party.some_lib import SomeClass
 # third_party/some_lib/module.py  ← do not touch
 ```
 
-### Initialising submodules
+### 1.4 Submodule initialization
 
 If `third_party/` appears empty after cloning, run:
 
@@ -31,44 +35,83 @@ If `third_party/` appears empty after cloning, run:
 git submodule update --init --recursive
 ```
 
-## Job Submission Policy
+## 2. Snellius
 
-This repo uses a strict split between job definitions, scheduler logs, and runtime artifacts.
+### 2.1 Reference guide
 
-Snellius reference guide for job creation and partition usage:
+Use this guide whenever you create or change Snellius jobs:
 
 `https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial1/Lisa_Cluster.html`
 
-### Rules
+### 2.2 GPU partitions
+
+For Snellius GPU jobs in this repo:
+
+- Always request an explicit partition with `#SBATCH --partition=...`.
+- For this course setup, both `gpu_a100` and `gpu_h100` are available.
+- Size `--cpus-per-task` and `--mem` to the chosen partition instead of relying on implicit defaults.
+
+### 2.3 Workspace paths
+
+For this repo on Snellius:
+
+- Do not hard-code `/home/$USER/...` paths.
+- Use the repo workspace under `/gpfs/home6/$USER/RPG`, or derive paths from the script location.
+
+## 3. Jobs
+
+### 3.1 Submission policy
+
+This repo uses a strict split between job definitions, scheduler logs, and runtime artifacts.
 
 - Submit Slurm jobs from the job's own directory under `jobs/`.
 - Do not submit jobs from the repo root, `$HOME`, or any other directory.
 - Keep job scripts under `jobs/`, preserving a meaningful tree such as `jobs/init/env/` or `jobs/reproduction/beauty/`.
-- Write scheduler stdout/stderr logs under `output/`, mirroring the `jobs/` tree. Example:
-  - job script: `jobs/init/env/setup_env.sh`
-  - log dir: `output/init/env/`
-- Write artifacts such as checkpoints, caches, tensorboard files, generated data, and result files under the repo-root `artifacts/` tree.
-- Do not write job logs into `jobs/` or artifacts into `output/`.
-
-### Expectations for agents
-
-- Before changing or adding a job, read this file and keep the layout above intact.
-- For Snellius GPU jobs, request an explicit partition such as `gpu_a100` or `gpu_h100` and size CPU and host-memory requests to that partition.
 - Job scripts should fail early if they are launched from the wrong working directory.
+
+### 3.2 Directory contract
+
+- `jobs/...`: job scripts and small job-local helper files.
+- `output/...`: scheduler logs, mirroring the `jobs/...` tree.
+- `artifacts/...`: runtime outputs such as checkpoints, caches, tensorboard files, generated data, and result files.
+
+Example:
+
+```text
+jobs/init/env/setup_env.sh
+output/init/env/
+artifacts/
+```
+
+### 3.3 Logging and artifacts
+
+- Write scheduler stdout/stderr logs under `output/`, mirroring the `jobs/` tree.
+- Do not write job logs into `jobs/`.
+- Do not write runtime artifacts into `output/`.
 - When adding a new job folder under `jobs/...`, create the matching `output/...` directory shape as needed.
 
-## Job Path Conventions
+Example:
+
+- job script: `jobs/init/env/setup_env.sh`
+- log dir: `output/init/env/`
+
+### 3.4 Agent expectations
+
+- Before changing or adding a job, read this file and keep the layout above intact.
+- Prefer checked-in job scripts over ad hoc `sbatch` commands when the workflow is repeated.
+- For Snellius GPU jobs, request an explicit partition such as `gpu_a100` or `gpu_h100`.
+
+## 4. Job Path Conventions
 
 Use real filesystem paths in all job scripts, `sbatch` examples, and wrapped commands.
 
-### Rules
+### 4.1 Rules
 
 - Do not use angle-bracket placeholders such as `<you>`, `<checkpoint>`, or similar tokens in shell commands.
-- Do not hard-code `/home/$USER/...` paths for this repo on Snellius. Use the repo workspace under `/gpfs/home6/$USER/RPG` or derive paths from the script location.
 - Prefer deriving `REPO_ROOT` from `SLURM_SUBMIT_DIR` or `BASH_SOURCE` inside checked-in job scripts.
 - When a job takes a checkpoint or config path, require a real absolute path and fail early if the file does not exist.
 
-### Example
+### 4.2 Example
 
 ```bash
 cd /gpfs/home6/$USER/RPG/jobs/reproduction/perf

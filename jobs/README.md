@@ -23,6 +23,25 @@ sbatch ./setup_env.sh
 
 Do not submit from the repo root or from `$HOME`.
 
+## Path conventions
+
+Use real filesystem paths in job arguments and wrapped commands. Do not leave angle-bracket placeholders such as `<you>` or `<checkpoint>` in shell input, because Bash interprets them as redirections and the job fails before the workload starts.
+
+Preferred rules:
+
+- Submit the checked-in scripts from their own directory under `jobs/...`.
+- Let the scripts derive `REPO_ROOT` from `SLURM_SUBMIT_DIR`; do not hard-code `/home/.../RPG-uva`.
+- Pass checkpoint and config inputs as real absolute paths.
+- On Snellius for this repo, the workspace root is `/gpfs/home6/$USER/RPG`, not `/home/$USER/...`.
+
+Examples:
+
+```bash
+cd /gpfs/home6/$USER/RPG/jobs/reproduction/perf
+sbatch ./build_graphs.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
+sbatch ./profile_inference.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
+```
+
 ## Directory contract
 
 - `jobs/...`: job scripts and small job-local helper files.

@@ -21,7 +21,7 @@ else
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
     echo "Run:" >&2
     echo "  cd ${SCRIPT_DIR}" >&2
-    echo "  bash ./build_graphs.sh /abs/path/to/checkpoint.pth" >&2
+    echo "  bash ./build_graphs.sh $(cd "${SCRIPT_DIR}/../../.." && pwd)/artifacts/rpg/ckpt/model.pth" >&2
     exit 2
   fi
 fi
@@ -35,6 +35,18 @@ PERF_CONFIG="${PERF_CONFIG:-${PERF_CONFIG_DEFAULT}}"
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
   echo "ERROR: provide the checkpoint path as the first argument or CHECKPOINT_PATH env var." >&2
   exit 3
+fi
+
+if [[ "${CHECKPOINT_PATH}" == *"<"* || "${CHECKPOINT_PATH}" == *">"* ]]; then
+  echo "ERROR: checkpoint path contains angle-bracket placeholders: ${CHECKPOINT_PATH}" >&2
+  echo "Use a real absolute path under ${REPO_ROOT}, for example:" >&2
+  echo "  ${REPO_ROOT}/artifacts/rpg/ckpt/model.pth" >&2
+  exit 4
+fi
+
+if [[ ! -f "${CHECKPOINT_PATH}" ]]; then
+  echo "ERROR: checkpoint file not found: ${CHECKPOINT_PATH}" >&2
+  exit 5
 fi
 
 mkdir -p "${OUTPUT_DIR}"

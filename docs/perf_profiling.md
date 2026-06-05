@@ -53,7 +53,7 @@ Validate the repo-owned exact sparse graph against the upstream dense graph:
 ```bash
 conda run -n rpg-uva python scripts/rpg_perf.py \
   validate-graph \
-  --checkpoint /abs/path/to/checkpoint.pth \
+  --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml
 ```
 
@@ -62,7 +62,7 @@ Prebuild adjacency caches only:
 ```bash
 conda run -n rpg-uva python scripts/rpg_perf.py \
   profile \
-  --checkpoint /abs/path/to/checkpoint.pth \
+  --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml \
   --prepare-only
 ```
@@ -72,7 +72,7 @@ Run inference-only profiling with cached graphs:
 ```bash
 conda run -n rpg-uva python scripts/rpg_perf.py \
   profile \
-  --checkpoint /abs/path/to/checkpoint.pth \
+  --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml \
   --profile-only
 ```
@@ -123,7 +123,7 @@ The defaults are aligned with Snellius partition guidance:
 ```bash
 cd jobs/reproduction/perf
 sbatch --partition=gpu_h100 --cpus-per-task=16 --mem=180G \
-  ./profile_inference.sh /abs/path/to/checkpoint.pth
+  ./profile_inference.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
 ```
 
 Reference guide:
@@ -134,8 +134,8 @@ They must be submitted from their own directory:
 
 ```bash
 cd jobs/reproduction/perf
-sbatch ./build_graphs.sh /abs/path/to/checkpoint.pth
-sbatch ./profile_inference.sh /abs/path/to/checkpoint.pth
+sbatch ./build_graphs.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
+sbatch ./profile_inference.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
 ```
 
 Scheduler logs are mirrored under:

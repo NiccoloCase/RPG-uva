@@ -89,7 +89,7 @@ python3 scripts/rpg_perf.py \
   --profile-only
 ```
 
-More detailed usage, artifact layout, and Snellius job wrappers are documented in [docs/perf_profiling.md](/Users/niccolocaselli/Desktop/uni/Reccomender%20Systems/Project/RPG-uva/docs/perf_profiling.md:1).
+More detailed usage, artifact layout, and Snellius job wrappers are documented in [docs/perf_profiling.md](docs/perf_profiling.md).
 
 ## Config Overrides
 

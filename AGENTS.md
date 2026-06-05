@@ -56,3 +56,21 @@ Snellius reference guide for job creation and partition usage:
 - For Snellius GPU jobs, request an explicit partition such as `gpu_a100` or `gpu_h100` and size CPU and host-memory requests to that partition.
 - Job scripts should fail early if they are launched from the wrong working directory.
 - When adding a new job folder under `jobs/...`, create the matching `output/...` directory shape as needed.
+
+## Job Path Conventions
+
+Use real filesystem paths in all job scripts, `sbatch` examples, and wrapped commands.
+
+### Rules
+
+- Do not use angle-bracket placeholders such as `<you>`, `<checkpoint>`, or similar tokens in shell commands.
+- Do not hard-code `/home/$USER/...` paths for this repo on Snellius. Use the repo workspace under `/gpfs/home6/$USER/RPG` or derive paths from the script location.
+- Prefer deriving `REPO_ROOT` from `SLURM_SUBMIT_DIR` or `BASH_SOURCE` inside checked-in job scripts.
+- When a job takes a checkpoint or config path, require a real absolute path and fail early if the file does not exist.
+
+### Example
+
+```bash
+cd /gpfs/home6/$USER/RPG/jobs/reproduction/perf
+sbatch ./build_graphs.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
+```

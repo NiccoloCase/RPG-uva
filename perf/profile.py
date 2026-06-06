@@ -26,6 +26,20 @@ from .pool import augment_candidate_pool
 
 
 def _session_root(config: dict[str, Any], output_root: str | None = None) -> Path:
+    """Create a unique output directory for one profiling session.
+
+    The session directory contains subfolders for raw run-level measurements,
+    summary tables, and graph-build artifacts. Paths are made unique using a
+    UTC timestamp and, when available, the current Slurm job ID.
+
+    Args:
+        config: Profiling config dictionary.
+        output_root: Optional explicit output root. Falls back to config or to
+            `artifacts/rpg/perf`.
+
+    Returns:
+        The newly created session root path.
+    """
     raw_root = output_root or config.get("perf_output_dir")
     if raw_root is None:
         raw_root = "artifacts/rpg/perf"
@@ -49,6 +63,7 @@ def _session_root(config: dict[str, Any], output_root: str | None = None) -> Pat
 
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
+    """Write a list of dictionaries to a CSV file, preserving key order."""
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         path.write_text("")
@@ -61,6 +76,7 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
+    """Write a list of dictionaries to newline-delimited JSON."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w") as handle:
         for row in rows:
@@ -68,6 +84,7 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def _median_or_nan(values: list[float]) -> float:
+    """Return the median of non-NaN values, or NaN when none are usable."""
     cleaned = [value for value in values if not math.isnan(value)]
     if not cleaned:
         return float("nan")
@@ -75,6 +92,7 @@ def _median_or_nan(values: list[float]) -> float:
 
 
 def _set_repeat_seed(base_seed: int, repeat_index: int) -> int:
+    """Set deterministic CPU/CUDA seeds for one profiling repeat."""
     seed = int(base_seed) + int(repeat_index)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -83,11 +101,13 @@ def _set_repeat_seed(base_seed: int, repeat_index: int) -> int:
 
 
 def _maybe_cuda_synchronize(device: torch.device) -> None:
+    """Synchronize the CUDA device when profiling GPU work."""
     if device.type == "cuda":
         torch.cuda.synchronize(device=device)
 
 
 def _bytes_to_gib(value: int) -> float:
+    """Convert a byte count to gibibytes for human-readable reporting."""
     return float(value) / (1024 ** 3)
 
 
@@ -95,6 +115,28 @@ def _profile_epoch(
     harness: EvaluationHarness,
     measure_cuda_memory: bool,
 ) -> tuple[dict[str, float], float, float, float, float, float, float, float]:
+    """Profile one evaluation pass of the harness.
+
+    This helper runs a full evaluation over the prepared test dataloader while
+    measuring wall-clock latency and, optionally, CUDA memory usage before and
+    during execution.
+
+    Args:
+        harness: Ready-to-run evaluation harness.
+        measure_cuda_memory: Whether to capture CUDA baseline/peak metrics when
+            the active device is a GPU.
+
+    Returns:
+        A tuple containing:
+        1. Evaluation metrics dictionary from `harness.evaluate()`
+        2. Elapsed wall-clock seconds
+        3. Peak CUDA allocated memory in GiB
+        4. Peak CUDA reserved memory in GiB
+        5. Baseline CUDA allocated memory in GiB
+        6. Baseline CUDA reserved memory in GiB
+        7. Peak runtime delta for allocated memory in GiB
+        8. Peak runtime delta for reserved memory in GiB
+    """
     device = harness.config["device"]
 
     baseline_allocated = float("nan")
@@ -134,6 +176,7 @@ def _profile_epoch(
 
 
 def _resolve_pool_sizes(config: dict[str, Any], pool_sizes_override: list[int] | None) -> list[int]:
+    """Resolve which candidate-pool sizes should be profiled."""
     if pool_sizes_override:
         return pool_sizes_override
     if "pool_sizes" not in config or not config["pool_sizes"]:
@@ -142,10 +185,12 @@ def _resolve_pool_sizes(config: dict[str, Any], pool_sizes_override: list[int] |
 
 
 def _resolve_graph_backend(config: dict[str, Any], override: str | None) -> str:
+    """Resolve the graph backend name, preferring the CLI override."""
     return (override or config.get("graph_backend") or "hnsw").lower()
 
 
 def _resolve_measure_cuda_memory(config: dict[str, Any]) -> bool:
+    """Resolve whether CUDA memory metrics should be collected."""
     return bool(config.get("measure_cuda_memory", True))
 
 
@@ -155,6 +200,23 @@ def run_validate_graph_command(
     config_overrides: dict[str, Any] | None,
     output_root: str | None = None,
 ) -> dict[str, Any]:
+    """Validate sparse graph builders against the original dense reference.
+
+    This command builds three graph variants on the original candidate pool:
+    the released dense reference implementation, an exact FAISS flat graph, and
+    an approximate HNSW graph. It then writes a JSON report describing exact and
+    approximate overlap between these variants.
+
+    Args:
+        checkpoint_path: RPG checkpoint to evaluate.
+        config_files: Ordered config files used to build the harness.
+        config_overrides: Optional config overrides applied after file loading.
+        output_root: Optional session-output root directory.
+
+    Returns:
+        A payload dictionary containing the report path, graph-build metadata,
+        and comparison summaries.
+    """
     harness = EvaluationHarness.build(
         checkpoint_path=checkpoint_path,
         config_files=config_files,
@@ -257,6 +319,37 @@ def run_profile_command(
     graph_backend_override: str | None = None,
     force_rebuild: bool = False,
 ) -> dict[str, str]:
+    """Run the end-to-end inference profiling workflow for one checkpoint.
+
+    For each requested candidate-pool size, the workflow optionally augments the
+    dataset with dummy items, builds or loads the graph adjacency used during
+    decoding, warms up the model, executes one or more timed evaluation passes,
+    and writes raw plus aggregated metrics to disk.
+
+    Args:
+        checkpoint_path: RPG checkpoint to profile.
+        config_files: Ordered config files used to build the harness.
+        config_overrides: Optional config overrides applied after file loading.
+        output_root: Optional explicit directory under which to create the
+            session folder.
+        pool_sizes_override: Optional CLI-provided pool sizes. Falls back to the
+            merged config when omitted.
+        prepare_only: If `True`, build/cache graphs only and skip evaluation.
+        profile_only: If `True`, require all graph caches to exist already and
+            fail instead of rebuilding them.
+        graph_backend_override: Optional backend override such as `"flat"` or
+            `"hnsw"`.
+        force_rebuild: If `True`, rebuild graph caches even when matching cache
+            files already exist.
+
+    Returns:
+        A manifest dictionary with the paths of the generated CSV/JSONL outputs.
+
+    Raises:
+        ValueError: If mutually exclusive mode flags are requested together.
+        RuntimeError: If `profile_only=True` but a required graph cache is
+            missing.
+    """
     if prepare_only and profile_only:
         raise ValueError("prepare_only and profile_only cannot both be enabled.")
 

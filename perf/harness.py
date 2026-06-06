@@ -27,6 +27,16 @@ class EvaluationHarness:
 
     @staticmethod
     def _semantic_id_cache_path(config: dict[str, Any], dataset: Any) -> Path:
+        """Reconstruct the semantic-ID cache path used by the upstream tokenizer.
+
+        Args:
+            config: Fully merged RPG config dictionary.
+            dataset: Upstream dataset instance exposing `cache_dir`.
+
+        Returns:
+            Absolute or repository-relative path to the `.sem_ids` cache file
+            expected by `RPGTokenizer`.
+        """
         n_codebook_bits = int(math.log2(config["codebook_size"]))
         index_factory = (
             f'OPQ{config["n_codebook"]},IVF1,PQ{config["n_codebook"]}x{n_codebook_bits}'
@@ -46,6 +56,27 @@ class EvaluationHarness:
         config_files: list[str],
         config_overrides: dict[str, Any] | None = None,
     ) -> "EvaluationHarness":
+        """Construct a ready-to-evaluate RPG stack from a checkpoint.
+
+        This helper mirrors the minimum subset of the upstream pipeline needed
+        for offline inference profiling: load configs, dataset, tokenizer,
+        tokenized test split, model weights, trainer, and test dataloader.
+
+        Args:
+            checkpoint_path: Path to the trained RPG checkpoint to profile.
+            config_files: Ordered config files to merge before evaluation.
+            config_overrides: Optional in-memory overrides applied after the
+                config files.
+
+        Returns:
+            An `EvaluationHarness` containing the assembled config, model,
+            tokenizer, trainer, and test dataloader.
+
+        Raises:
+            FileNotFoundError: If the checkpoint path does not exist.
+            RuntimeError: If semantic-ID caches are required but cannot be
+                generated safely with the active embedding configuration.
+        """
         if str(THIRD_PARTY_ROOT) not in sys.path:
             sys.path.insert(0, str(THIRD_PARTY_ROOT))
 
@@ -124,6 +155,15 @@ class EvaluationHarness:
         )
 
     def warmup(self, num_batches: int) -> None:
+        """Run a small number of inference batches to warm caches and kernels.
+
+        Args:
+            num_batches: Number of test batches to execute. Non-positive values
+                disable warmup.
+
+        Returns:
+            None.
+        """
         if num_batches <= 0:
             return
 
@@ -138,6 +178,13 @@ class EvaluationHarness:
                 _ = self.model.generate(batch, n_return_sequences=maxk)
 
     def evaluate(self) -> dict[str, float]:
+        """Evaluate the checkpoint on the test split with graph decoding enabled.
+
+        Returns:
+            The metrics dictionary returned by the upstream trainer, typically
+            containing ranking metrics such as `recall@k`, `ndcg@k`, and the
+            average number of visited items during graph-constrained decoding.
+        """
         self.model.generate_w_decoding_graph = True
         self.model.eval()
         return self.trainer.evaluate(self.test_dataloader, split="test")

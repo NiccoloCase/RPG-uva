@@ -5,6 +5,18 @@ from pathlib import Path
 
 
 def _load_summary_rows(input_path: str | Path) -> list[dict[str, str]]:
+    """Load the profiling summary CSV from either a file or a session folder.
+
+    Args:
+        input_path: Either the direct path to `profile_summary.csv` or a perf
+            session root that contains `summaries/profile_summary.csv`.
+
+    Returns:
+        The CSV rows as dictionaries keyed by column name.
+
+    Raises:
+        FileNotFoundError: If the expected summary CSV cannot be found.
+    """
     path = Path(input_path).expanduser().resolve()
     if path.is_dir():
         path = path / "summaries" / "profile_summary.csv"
@@ -17,6 +29,23 @@ def _load_summary_rows(input_path: str | Path) -> list[dict[str, str]]:
 
 
 def plot_summary_csv(input_path: str | Path, output_path: str | Path) -> Path:
+    """Generate overview plots from the aggregated profiling summary CSV.
+
+    The function groups rows by method/model name and plots item-pool scaling
+    trends for latency, runtime CUDA memory growth, and total peak CUDA memory.
+
+    Args:
+        input_path: Path to a summary CSV or to a session directory containing
+            one.
+        output_path: Destination image path for the generated plot.
+
+    Returns:
+        The resolved output path that was written.
+
+    Raises:
+        ValueError: If the summary CSV exists but contains no rows.
+        SystemExit: If matplotlib is not installed in the environment.
+    """
     rows = _load_summary_rows(input_path)
     if not rows:
         raise ValueError("No rows found in the summary CSV.")

@@ -28,26 +28,44 @@ class GraphBuildRecord:
 
 
 def _import_faiss():
+    """Import FAISS lazily so profiling utilities can fail only when needed."""
     import faiss
 
     return faiss
 
 
 def _valid_item_ids(model: Any) -> np.ndarray:
+    """Return the non-padding item IDs that participate in retrieval."""
     return np.arange(1, model.dataset.n_items, dtype=np.int64)
 
 
 def _graph_topk(config: dict[str, Any]) -> int:
+    """Resolve the requested graph neighborhood width from config."""
     if "graph_topk" in config and config["graph_topk"] is not None:
         return int(config["graph_topk"])
     return int(config["n_edges"])
 
 
 def _vector_batch_size(config: dict[str, Any]) -> int:
+    """Resolve the batch size used while materializing item graph vectors."""
     return int(config.get("graph_vector_batch_size", 1024))
 
 
 def _build_token_embedding_table(model: Any) -> np.ndarray:
+    """Build the normalized per-digit token embedding table used for graphing.
+
+    The upstream RPG model stores one embedding vector per semantic-token value
+    in `gpt2.wte.weight`. This helper removes special tokens, reshapes the
+    tensor into `[n_digit, codebook_size, hidden_dim]`, normalizes each token
+    embedding, and returns a NumPy copy for FAISS indexing.
+
+    Args:
+        model: Loaded RPG model.
+
+    Returns:
+        A float32 NumPy array of shape
+        `(n_digit, codebook_size, hidden_dim_per_token)`.
+    """
     token_embs = model.gpt2.wte.weight[1:-1].detach().float().cpu()
     token_embs = token_embs.view(model.tokenizer.n_digit, model.tokenizer.codebook_size, -1)
     token_embs = torch.nn.functional.normalize(token_embs, dim=-1)
@@ -59,6 +77,25 @@ def _iter_graph_vectors(
     token_table: np.ndarray,
     batch_size: int,
 ):
+    """Yield dense item vectors used to build approximate item-item graphs.
+
+    Each item in RPG is represented by `n_digit` semantic tokens. For graph
+    construction we look up the normalized embedding of every digit token,
+    concatenate those digit embeddings into one long vector, and scale by
+    `1/sqrt(n_digit)` so vector norms stay comparable as the number of digits
+    changes.
+
+    Args:
+        model: Loaded RPG model containing `item_id2tokens`.
+        token_table: Normalized per-digit token embedding table produced by
+            `_build_token_embedding_table`.
+        batch_size: Number of items to materialize per yielded batch.
+
+    Yields:
+        Tuples `(batch_item_ids, batch_vectors)` where `batch_item_ids` is a
+        NumPy array of dataset item IDs and `batch_vectors` is a float32 array
+        of concatenated item vectors ready for FAISS indexing/search.
+    """
     item_ids = _valid_item_ids(model)
     item_tokens = model.item_id2tokens.detach().cpu().numpy()
     n_digit = model.tokenizer.n_digit
@@ -83,6 +120,22 @@ def _build_index(
     topk: int,
     config: dict[str, Any],
 ):
+    """Instantiate the FAISS index used for sparse graph construction.
+
+    Args:
+        dim: Dimensionality of each item vector.
+        backend: Retrieval backend name. Supported values are `"flat"` for
+            exact inner-product search and `"hnsw"` for approximate search.
+        topk: Desired graph neighborhood size. Used to derive default HNSW
+            search parameters.
+        config: Profiling config dictionary containing backend-specific knobs.
+
+    Returns:
+        A configured FAISS index instance.
+
+    Raises:
+        ValueError: If the requested backend is not supported.
+    """
     faiss = _import_faiss()
     if backend == "flat":
         return faiss.IndexFlatIP(dim)
@@ -102,6 +155,23 @@ def _enforce_self_neighbors(
     batch_item_ids: np.ndarray,
     topk: int,
 ) -> np.ndarray:
+    """Normalize raw nearest-neighbor results into RPG adjacency rows.
+
+    The graph-decoding code assumes that every adjacency row starts with the
+    item itself, followed by unique valid neighbors. FAISS search results may
+    omit self-neighbors or include duplicates/invalid entries, so this helper
+    repairs each row and pads with the item itself if the candidate list is too
+    short.
+
+    Args:
+        search_result_ids: Retrieved neighbor item IDs per query item.
+        batch_item_ids: Item IDs corresponding to the query rows.
+        topk: Final number of neighbors required per row.
+
+    Returns:
+        An integer array of shape `(len(batch_item_ids), topk)` suitable for
+        direct insertion into the adjacency tensor.
+    """
     adjusted = np.zeros((batch_item_ids.shape[0], topk), dtype=np.int64)
 
     for row_index, item_id in enumerate(batch_item_ids):
@@ -123,6 +193,7 @@ def _enforce_self_neighbors(
 
 
 def _candidate_search_k(valid_pool_size: int, topk: int, backend: str) -> int:
+    """Choose how many FAISS neighbors to request before post-processing."""
     if backend == "flat":
         return min(valid_pool_size, topk + 1)
     return min(valid_pool_size, max(topk * 4, topk + 1))
@@ -134,6 +205,25 @@ def build_sparse_adjacency(
     topk: int,
     config: dict[str, Any],
 ) -> torch.Tensor:
+    """Build an item-item adjacency tensor using vector search over item codes.
+
+    This is the scalable replacement for the original dense
+    `build_ii_sim_mat()` path. It converts every item into a concatenated vector
+    of normalized digit-token embeddings, indexes those vectors with FAISS, and
+    searches the resulting index to obtain the top-`k` neighbors for every
+    non-padding item.
+
+    Args:
+        model: Loaded RPG model.
+        backend: FAISS backend to use, typically `"flat"` or `"hnsw"`.
+        topk: Number of neighbors to keep per item.
+        config: Profiling config dictionary containing vectorization and backend
+            parameters.
+
+    Returns:
+        A CPU `torch.LongTensor` of shape `(n_items, topk)` where row `0` is
+        zeroed for padding and every other row contains item IDs.
+    """
     token_table = _build_token_embedding_table(model)
     dim = model.tokenizer.n_digit * token_table.shape[-1]
     index = _build_index(dim=dim, backend=backend, topk=topk, config=config)
@@ -162,6 +252,20 @@ def build_sparse_adjacency(
 
 
 def build_dense_reference_adjacency(model: Any, topk: int) -> torch.Tensor:
+    """Build the original dense adjacency as a correctness reference.
+
+    The upstream RPG release computes an all-pairs item similarity matrix and
+    then keeps the top neighbors per row. This helper temporarily overrides the
+    model's `n_edges` setting so the dense path returns the requested `topk`.
+
+    Args:
+        model: Loaded RPG model exposing `build_ii_sim_mat()`.
+        topk: Number of neighbors to extract per item.
+
+    Returns:
+        A CPU `torch.LongTensor` adjacency tensor built by the original dense
+        implementation.
+    """
     original_n_edges = model.n_edges
     try:
         model.n_edges = topk
@@ -178,6 +282,18 @@ def compare_adjacency_sets(
     candidate: torch.Tensor,
     valid_item_ids: np.ndarray | None = None,
 ) -> dict[str, Any]:
+    """Check exact set equality between two adjacency tensors.
+
+    Args:
+        reference: Gold/reference adjacency tensor.
+        candidate: Adjacency tensor to validate against the reference.
+        valid_item_ids: Optional subset of item IDs to inspect. Defaults to all
+            non-padding items.
+
+    Returns:
+        A dictionary summarizing whether all checked rows match exactly and
+        including up to 20 mismatch examples.
+    """
     if valid_item_ids is None:
         valid_item_ids = np.arange(1, reference.shape[0], dtype=np.int64)
 
@@ -211,6 +327,23 @@ def compare_adjacency_overlap(
     valid_item_ids: np.ndarray | None = None,
     max_examples: int = 20,
 ) -> dict[str, Any]:
+    """Summarize overlap quality between two adjacency tensors.
+
+    Unlike `compare_adjacency_sets`, this helper reports graded overlap
+    statistics, which are more informative when evaluating approximate graph
+    backends such as HNSW.
+
+    Args:
+        reference: Gold/reference adjacency tensor.
+        candidate: Adjacency tensor to compare against the reference.
+        valid_item_ids: Optional subset of item IDs to inspect. Defaults to all
+            non-padding items.
+        max_examples: Maximum number of mismatch examples to include.
+
+    Returns:
+        A dictionary containing overlap-rate statistics and representative
+        mismatch rows.
+    """
     if valid_item_ids is None:
         valid_item_ids = np.arange(1, reference.shape[0], dtype=np.int64)
 
@@ -263,6 +396,7 @@ def compare_adjacency_overlap(
 
 
 def _graph_cache_dir(config: dict[str, Any]) -> Path:
+    """Resolve the directory used to cache built adjacency tensors."""
     raw_path = config.get("graph_cache_dir")
     if raw_path is None:
         raw_path = Path(config["cache_dir"]).resolve().parents[0] / "perf" / "graphs"
@@ -279,6 +413,11 @@ def _graph_cache_id(
     backend: str,
     topk: int,
 ) -> str:
+    """Build a stable cache identifier for one graph-construction setting.
+
+    The cache ID encodes all knobs that affect the adjacency contents so cached
+    graph files can be reused safely across profiling runs.
+    """
     category = str(config["category"]).lower()
     model_name = str(config["model"]).lower()
     signature = checkpoint_signature(checkpoint_path)
@@ -303,6 +442,7 @@ def _expected_cache_metadata(
     backend: str,
     topk: int,
 ) -> dict[str, Any]:
+    """Create the metadata dictionary that a valid cache entry must satisfy."""
     metadata = {
         "cache_id": _graph_cache_id(
             checkpoint_path=checkpoint_path,
@@ -334,6 +474,21 @@ def _validate_cached_adjacency(
     expected_metadata: dict[str, Any],
     model: Any,
 ) -> None:
+    """Validate that a cached adjacency tensor matches the current request.
+
+    Args:
+        adjacency: Cached adjacency tensor loaded from disk.
+        metadata: Metadata stored alongside the cached tensor.
+        expected_metadata: Metadata values implied by the current run.
+        model: Loaded model, used to validate the expected tensor shape.
+
+    Returns:
+        None.
+
+    Raises:
+        ValueError: If metadata fields or tensor shape do not match the current
+            request.
+    """
     for key, expected_value in expected_metadata.items():
         actual_value = metadata.get(key)
         if actual_value != expected_value:
@@ -357,6 +512,7 @@ def _graph_cache_paths(
     backend: str,
     topk: int,
 ) -> tuple[str, Path, Path]:
+    """Return the cache ID plus the data and metadata paths for one graph run."""
     cache_dir = _graph_cache_dir(config)
     cache_id = _graph_cache_id(
         checkpoint_path=checkpoint_path,
@@ -378,6 +534,21 @@ def build_or_load_adjacency(
     backend: str,
     force_rebuild: bool = False,
 ) -> tuple[torch.Tensor, GraphBuildRecord]:
+    """Load a cached graph adjacency or build and cache it on demand.
+
+    Args:
+        model: Loaded RPG model used to build the adjacency when needed.
+        checkpoint_path: Checkpoint path whose signature becomes part of the
+            cache key.
+        config: Profiling config dictionary.
+        pool_size: Candidate pool size being profiled.
+        backend: Graph backend name, typically `"flat"` or `"hnsw"`.
+        force_rebuild: If `True`, ignore any existing cache files and rebuild.
+
+    Returns:
+        A tuple `(adjacency, record)` where `adjacency` is the CPU adjacency
+        tensor and `record` summarizes how it was produced.
+    """
     topk = _graph_topk(config)
     expected_metadata = _expected_cache_metadata(
         checkpoint_path=checkpoint_path,

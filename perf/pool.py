@@ -23,6 +23,34 @@ def augment_candidate_pool(
     target_pool_size: int,
     seed: int,
 ) -> PoolAugmentationResult:
+    """Expand the candidate item pool by cloning existing items as dummies.
+
+    The released RPG checkpoint was trained on the original dataset size, so
+    the perf tooling cannot simply invent brand-new items with unseen semantic
+    IDs. Instead, it duplicates existing items under synthetic item names and
+    reuses their semantic-token codes. This preserves the model's assumptions
+    while allowing inference to be stress-tested on larger candidate pools.
+
+    Args:
+        dataset: Loaded dataset instance from the upstream RPG code.
+        tokenizer: Tokenizer instance that owns the `item2tokens` mapping.
+        model: RPG model instance whose `item_id2tokens` lookup table must stay
+            synchronized with the dataset/tokenizer state.
+        target_pool_size: Desired number of non-padding items after
+            augmentation.
+        seed: Seed used to choose where the source-item cycling starts.
+
+    Returns:
+        A `PoolAugmentationResult` describing the original pool size, requested
+        pool size, number of added dummy items, and deterministic cycling
+        details.
+
+    Raises:
+        ValueError: If the requested target pool is smaller than the original
+            pool or if a dummy item name collision occurs.
+        RuntimeError: If the dataset size after augmentation does not match the
+            expected target.
+    """
     original_pool_size = dataset.n_items - 1
     if target_pool_size < original_pool_size:
         raise ValueError(

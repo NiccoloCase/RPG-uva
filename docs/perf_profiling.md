@@ -49,7 +49,7 @@ It uses:
 
 ## Commands
 
-Validate the repo-owned exact sparse graph against the upstream dense graph:
+Validate graph fidelity on the original Sports pool:
 
 ```bash
 conda run -n rpg-uva python scripts/rpg_perf.py \
@@ -57,6 +57,12 @@ conda run -n rpg-uva python scripts/rpg_perf.py \
   --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml
 ```
+
+This writes `graphs/validate_graph_report.json` with three comparisons:
+
+- upstream dense graph vs exact FAISS flat graph
+- exact FAISS flat graph vs scalable FAISS HNSW graph
+- upstream dense graph vs scalable FAISS HNSW graph
 
 Prebuild adjacency caches only:
 

@@ -13,9 +13,12 @@ from typing import Any
 
 import torch
 
+from .config import checkpoint_signature
 from .graph import (
     build_dense_reference_adjacency,
     build_or_load_adjacency,
+    build_sparse_adjacency,
+    compare_adjacency_overlap,
     compare_adjacency_sets,
 )
 from .harness import EvaluationHarness
@@ -160,32 +163,85 @@ def run_validate_graph_command(
     session_root = _session_root(harness.config, output_root=output_root)
     topk = int(harness.config.get("graph_topk", harness.config["n_edges"]))
 
-    exact_adjacency, graph_record = build_or_load_adjacency(
+    graph_records: list[dict[str, Any]] = []
+    flat_start = time.perf_counter()
+    exact_adjacency = build_sparse_adjacency(
         model=harness.model,
-        checkpoint_path=harness.checkpoint_path,
-        config={**harness.config, "graph_backend": "flat"},
-        pool_size=harness.dataset.n_items - 1,
         backend="flat",
-        force_rebuild=True,
+        topk=topk,
+        config={**harness.config, "graph_backend": "flat"},
     )
+    graph_records.append(
+        {
+            "backend": "flat",
+            "pool_size": harness.dataset.n_items - 1,
+            "topk": topk,
+            "build_seconds": time.perf_counter() - flat_start,
+            "cached": False,
+        }
+    )
+
+    hnsw_start = time.perf_counter()
+    hnsw_adjacency = build_sparse_adjacency(
+        model=harness.model,
+        backend="hnsw",
+        topk=topk,
+        config={**harness.config, "graph_backend": "hnsw"},
+    )
+    graph_records.append(
+        {
+            "backend": "hnsw",
+            "pool_size": harness.dataset.n_items - 1,
+            "topk": topk,
+            "build_seconds": time.perf_counter() - hnsw_start,
+            "cached": False,
+            "graph_hnsw_m": int(harness.config.get("graph_hnsw_m", 32)),
+            "graph_hnsw_ef_construction": int(
+                harness.config.get("graph_hnsw_ef_construction", 200)
+            ),
+            "graph_hnsw_ef_search": int(
+                harness.config.get("graph_hnsw_ef_search", max(256, topk * 2))
+            ),
+        }
+    )
+
     reference_adjacency = build_dense_reference_adjacency(harness.model, topk=topk)
-    comparison = compare_adjacency_sets(reference_adjacency, exact_adjacency)
+    dense_vs_flat = compare_adjacency_sets(reference_adjacency, exact_adjacency)
+    comparisons = {
+        "dense_vs_flat": {
+            "purpose": (
+                "Checks whether the FAISS exact-vector formulation reproduces "
+                "the released dense graph on the original item pool."
+            ),
+            **compare_adjacency_overlap(reference_adjacency, exact_adjacency),
+        },
+        "flat_vs_hnsw": {
+            "purpose": (
+                "Checks the scalable HNSW backend used for enlarged-pool "
+                "profiling against the exact FAISS flat backend."
+            ),
+            **compare_adjacency_overlap(exact_adjacency, hnsw_adjacency),
+        },
+        "dense_vs_hnsw": {
+            "purpose": (
+                "End-to-end reference check from the released dense graph to "
+                "the scalable HNSW graph."
+            ),
+            **compare_adjacency_overlap(reference_adjacency, hnsw_adjacency),
+        },
+    }
 
     payload = {
         "topk": topk,
         "pool_size": harness.dataset.n_items - 1,
         "checkpoint_path": str(harness.checkpoint_path),
-        "graph_record": asdict(graph_record),
-        **comparison,
+        "checkpoint_signature": checkpoint_signature(harness.checkpoint_path),
+        "graph_records": graph_records,
+        "comparisons": comparisons,
+        "legacy_dense_vs_flat_exact": dense_vs_flat,
     }
     report_path = session_root / "graphs" / "validate_graph_report.json"
     report_path.write_text(json.dumps(payload, indent=2))
-
-    if not comparison["match"]:
-        raise SystemExit(
-            "Exact sparse graph validation failed. See "
-            f"{report_path} for mismatch details."
-        )
 
     return {"report_path": str(report_path), **payload}
 

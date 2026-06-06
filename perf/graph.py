@@ -205,6 +205,63 @@ def compare_adjacency_sets(
     }
 
 
+def compare_adjacency_overlap(
+    reference: torch.Tensor,
+    candidate: torch.Tensor,
+    valid_item_ids: np.ndarray | None = None,
+    max_examples: int = 20,
+) -> dict[str, Any]:
+    if valid_item_ids is None:
+        valid_item_ids = np.arange(1, reference.shape[0], dtype=np.int64)
+
+    overlap_counts: list[int] = []
+    overlap_rates: list[float] = []
+    mismatch_examples: list[dict[str, Any]] = []
+    exact_match_count = 0
+
+    for item_id in valid_item_ids:
+        reference_set = set(reference[item_id].tolist())
+        candidate_set = set(candidate[item_id].tolist())
+        overlap = len(reference_set & candidate_set)
+        denominator = max(len(reference_set), 1)
+        overlap_counts.append(overlap)
+        overlap_rates.append(overlap / denominator)
+
+        if reference_set == candidate_set:
+            exact_match_count += 1
+        elif len(mismatch_examples) < max_examples:
+            mismatch_examples.append(
+                {
+                    "item_id": int(item_id),
+                    "overlap_count": int(overlap),
+                    "overlap_rate": overlap / denominator,
+                    "missing_from_candidate": sorted(reference_set - candidate_set),
+                    "extra_in_candidate": sorted(candidate_set - reference_set),
+                }
+            )
+
+    rates = np.array(overlap_rates, dtype=np.float64)
+    counts = np.array(overlap_counts, dtype=np.float64)
+    checked_items = int(len(valid_item_ids))
+    mismatch_count = checked_items - exact_match_count
+
+    return {
+        "checked_items": checked_items,
+        "topk": int(reference.shape[1]),
+        "exact_match": mismatch_count == 0,
+        "exact_match_count": int(exact_match_count),
+        "exact_match_rate": exact_match_count / max(checked_items, 1),
+        "mismatch_count": int(mismatch_count),
+        "mean_overlap_count": float(counts.mean()) if checked_items else 0.0,
+        "mean_overlap_rate": float(rates.mean()) if checked_items else 0.0,
+        "min_overlap_rate": float(rates.min()) if checked_items else 0.0,
+        "p5_overlap_rate": float(np.percentile(rates, 5)) if checked_items else 0.0,
+        "p50_overlap_rate": float(np.percentile(rates, 50)) if checked_items else 0.0,
+        "p95_overlap_rate": float(np.percentile(rates, 95)) if checked_items else 0.0,
+        "mismatch_examples": mismatch_examples,
+    }
+
+
 def _graph_cache_dir(config: dict[str, Any]) -> Path:
     raw_path = config.get("graph_cache_dir")
     if raw_path is None:

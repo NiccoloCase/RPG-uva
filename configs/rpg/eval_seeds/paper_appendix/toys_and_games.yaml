@@ -1,0 +1,11 @@
+run_id: rpg_eval_seeds_paper_appendix_toys_and_games
+category: Toys_and_Games
+lr: 0.003
+temperature: 0.03
+n_codebook: 16
+num_beams: 10
+n_edges: 50
+propagation_steps: 5
+paper_metric: ndcg@10
+paper_value: 0.0490
+equivalence_margin: 0.001

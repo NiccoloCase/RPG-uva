@@ -1,0 +1,11 @@
+run_id: rpg_eval_seeds_released_readme_cds_and_vinyl
+category: CDs_and_Vinyl
+lr: 0.001
+temperature: 0.03
+n_codebook: 64
+num_beams: 20
+n_edges: 500
+propagation_steps: 5
+paper_metric: ndcg@10
+paper_value: 0.0415
+equivalence_margin: 0.001

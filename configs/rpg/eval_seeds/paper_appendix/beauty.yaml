@@ -1,0 +1,11 @@
+run_id: rpg_eval_seeds_paper_appendix_beauty
+category: Beauty
+lr: 0.01
+temperature: 0.03
+n_codebook: 32
+num_beams: 10
+n_edges: 100
+propagation_steps: 3
+paper_metric: ndcg@10
+paper_value: 0.0464
+equivalence_margin: 0.001

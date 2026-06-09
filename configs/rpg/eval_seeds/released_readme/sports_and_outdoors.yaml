@@ -1,0 +1,11 @@
+run_id: rpg_eval_seeds_released_readme_sports_and_outdoors
+category: Sports_and_Outdoors
+lr: 0.003
+temperature: 0.03
+n_codebook: 16
+num_beams: 100
+n_edges: 30
+propagation_steps: 5
+paper_metric: ndcg@10
+paper_value: 0.0263
+equivalence_margin: 0.001

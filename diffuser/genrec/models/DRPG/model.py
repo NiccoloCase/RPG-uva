@@ -259,10 +259,11 @@ class DRPG(AbstractModel):
             token_logits = [torch.matmul(final_states[k].squeeze(dim=1), token_embs[k].T) / self.temperature for k in range(self.n_digit)]
             token_logits = [torch.clamp(logit, min=-50.0, max=50.0) for logit in token_logits]  # prevent nan
 
-            # The standard loss mean over B_multi naturally acts as the 1/|M| average over views described in eq. 3 in https://arxiv.org/pdf/2510.21805
-            losses = [self.loss_fct(token_logits[k], shifted_labels_multi[:, k]) for k in range(self.n_digit)]
-
-            outputs.loss = torch.mean(torch.stack(losses))
+            # diffGRM micro-averaging loss instead of macro-averaging RPG loss. Bit more stable due to RPG loss being digit-individual and some digits get masked more often than others.
+            logits_stack = torch.stack(token_logits, dim=1)  # (B_multi, n_digit, codebook_size)
+            logits_flat = logits_stack.view(-1, self.config['codebook_size'])  # Shape: (B_multi * n_digit, codebook_size)
+            labels_flat = shifted_labels_multi.view(-1)  # Shape: (B_multi * n_digit)
+            outputs.loss = self.loss_fct(logits_flat, labels_flat)
         # If not returning loss/ training, only return last hidden state in sequence
         # in order to predict with all context. Decoding is done in generate()
         else:

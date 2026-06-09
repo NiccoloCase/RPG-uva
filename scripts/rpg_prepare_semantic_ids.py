@@ -106,6 +106,7 @@ def main(argv: list[str] | None = None) -> int:
     init_logger(config)
 
     dataset = get_dataset(args.dataset)(config)
+    dataset.split()
     cache_path = semantic_id_cache_path(config, dataset)
     print(f"semantic_id_cache={cache_path}")
 

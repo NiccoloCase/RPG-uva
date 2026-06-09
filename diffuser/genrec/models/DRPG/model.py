@@ -111,6 +111,11 @@ class DRPG(AbstractModel):
         self.mask_token_id = tokenizer.vocab_size
         self.num_timesteps = config['num_timesteps']
 
+        # Digit positional embeddings instead of diffGRM's itemMLP, since the itemMLP contains way to many parameters due to our large n_digits compared to diffGRM's 4 digits.
+        self.digit_pos_emb = nn.Embedding(self.n_digit, config['n_embd'])
+        with torch.no_grad():
+            self.digit_pos_emb.weight.normal_(0, 0.02)
+
         self.denoiser = Denoiser(
             n_digit=self.n_digit,
             n_embd=config['n_embd'],
@@ -157,7 +162,13 @@ class DRPG(AbstractModel):
 
     def forward(self, batch: dict, return_loss=True) -> torch.Tensor:
         input_tokens = self.item_id2tokens[batch['input_ids']]  # (B, seq_len, n_codebook)
-        input_embs = self.gpt2.wte(input_tokens).mean(dim=-2)  # (B, seq_len, n_embd)
+
+        # Mix item position into input embeddings
+        tok_emb = self.gpt2.wte(input_tokens)
+        pos_ids = torch.arange(self.n_digit, device=tok_emb.device)
+        pos_emb = self.digit_pos_emb(pos_ids)
+        tok_emb = tok_emb + pos_emb.view(1, 1, self.n_digit, -1)
+        input_embs = tok_emb.mean(dim=-2)
 
         # Run encoder
         outputs = self.gpt2(

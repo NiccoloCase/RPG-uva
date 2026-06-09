@@ -34,7 +34,8 @@ class Denoiser(nn.Module):
             dim_feedforward=n_embd * 4,
             dropout=dropout,
             batch_first=True,
-            activation='gelu'
+            activation='gelu',
+            norm_first=True,
         )
         self.transformer = nn.TransformerDecoder(decoder_layer, num_layers=n_layers)
 
@@ -46,11 +47,12 @@ class Denoiser(nn.Module):
         with torch.no_grad():
             self.mask_embeddings.weight.normal_(0, 0.02)
 
-    def forward(self, target_tokens, context):
+    def forward(self, target_tokens, memory_context, memory_padding_mask):
         """
         Args:
             target_tokens (batch_size, n_digit): (Partially) masked target token IDs
-            context (batch_size, n_embd): User history context vector
+            memory_context (batch_size, seq_len, n_embd): Full sequence context history
+            memory_padding_mask (batch_size, seq_len): Boolean mask where True blocks attention
         """
         B = target_tokens.size(0)
 
@@ -66,13 +68,11 @@ class Denoiser(nn.Module):
         # Mask where needed
         tgt = torch.where(is_masked.unsqueeze(-1), mask_embs, token_embs)
 
-        # TODO: check if this is still needed
-        if context.dim() == 2:
-            memory = context.unsqueeze(1)  # (B, 1, n_embd)
-        else:
-            memory = context               # (B, seq_len, n_embd)
-
-        output_states = self.transformer(tgt=tgt, memory=memory)  # (B, n_digit, n_embd)
+        output_states = self.transformer(
+            tgt=tgt,
+            memory=memory_context,
+            memory_key_padding_mask=memory_padding_mask
+        )
         output_states = self.final_proj(output_states)
 
         return output_states
@@ -171,12 +171,29 @@ class DRPG(AbstractModel):
             target_labels = self.item_id2tokens[batch['labels']]  # (B, seq_len, n_digit)
             label_mask = batch['labels'].view(-1) != -100  # (B*seq_len)
 
-            selected_context = outputs.last_hidden_state.view(-1, self.config['n_embd'])[label_mask]  # (B*seq_len, n_embed)
-            selected_target_labels = target_labels.view(-1, self.n_digit)[label_mask]  # (B*seq_len, n_digit)
+            batch_idx, time_idx = torch.where(label_mask)
 
-            B_eff = selected_target_labels.size(0)  # (B*seq_len)
+            B_eff = batch_idx.size(0)
+            seq_len = outputs.last_hidden_state.size(1)
 
-            target_tokens = selected_target_labels.clone()  # (B*seq_len, n_digit)
+            full_sequence_context = outputs.last_hidden_state[batch_idx]  # (B_eff, seq_len, n_embd)
+
+            base_pad_mask = (batch['attention_mask'] == 0)  # (B, seq_len)
+            mem_pad_mask = base_pad_mask[batch_idx]  # (B_eff, seq_len)
+
+            seq_range = torch.arange(seq_len, device=outputs.last_hidden_state.device).unsqueeze(0)
+
+            valid_indices = (~mem_pad_mask).long() * seq_range
+            masked_valid_indices = torch.where(seq_range <= time_idx.unsqueeze(1), valid_indices, -1)
+            safe_time_idx = masked_valid_indices.max(dim=1)[0]
+
+            safe_time_idx = torch.where(safe_time_idx == -1, time_idx, safe_time_idx)
+
+            causal_mask = seq_range > safe_time_idx.unsqueeze(1)  # (B_eff, seq_len)
+            final_memory_mask = mem_pad_mask | causal_mask  # (B_eff, seq_len)
+
+            selected_target_labels = target_labels[batch_idx, time_idx]  # (B_eff, n_digit)
+            target_tokens = selected_target_labels.clone()  # (B_eff, n_digit)
 
             # On-Policy Confidence Estimation (OCN). See section 3.3 in https://arxiv.org/pdf/2510.21805
             # "we compute the difficulty order once per example with a single fully masked pass, reuse the encoder output across the 𝑅 views"
@@ -184,7 +201,7 @@ class DRPG(AbstractModel):
                 # "run the MD-Decoder once on a fully masked 𝑛-digit input"
                 dummy_masked = torch.full_like(target_tokens, self.denoiser.mask_token_id)
 
-                baseline_states = self.denoiser(dummy_masked, selected_context)
+                baseline_states = self.denoiser(dummy_masked, full_sequence_context, final_memory_mask)
                 baseline_states = F.normalize(baseline_states, dim=-1, eps=1e-8)
                 baseline_states_chunked = torch.chunk(baseline_states, self.n_digit, dim=1)
 
@@ -195,16 +212,11 @@ class DRPG(AbstractModel):
                 confidence = torch.zeros((B_eff, self.n_digit), device=target_tokens.device)
 
                 for k in range(self.n_digit):
-                    offsets_k = k * self.config['codebook_size'] + 1
-                    local_labels_k = selected_target_labels[:, k] - offsets_k
-
                     logits_i = torch.matmul(baseline_states_chunked[k].squeeze(1), token_embs_eval_chunked[k].T) / self.temperature
                     logits_i = torch.clamp(logits_i, min=-50.0, max=50.0)
                     probs_i = F.softmax(logits_i, dim=-1)
 
-                    # Extract the probability of the correct token
-                    # confidence[:, k] = probs_i.max(dim=-1).values
-                    confidence[:, k] = probs_i.gather(dim=-1, index=local_labels_k.unsqueeze(-1)).squeeze(-1)
+                    confidence[:, k] = probs_i.max(dim=-1).values
 
             uncertainty = 1.0 - confidence
             mask_weights = uncertainty + 1e-5  # Tiny epsilon so high-confidence tokens have a non-zero chance of being masked.
@@ -215,7 +227,8 @@ class DRPG(AbstractModel):
 
             # R / n_view different views
             mask_weights_multi = mask_weights.repeat_interleave(n_views, dim=0)
-            selected_context_multi = selected_context.repeat_interleave(n_views, dim=0)
+            memory_context_multi = full_sequence_context.repeat_interleave(n_views, dim=0)
+            memory_mask_multi = final_memory_mask.repeat_interleave(n_views, dim=0)
             target_tokens_multi = target_tokens.repeat_interleave(n_views, dim=0)
             selected_target_labels_multi = selected_target_labels.repeat_interleave(n_views, dim=0)
 
@@ -237,7 +250,7 @@ class DRPG(AbstractModel):
             shifted_labels_multi[~to_mask] = self.loss_fct.ignore_index
 
             # Demask
-            final_states = self.denoiser(target_tokens_multi, selected_context_multi)
+            final_states = self.denoiser(target_tokens_multi, memory_context_multi, memory_mask_multi)
             final_states = F.normalize(final_states, dim=-1, eps=1e-8)
             final_states = torch.chunk(final_states, self.n_digit, dim=1)
 
@@ -256,9 +269,8 @@ class DRPG(AbstractModel):
         # in order to predict with all context. Decoding is done in generate()
         else:
             seq_lens = batch['seq_lens'] - 1
-            gather_index = seq_lens.view(-1, 1, 1).expand(-1, 1, self.config['n_embd'])
-            context = outputs.last_hidden_state.gather(dim=1, index=gather_index).squeeze(1)
-            outputs.final_states = context  # (B, n_embd)
+            outputs.memory_context = outputs.last_hidden_state  # (B, seq_len, n_embd)
+            outputs.memory_padding_mask = (batch['attention_mask'] == 0)  # (B, seq_len)
 
         return outputs
 
@@ -398,9 +410,10 @@ class DRPG(AbstractModel):
 
     def generate(self, batch, n_return_sequences=1):
         outputs = self.forward(batch, return_loss=False)
-        context = outputs.final_states
-        B = context.size(0)
-        device = context.device
+        memory_context = outputs.memory_context
+        memory_padding_mask = outputs.memory_padding_mask
+        B = memory_context.size(0)
+        device = memory_context.device
 
         denoise_steps = self.config['denoise_inference_steps']
 
@@ -415,7 +428,7 @@ class DRPG(AbstractModel):
         token_emb = F.normalize(token_emb, dim=-1)
         token_embs = torch.chunk(token_emb, self.n_digit, dim=0)
         for step in range(1, denoise_steps + 1):
-            states = self.denoiser(current_targets, context)  # (B, n_digit, n_embd)
+            states = self.denoiser(current_targets, memory_context, memory_padding_mask)  # (B, n_digit, n_embd)
             states = F.normalize(states, dim=-1)
 
             logits = [torch.matmul(states[:,i,:], token_embs[i].T) / self.temperature for i in range(self.n_digit)]
@@ -432,6 +445,9 @@ class DRPG(AbstractModel):
             max_probs, pred_ids = probs.max(dim=-1)  # max confidence, ID (0-codebook_size-1)
 
             # Local pred_id (0-codebook_size-1) to global vocab token ID
+            offsets = torch.arange(self.n_digit, device=device) * self.config['codebook_size'] + 1
+            global_pred_ids = pred_ids + offsets.unsqueeze(0)
+
             offsets = torch.arange(self.n_digit, device=device) * self.config['codebook_size'] + 1
             global_pred_ids = pred_ids + offsets.unsqueeze(0)
 
@@ -466,7 +482,7 @@ class DRPG(AbstractModel):
             return outputs
         else:
             item_logits = torch.gather(
-                input=token_logits.unsqueeze(-2).expand(-1, self.dataset.n_items, -1),              # (batch_size, n_items, n_digit)
+                input=token_logits.unsqueeze(-2).expand(-1, self.dataset.n_items, -1),  # (batch_size, n_items, n_digit)
                 dim=-1,
                 index=(self.item_id2tokens[1:,:] - 1).unsqueeze(0).expand(token_logits.shape[0], -1, -1)  # (batch_size, n_items, code_dim)
             ).mean(dim=-1)

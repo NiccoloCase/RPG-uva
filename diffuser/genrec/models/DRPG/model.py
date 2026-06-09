@@ -58,14 +58,15 @@ class Denoiser(nn.Module):
 
         is_masked = (target_tokens == self.mask_token_id) # (B, n_digit)
 
-        # Temporarily replace the mask_token_id with 0 to avoid index out-of-bounds in target_embeddings.
+        # Get token embeddings for unmasked tokens
         safe_tokens = target_tokens.masked_fill(is_masked, 0)
         token_embs = self.target_embeddings(safe_tokens) # (B, n_digit, n_embd)
 
+        # Get mask embeddings for masked tokens
         pos_ids = torch.arange(self.n_digit, device=target_tokens.device)
         mask_embs = self.mask_embeddings(pos_ids).unsqueeze(0).expand(B, -1, -1) # (B, n_digit, n_embd)
 
-        # Mask where needed
+        # Set token/ mask embeddings
         tgt = torch.where(is_masked.unsqueeze(-1), mask_embs, token_embs)
 
         output_states = self.transformer(
@@ -158,7 +159,6 @@ class DRPG(AbstractModel):
     def forward(self, batch: dict, return_loss=True) -> torch.Tensor:
         input_tokens = self.item_id2tokens[batch['input_ids']]  # (B, seq_len, n_codebook)
         input_embs = self.gpt2.wte(input_tokens).mean(dim=-2)  # (B, seq_len, n_embd)
-        B = input_embs.size(0)
 
         # Run encoder
         outputs = self.gpt2(
@@ -173,29 +173,29 @@ class DRPG(AbstractModel):
 
             batch_idx, time_idx = torch.where(label_mask)
 
-            B_eff = batch_idx.size(0)
+            B = batch_idx.size(0)
             seq_len = outputs.last_hidden_state.size(1)
 
-            full_sequence_context = outputs.last_hidden_state[batch_idx]  # (B_eff, seq_len, n_embd)
+            full_sequence_context = outputs.last_hidden_state[batch_idx]  # (B, seq_len, n_embd)
 
             base_pad_mask = (batch['attention_mask'] == 0)  # (B, seq_len)
-            mem_pad_mask = base_pad_mask[batch_idx]  # (B_eff, seq_len)
+            mem_pad_mask = base_pad_mask[batch_idx]  # (B, seq_len)
 
+            # Get last non-padding item
             seq_range = torch.arange(seq_len, device=outputs.last_hidden_state.device).unsqueeze(0)
-
             valid_indices = (~mem_pad_mask).long() * seq_range
             masked_valid_indices = torch.where(seq_range <= time_idx.unsqueeze(1), valid_indices, -1)
             safe_time_idx = masked_valid_indices.max(dim=1)[0]
 
             safe_time_idx = torch.where(safe_time_idx == -1, time_idx, safe_time_idx)
+            causal_mask = seq_range > safe_time_idx.unsqueeze(1)  # (B, seq_len)
+            # Mask out padding AND future tokens
+            final_memory_mask = mem_pad_mask | causal_mask  # (B, seq_len)
 
-            causal_mask = seq_range > safe_time_idx.unsqueeze(1)  # (B_eff, seq_len)
-            final_memory_mask = mem_pad_mask | causal_mask  # (B_eff, seq_len)
+            selected_target_labels = target_labels[batch_idx, time_idx]  # (B, n_digit)
+            target_tokens = selected_target_labels.clone()  # (B, n_digit)
 
-            selected_target_labels = target_labels[batch_idx, time_idx]  # (B_eff, n_digit)
-            target_tokens = selected_target_labels.clone()  # (B_eff, n_digit)
-
-            # On-Policy Confidence Estimation (OCN). See section 3.3 in https://arxiv.org/pdf/2510.21805
+            # On-Policy Confidence Estimation (OCN). See section 3.3 in https://arxiv.org/pdf/2510.21805. Focus on most uncertain digits.
             # "we compute the difficulty order once per example with a single fully masked pass, reuse the encoder output across the 𝑅 views"
             with torch.no_grad():
                 # "run the MD-Decoder once on a fully masked 𝑛-digit input"
@@ -209,7 +209,7 @@ class DRPG(AbstractModel):
                 token_emb_eval = F.normalize(token_emb_eval, dim=-1, eps=1e-8)
                 token_embs_eval_chunked = torch.chunk(token_emb_eval, self.n_digit, dim=0)
 
-                confidence = torch.zeros((B_eff, self.n_digit), device=target_tokens.device)
+                confidence = torch.zeros((B, self.n_digit), device=target_tokens.device)
 
                 for k in range(self.n_digit):
                     logits_i = torch.matmul(baseline_states_chunked[k].squeeze(1), token_embs_eval_chunked[k].T) / self.temperature
@@ -223,7 +223,7 @@ class DRPG(AbstractModel):
 
             # "OCN constructs a small nested set of views per sample"
             n_views = self.config['n_views']
-            B_multi = B_eff * n_views
+            B_multi = B * n_views
 
             # R / n_view different views
             mask_weights_multi = mask_weights.repeat_interleave(n_views, dim=0)
@@ -232,6 +232,7 @@ class DRPG(AbstractModel):
             target_tokens_multi = target_tokens.repeat_interleave(n_views, dim=0)
             selected_target_labels_multi = selected_target_labels.repeat_interleave(n_views, dim=0)
 
+            # Randomly decide how many digits to mask
             num_digits_to_mask = torch.randint(1, self.n_digit + 1, (B_multi,), device=target_tokens.device)
 
             # Generate Gumbel noise to sample proportional to weights
@@ -456,7 +457,7 @@ class DRPG(AbstractModel):
             confidence = max_probs.clone()
             confidence[~is_masked] = 1e9
 
-            # Unmask with cosine strategy similar
+            # Unmask with cosine strategy similar to maskGIT. Unmask few tokens early on and more later when the model has more context.
             progress = step / denoise_steps
             ratio_to_mask = math.cos(progress * math.pi / 2.0)
             num_to_mask = max(0, int(self.n_digit * ratio_to_mask))

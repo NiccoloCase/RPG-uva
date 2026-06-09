@@ -6,6 +6,3 @@ n_codebook: 64
 num_beams: 10
 n_edges: 500
 propagation_steps: 3
-paper_metric: ndcg@10
-paper_value: 0.0415
-equivalence_margin: 0.001

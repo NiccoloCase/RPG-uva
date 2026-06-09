@@ -40,9 +40,6 @@ fi
 EVAL_CONFIG="${EVAL_CONFIG:-${EVAL_CONFIG_DEFAULT}}"
 EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026,2027,2028,2029,2030,2031,2032,2033}"
 EVAL_OUTPUT_DIR="${EVAL_OUTPUT_DIR:-${REPO_ROOT}/artifacts/rpg/eval_seeds/sports}"
-PAPER_METRIC="${PAPER_METRIC:-ndcg@10}"
-PAPER_VALUE="${PAPER_VALUE:-0.0263}"
-EQUIVALENCE_MARGIN="${EQUIVALENCE_MARGIN:-0.001}"
 
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
   echo "ERROR: provide the checkpoint path as the first argument or CHECKPOINT_PATH env var." >&2
@@ -86,23 +83,6 @@ cmd=(
   --eval-seeds "${EVAL_SEEDS}"
   --output-dir "${EVAL_OUTPUT_DIR}"
 )
-
-paper_args_set=0
-if [[ -n "${PAPER_METRIC}" || -n "${PAPER_VALUE}" || -n "${EQUIVALENCE_MARGIN}" ]]; then
-  paper_args_set=1
-fi
-
-if [[ ${paper_args_set} -eq 1 ]]; then
-  if [[ -z "${PAPER_METRIC}" || -z "${PAPER_VALUE}" || -z "${EQUIVALENCE_MARGIN}" ]]; then
-    echo "ERROR: PAPER_METRIC, PAPER_VALUE, and EQUIVALENCE_MARGIN must be all set or all empty." >&2
-    exit 7
-  fi
-  cmd+=(
-    --paper-metric "${PAPER_METRIC}"
-    --paper-value "${PAPER_VALUE}"
-    --equivalence-margin "${EQUIVALENCE_MARGIN}"
-  )
-fi
 
 cmd+=("$@")
 "${cmd[@]}"

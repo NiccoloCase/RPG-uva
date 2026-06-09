@@ -26,8 +26,5 @@ fi
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 export EVAL_CONFIG="${EVAL_CONFIG:-${REPO_ROOT}/configs/rpg/eval_seeds/released_readme/sports_and_outdoors.yaml}"
 export EVAL_OUTPUT_DIR="${EVAL_OUTPUT_DIR:-${REPO_ROOT}/artifacts/rpg/eval_seeds/released_readme/sports_and_outdoors}"
-export PAPER_METRIC="${PAPER_METRIC:-ndcg@10}"
-export PAPER_VALUE="${PAPER_VALUE:-0.0263}"
-export EQUIVALENCE_MARGIN="${EQUIVALENCE_MARGIN:-0.001}"
 
 (cd .. && bash ./run_eval_seeds.sh "$@")

@@ -80,23 +80,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.95,
         help="Two-sided bootstrap confidence level for metric summaries.",
     )
-    parser.add_argument(
-        "--paper-metric",
-        default=None,
-        help="Optional metric name to compare against the paper, e.g. 'ndcg@10'.",
-    )
-    parser.add_argument(
-        "--paper-value",
-        type=float,
-        default=None,
-        help="Optional paper metric value used for equivalence testing.",
-    )
-    parser.add_argument(
-        "--equivalence-margin",
-        type=float,
-        default=None,
-        help="Optional absolute equivalence margin around the paper value.",
-    )
     return parser
 
 
@@ -113,6 +96,21 @@ def _metric_names(config: dict[str, Any]) -> list[str]:
         for metric in config["metrics"]
         for k in config["topk"]
     ]
+
+
+def _reject_analysis_args(tokens: list[str]) -> None:
+    disallowed_prefixes = (
+        "--paper-",
+        "--paper_",
+        "--equivalence-",
+        "--equivalence_",
+    )
+    for token in tokens:
+        if token.startswith(disallowed_prefixes):
+            raise ValueError(
+                f"{token} is a reporting/analysis option. Run eval first, then "
+                "set paper targets and equivalence margins in notebooks/eval_seed_tables.ipynb."
+            )
 
 
 def _session_root(output_root: str | Path) -> Path:
@@ -288,9 +286,6 @@ def _metric_summary(
     bootstrap_samples: int,
     bootstrap_seed: int,
     ci_level: float,
-    paper_metric: str | None,
-    paper_value: float | None,
-    equivalence_margin: float | None,
 ) -> list[dict[str, Any]]:
     rows_by_user_metric: dict[str, dict[int, list[float]]] = {
         metric: defaultdict(list) for metric in metric_names
@@ -328,72 +323,9 @@ def _metric_summary(
             "eval_seed_max": max(per_seed_values) if per_seed_values else float("nan"),
         }
 
-        if paper_metric == metric:
-            assert paper_value is not None
-            assert equivalence_margin is not None
-            diff_low, diff_high = _bootstrap_ci(
-                values=per_user_seed_means,
-                n_samples=bootstrap_samples,
-                seed=bootstrap_seed,
-                ci_level=0.90,
-                offset=paper_value,
-            )
-            observed_diff = summary["final_user_avg"] - paper_value
-            summary.update(
-                {
-                    "paper_value": paper_value,
-                    "paper_difference": observed_diff,
-                    "equivalence_margin": equivalence_margin,
-                    "equivalence_ci_level": 0.90,
-                    "equivalence_diff_ci_low": diff_low,
-                    "equivalence_diff_ci_high": diff_high,
-                    "equivalent_to_paper": (
-                        diff_low >= -equivalence_margin
-                        and diff_high <= equivalence_margin
-                    ),
-                }
-            )
         metric_rows.append(summary)
 
     return metric_rows
-
-
-def _validate_paper_args(
-    paper_metric: str | None,
-    paper_value: float | None,
-    equivalence_margin: float | None,
-    metric_names: list[str],
-) -> None:
-    provided = [
-        paper_metric is not None,
-        paper_value is not None,
-        equivalence_margin is not None,
-    ]
-    if any(provided) and not all(provided):
-        raise ValueError(
-            "--paper-metric, --paper-value, and --equivalence-margin must be provided together."
-        )
-    if paper_metric is not None and paper_metric not in metric_names:
-        raise ValueError(
-            f"Paper metric {paper_metric!r} is not in active metrics: {metric_names}."
-        )
-    if equivalence_margin is not None and equivalence_margin <= 0:
-        raise ValueError("--equivalence-margin must be positive.")
-
-
-def _resolve_paper_comparison(args: argparse.Namespace, config: dict[str, Any]) -> tuple[str | None, float | None, float | None]:
-    paper_metric = args.paper_metric
-    paper_value = args.paper_value
-    equivalence_margin = args.equivalence_margin
-
-    if paper_metric is None:
-        paper_metric = config.get("paper_metric")
-    if paper_value is None and config.get("paper_value") is not None:
-        paper_value = float(config["paper_value"])
-    if equivalence_margin is None and config.get("equivalence_margin") is not None:
-        equivalence_margin = float(config["equivalence_margin"])
-
-    return paper_metric, paper_value, equivalence_margin
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -409,6 +341,7 @@ def main(argv: list[str] | None = None) -> int:
         include_root_config=not args.no_root_config,
         include_local_config=not args.no_local_config,
     )
+    _reject_analysis_args(override_tokens)
     config_overrides = parse_override_args(override_tokens)
 
     harness = EvaluationHarness.build(
@@ -420,13 +353,6 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError("scripts/rpg_eval_seeds.py only supports single-process evaluation.")
 
     metric_names = _metric_names(harness.config)
-    paper_metric, paper_value, equivalence_margin = _resolve_paper_comparison(args, harness.config)
-    _validate_paper_args(
-        paper_metric=paper_metric,
-        paper_value=paper_value,
-        equivalence_margin=equivalence_margin,
-        metric_names=metric_names,
-    )
 
     test_split = harness.dataset.split()["test"]
     user_ids = [str(user) for user in test_split["user"]]
@@ -457,9 +383,6 @@ def main(argv: list[str] | None = None) -> int:
         bootstrap_samples=args.bootstrap_samples,
         bootstrap_seed=args.bootstrap_seed,
         ci_level=args.ci_level,
-        paper_metric=paper_metric,
-        paper_value=paper_value,
-        equivalence_margin=equivalence_margin,
     )
 
     session_root = _session_root(args.output_dir)
@@ -485,11 +408,6 @@ def main(argv: list[str] | None = None) -> int:
         "bootstrap_samples": args.bootstrap_samples,
         "bootstrap_seed": args.bootstrap_seed,
         "ci_level": args.ci_level,
-        "paper_comparison": {
-            "paper_metric": paper_metric,
-            "paper_value": paper_value,
-            "equivalence_margin": equivalence_margin,
-        },
         "per_seed_summary": per_seed_rows,
         "metric_summary": metric_rows,
     }

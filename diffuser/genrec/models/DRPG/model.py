@@ -27,6 +27,7 @@ class Denoiser(nn.Module):
         self.target_embeddings = nn.Embedding(vocab_size, n_embd)
         # Seperate mask embedding per position so no positional embeddings, like in diffGRM
         self.mask_embeddings = nn.Embedding(n_digit, n_embd)
+        self.pos_embedding = nn.Embedding(n_digit, n_embd)
 
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=n_embd,
@@ -66,6 +67,7 @@ class Denoiser(nn.Module):
 
         # Set token/ mask embeddings
         tgt = torch.where(is_masked.unsqueeze(-1), mask_embs, token_embs)
+        tgt = tgt + self.pos_embedding(pos_ids).unsqueeze(0)
 
         output_states = self.transformer(
             tgt=tgt,

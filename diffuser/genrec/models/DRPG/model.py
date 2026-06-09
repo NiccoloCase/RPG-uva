@@ -460,15 +460,12 @@ class DRPG(AbstractModel):
             ratio_to_mask = math.cos(progress * math.pi / 2.0)
             num_to_mask = max(0, int(self.n_digit * ratio_to_mask))
 
+            next_targets = global_pred_ids.clone()
+            # Reapply mask to lowest confidence positions
             if num_to_mask > 0:
                 mask_idx = torch.topk(confidence, k=num_to_mask, dim=-1, largest=False).indices
-
-                next_targets = current_targets.clone()
-                next_targets[is_masked] = global_pred_ids[is_masked]
                 next_targets.scatter_(1, mask_idx, self.denoiser.mask_token_id)
-                current_targets = next_targets
-            else:
-                current_targets[is_masked] = global_pred_ids[is_masked]
+            current_targets = next_targets
 
         if self.generate_w_decoding_graph:
             if not self.init_flag:

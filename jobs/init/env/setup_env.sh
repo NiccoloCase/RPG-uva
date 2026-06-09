@@ -30,6 +30,9 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/init/env"
 
 mkdir -p "${OUTPUT_DIR}"
+source "${REPO_ROOT}/jobs/lib/runtime_stats.sh"
+runtime_stats_init "${OUTPUT_DIR}" "install_rpg_env"
+trap runtime_stats_finish EXIT
 
 module purge
 module load 2025
@@ -53,7 +56,7 @@ accept_tos_if_available "https://repo.anaconda.com/pkgs/main"
 accept_tos_if_available "https://repo.anaconda.com/pkgs/r"
 
 if conda env list | awk '$1 == "rpg-uva" {found=1} END {exit !found}'; then
-  conda env update -n rpg-uva -f environment.yml --prune
+  runtime_stats_run conda env update -n rpg-uva -f environment.yml --prune
 else
-  conda env create -f environment.yml
+  runtime_stats_run conda env create -f environment.yml
 fi

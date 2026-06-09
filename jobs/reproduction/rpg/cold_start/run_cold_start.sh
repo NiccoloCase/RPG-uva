@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Submit from jobs/reproduction/cold_start so these relative output paths resolve correctly.
+# Submit from jobs/reproduction/rpg/cold_start so these relative output paths resolve correctly.
 #SBATCH --job-name=rpg_cold_start
 #SBATCH --partition=gpu_a100
 #SBATCH --ntasks=1
@@ -8,8 +8,8 @@
 #SBATCH --gpus=1
 #SBATCH --mem=120G
 #SBATCH --time=04:00:00
-#SBATCH --output=../../../output/reproduction/cold_start/%x-%j.out
-#SBATCH --error=../../../output/reproduction/cold_start/%x-%j.err
+#SBATCH --output=../../../../output/reproduction/rpg/cold_start/%x-%j.out
+#SBATCH --error=../../../../output/reproduction/rpg/cold_start/%x-%j.err
 
 set -euo pipefail
 
@@ -22,13 +22,13 @@ else
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
     echo "Run:" >&2
     echo "  cd ${SCRIPT_DIR}" >&2
-    echo "  bash ./run_cold_start.sh $(cd "${SCRIPT_DIR}/../../.." && pwd)/artifacts/rpg/ckpt/model.pth" >&2
+    echo "  bash ./run_cold_start.sh $(cd "${SCRIPT_DIR}/../../../.." && pwd)/artifacts/rpg/ckpt/model.pth" >&2
     exit 2
   fi
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-OUTPUT_DIR="${REPO_ROOT}/output/reproduction/cold_start"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/cold_start"
 COLD_START_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/repro/sports_and_outdoors.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0

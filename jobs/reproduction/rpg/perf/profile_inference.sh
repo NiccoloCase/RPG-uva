@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Submit from jobs/reproduction/perf so these relative output paths resolve correctly.
+# Submit from jobs/reproduction/rpg/perf so these relative output paths resolve correctly.
 #SBATCH --job-name=rpg_perf_profile
 #SBATCH --partition=gpu_a100
 #SBATCH --ntasks=1
@@ -8,8 +8,8 @@
 #SBATCH --gpus=1
 #SBATCH --mem=120G
 #SBATCH --time=06:00:00
-#SBATCH --output=../../../output/reproduction/perf/%x-%j.out
-#SBATCH --error=../../../output/reproduction/perf/%x-%j.err
+#SBATCH --output=../../../../output/reproduction/rpg/perf/%x-%j.out
+#SBATCH --error=../../../../output/reproduction/rpg/perf/%x-%j.err
 
 set -euo pipefail
 
@@ -22,13 +22,13 @@ else
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
     echo "Run:" >&2
     echo "  cd ${SCRIPT_DIR}" >&2
-    echo "  bash ./profile_inference.sh $(cd "${SCRIPT_DIR}/../../.." && pwd)/artifacts/rpg/ckpt/model.pth" >&2
+    echo "  bash ./profile_inference.sh $(cd "${SCRIPT_DIR}/../../../.." && pwd)/artifacts/rpg/ckpt/model.pth" >&2
     exit 2
   fi
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-OUTPUT_DIR="${REPO_ROOT}/output/reproduction/perf"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/perf"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/perf/sports.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0

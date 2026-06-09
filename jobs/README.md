@@ -37,7 +37,7 @@ Preferred rules:
 Examples:
 
 ```bash
-cd /gpfs/home6/$USER/RPG/jobs/reproduction/perf
+cd /gpfs/home6/$USER/RPG/jobs/reproduction/rpg/perf
 sbatch ./build_graphs.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
 sbatch ./profile_inference.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
 ```

@@ -39,8 +39,6 @@ class Denoiser(nn.Module):
         )
         self.transformer = nn.TransformerDecoder(decoder_layer, num_layers=n_layers)
 
-        self.final_proj = nn.Linear(n_embd, n_embd)
-
     def init_target_embeddings(self, gpt2_wte_weights):
         # Share embedding table weights with encoder
         self.target_embeddings.weight = gpt2_wte_weights
@@ -74,7 +72,6 @@ class Denoiser(nn.Module):
             memory=memory_context,
             memory_key_padding_mask=memory_padding_mask
         )
-        output_states = self.final_proj(output_states)
 
         return output_states
 

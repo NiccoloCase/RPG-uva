@@ -39,6 +39,11 @@ class SASRecTokenizer(AbstractTokenizer):
         self.item2id = dataset.item2id
         self.user2id = dataset.user2id
         self.id2item = dataset.id_mapping["id2item"]
+        self.item2tokens = {
+            item: (item_id,)
+            for item, item_id in self.item2id.items()
+            if item_id != 0
+        }
         self.ignored_label = -100
         self.eos_token = None
 
@@ -86,6 +91,16 @@ class SASRecTokenizer(AbstractTokenizer):
 
     def _tokenize_eval_sequence(self, item_seq: list[int]) -> dict:
         """Create one evaluation example that predicts the final held-out item."""
+        if len(item_seq) < 2:
+            # Users without any history before the target item cannot be
+            # evaluated meaningfully in next-item prediction.
+            return {
+                "input_ids": [],
+                "labels": [],
+                "attention_mask": [],
+                "seq_lens": [],
+            }
+
         input_ids = item_seq[:-1]
         padded_input_ids, attention_mask, seq_lens = self._pad_input_ids(input_ids)
 

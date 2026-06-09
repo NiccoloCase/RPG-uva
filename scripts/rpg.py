@@ -7,8 +7,11 @@ import ast
 import sys
 from pathlib import Path
 
+from genrec_repo_support import (
+    REPO_ROOT,
+    prepare_genrec_runtime,
+)
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
 THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
 ROOT_CONFIG = REPO_ROOT / "configs" / "rpg" / "root.yaml"
 LOCAL_CONFIG = REPO_ROOT / "configs" / "rpg" / "local.yaml"
@@ -22,14 +25,14 @@ PRESET_CONFIGS = {
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(
-        description="Run RPG from the repository root without modifying third_party/.",
+        description="Run a GenRec model from the repository root without modifying third_party/.",
         epilog=(
             "Config precedence: CLI overrides > --config files > --preset file > "
             "configs/rpg/local.yaml > configs/rpg/root.yaml > third_party defaults. "
             "Forwarded config overrides accept both '--key=value' and '--key value'."
         ),
     )
-    parser.add_argument("--model", default="RPG", help="Model name exposed by third_party/genrec.")
+    parser.add_argument("--model", default="RPG", help="Model name exposed by the vendored or repo-owned GenRec registry.")
     parser.add_argument("--dataset", default="AmazonReviews2014", help="Dataset name exposed by third_party/genrec.")
     parser.add_argument("--checkpoint", default=None, help="Optional checkpoint path.")
     parser.add_argument(
@@ -126,29 +129,12 @@ def build_config_files(args: argparse.Namespace) -> list[str]:
 
     return [str(path) for path in config_files]
 
-
-def ensure_submodule_available() -> None:
-    expected_paths = [
-        THIRD_PARTY_ROOT / "main.py",
-        THIRD_PARTY_ROOT / "genrec" / "pipeline.py",
-    ]
-    missing_paths = [path for path in expected_paths if not path.exists()]
-    if missing_paths:
-        missing_str = ", ".join(str(path.relative_to(REPO_ROOT)) for path in missing_paths)
-        raise SystemExit(
-            f"Missing third_party sources: {missing_str}. "
-            "Run 'git submodule update --init --recursive'."
-        )
-
-
 def main() -> int:
     args, override_tokens = parse_args()
-    ensure_submodule_available()
+    prepare_genrec_runtime(args.model)
 
     config_files = build_config_files(args)
     overrides = parse_override_args(override_tokens)
-
-    sys.path.insert(0, str(THIRD_PARTY_ROOT))
 
     from genrec.pipeline import Pipeline
 

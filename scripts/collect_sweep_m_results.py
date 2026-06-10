@@ -10,7 +10,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import ast
 import csv
 import re
 import sys
@@ -22,7 +21,8 @@ DEFAULT_LOG_DIR = REPO_ROOT / "output" / "reproduction" / "train" / "sweep_m"
 SWEEP_START_RE = re.compile(
     r"SWEEP_START\s+dataset=(\S+)\s+n_codebook=(\d+)\s+run_id=(\S+)"
 )
-TEST_RESULTS_RE = re.compile(r"Test Results:\s*(.+)$")
+TEST_RESULTS_RE = re.compile(r"Test Results:")
+KV_RE = re.compile(r"\('([^']+)',\s*([\d.e+-]+)\)")
 
 
 def parse_log(path: Path) -> dict | None:
@@ -36,12 +36,10 @@ def parse_log(path: Path) -> dict | None:
         if m:
             dataset, n_codebook, run_id = m.group(1), int(m.group(2)), m.group(3)
 
-        m = TEST_RESULTS_RE.search(line)
-        if m:
-            try:
-                metrics = ast.literal_eval(m.group(1))
-            except (ValueError, SyntaxError):
-                pass
+        if TEST_RESULTS_RE.search(line):
+            pairs = KV_RE.findall(line)
+            if pairs:
+                metrics = {k: float(v) for k, v in pairs}
 
     if dataset is None or metrics is None:
         return None

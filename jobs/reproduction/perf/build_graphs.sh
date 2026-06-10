@@ -21,26 +21,36 @@ else
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
     echo "Run:" >&2
     echo "  cd ${SCRIPT_DIR}" >&2
-    echo "  bash ./build_graphs.sh $(cd "${SCRIPT_DIR}/../../.." && pwd)/artifacts/rpg/ckpt/model.pth" >&2
+    echo "  bash ./build_graphs.sh" >&2
     exit 2
   fi
 fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+GROUP_ARTIFACTS_ROOT="${GROUP_ARTIFACTS_ROOT:-/gpfs/work5/0/prjs2120/groups/group_16/artifacts}"
+RPG_ARTIFACTS_ROOT="${RPG_ARTIFACTS_ROOT:-${GROUP_ARTIFACTS_ROOT}/rpg}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-${RPG_ARTIFACTS_ROOT}/ckpt}"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/perf"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/perf/sports.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 PERF_CONFIG="${PERF_CONFIG:-${PERF_CONFIG_DEFAULT}}"
+PERF_DATASET_SLUG="${PERF_DATASET_SLUG:-sports_and_outdoors}"
+
+if [[ -z "${CHECKPOINT_PATH}" ]]; then
+  CHECKPOINT_PATH="$(find "${CHECKPOINT_DIR}" -maxdepth 1 -type f -name "rpg_repro_${PERF_DATASET_SLUG}-*.pth" | sort | tail -n 1)"
+fi
 
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
   echo "ERROR: provide the checkpoint path as the first argument or CHECKPOINT_PATH env var." >&2
+  echo "If omitted, the script tries to resolve the latest dataset checkpoint from:" >&2
+  echo "  ${CHECKPOINT_DIR}" >&2
   exit 3
 fi
 
 if [[ "${CHECKPOINT_PATH}" == *"<"* || "${CHECKPOINT_PATH}" == *">"* ]]; then
   echo "ERROR: checkpoint path contains angle-bracket placeholders: ${CHECKPOINT_PATH}" >&2
   echo "Use a real absolute path under ${REPO_ROOT}, for example:" >&2
-  echo "  ${REPO_ROOT}/artifacts/rpg/ckpt/model.pth" >&2
+  echo "  ${CHECKPOINT_DIR}/rpg_repro_${PERF_DATASET_SLUG}-<timestamp>.pth" >&2
   exit 4
 fi
 

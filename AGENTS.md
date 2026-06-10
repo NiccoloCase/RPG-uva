@@ -39,16 +39,23 @@ git submodule update --init --recursive
 
 ### 2.1 Reference guide
 
-Use this guide whenever you create or change Snellius jobs:
+Use the local course guide whenever you create or change Snellius jobs:
 
-`https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial1/Lisa_Cluster.html`
+- `docs/snellius/Snellius_Practical_Guide.pdf`
+- `docs/snellius/Snellius_Practical_Guide.txt`
+
+Keep only the operational rules that affect this repo:
+
+- Login nodes are for editing, inspecting files, and submitting jobs.
+- Training, evaluation, indexing, and other heavy work must run through Slurm on compute nodes.
+- Test small before scaling up to long or expensive GPU jobs.
 
 ### 2.2 GPU partitions
 
 For Snellius GPU jobs in this repo:
 
 - Always request an explicit partition with `#SBATCH --partition=...`.
-- For this course setup, both `gpu_a100` and `gpu_h100` are available.
+- Prefer `gpu_mig` for short GPU debugging/tests, `gpu_a100` for real runs, and `gpu_h100` only when clearly needed.
 - Size `--cpus-per-task` and `--mem` to the chosen partition instead of relying on implicit defaults.
 
 ### 2.3 Workspace paths
@@ -57,6 +64,10 @@ For this repo on Snellius:
 
 - Do not hard-code `/home/$USER/...` paths.
 - Use the repo workspace under `/gpfs/home6/$USER/RPG`, or derive paths from the script location.
+- Keep large shared datasets under `/projects/prjs2120/datasets`.
+- Keep important shared outputs under `/projects/prjs2120/groups/group_16`.
+- Use `/scratch-shared/$USER` only for temporary and reproducible intermediates.
+- Do not keep important checkpoints, logs, or final results only in scratch.
 
 ## 3. Jobs
 
@@ -89,6 +100,7 @@ artifacts/
 - Do not write job logs into `jobs/`.
 - Do not write runtime artifacts into `output/`.
 - When adding a new job folder under `jobs/...`, create the matching `output/...` directory shape as needed.
+- When a run also needs long-term shared storage outside the repo, copy or sync the important outputs to `/projects/prjs2120/groups/group_16`.
 
 Example:
 
@@ -110,10 +122,11 @@ Use real filesystem paths in all job scripts, `sbatch` examples, and wrapped com
 - Do not use angle-bracket placeholders such as `<you>`, `<checkpoint>`, or similar tokens in shell commands.
 - Prefer deriving `REPO_ROOT` from `SLURM_SUBMIT_DIR` or `BASH_SOURCE` inside checked-in job scripts.
 - When a job takes a checkpoint or config path, require a real absolute path and fail early if the file does not exist.
+- Use `/projects/prjs2120/groups/group_16/...` for stable shared paths and `/scratch-shared/$USER/...` only for temporary paths.
 
 ### 4.2 Example
 
 ```bash
 cd /gpfs/home6/$USER/RPG/jobs/reproduction/perf
-sbatch ./build_graphs.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
+sbatch ./build_graphs.sh /gpfs/work5/0/prjs2120/groups/group_16/artifacts/rpg/ckpt/model.pth
 ```

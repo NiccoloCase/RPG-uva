@@ -19,11 +19,12 @@ if [[ "${PWD_REAL}" != "${SCRIPT_DIR}" ]]; then
   echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
   echo "Run:" >&2
   echo "  cd ${SCRIPT_DIR}" >&2
-  echo "  sbatch ./run_sports_and_outdoors.sh /gpfs/home6/\$USER/RPG/artifacts/rpg/ckpt/model.pth" >&2
+  echo "  sbatch ./run_sports_and_outdoors.sh" >&2
   exit 2
 fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+export EVAL_DATASET_SLUG="${EVAL_DATASET_SLUG:-sports_and_outdoors}"
 export EVAL_CONFIG="${EVAL_CONFIG:-${REPO_ROOT}/configs/rpg/eval_seeds/released_readme/sports_and_outdoors.yaml}"
 export EVAL_OUTPUT_DIR="${EVAL_OUTPUT_DIR:-${REPO_ROOT}/artifacts/rpg/eval_seeds/released_readme/sports_and_outdoors}"
 

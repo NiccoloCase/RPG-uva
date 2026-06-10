@@ -6,13 +6,20 @@ This directory contains Slurm job definitions only.
 
 Always submit a job from its own folder.
 
-Before creating or changing Snellius jobs, check the UvA guide:
+Before creating or changing Snellius jobs, check the local course guide:
 
-`https://uvadlc-notebooks.readthedocs.io/en/latest/tutorial_notebooks/tutorial1/Lisa_Cluster.html`
+`docs/snellius/Snellius_Practical_Guide.pdf`
+or
+`docs/snellius/Snellius_Practical_Guide.txt`
 
-For GPU jobs on this project, always request an explicit partition with `#SBATCH --partition=...`.
-For the course setup, both `gpu_a100` and `gpu_h100` are available. Match `--cpus-per-task`
-and `--mem` to the chosen partition instead of relying on implicit defaults.
+Snellius rules that matter for this repo:
+
+- Use login nodes only to edit, inspect files, and submit jobs.
+- Run training, evaluation, and other heavy work only through Slurm.
+- Start with a short test job before submitting a long GPU run.
+- Always request an explicit partition with `#SBATCH --partition=...`.
+- Prefer `gpu_mig` for short GPU tests, `gpu_a100` for normal full runs, and `gpu_h100` only when necessary.
+- Match `--cpus-per-task` and `--mem` to the chosen partition instead of relying on implicit defaults.
 
 Example:
 
@@ -33,13 +40,17 @@ Preferred rules:
 - Let the scripts derive `REPO_ROOT` from `SLURM_SUBMIT_DIR`; do not hard-code `/home/.../RPG-uva`.
 - Pass checkpoint and config inputs as real absolute paths.
 - On Snellius for this repo, the workspace root is `/gpfs/home6/$USER/RPG`, not `/home/$USER/...`.
+- Keep shared datasets under `/projects/prjs2120/datasets`; do not duplicate them into repo or home storage.
+- Keep important shared outputs under `/projects/prjs2120/groups/group_16`.
+- Use `/scratch-shared/$USER` only for temporary intermediates that can be regenerated.
+- Do not leave the only copy of final checkpoints or results in scratch.
 
 Examples:
 
 ```bash
 cd /gpfs/home6/$USER/RPG/jobs/reproduction/perf
-sbatch ./build_graphs.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
-sbatch ./profile_inference.sh /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth
+sbatch ./build_graphs.sh /gpfs/work5/0/prjs2120/groups/group_16/artifacts/rpg/ckpt/model.pth
+sbatch ./profile_inference.sh /gpfs/work5/0/prjs2120/groups/group_16/artifacts/rpg/ckpt/model.pth
 ```
 
 ## Directory contract
@@ -67,3 +78,5 @@ output/a/b/
 ## Artifact rule
 
 Artifacts do not live next to the job script. They belong under the repo-root `artifacts/` tree. If a job needs a dedicated area, create a stable subpath there.
+
+If the outputs must persist outside the repo or be shared with the course group, copy or sync the selected results to `/projects/prjs2120/groups/group_16`.

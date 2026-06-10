@@ -13,10 +13,12 @@
 
 set -euo pipefail
 
+RUNNER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+
 if [[ -n "${SLURM_JOB_ID:-}" ]]; then
   SCRIPT_DIR="$(cd "${SLURM_SUBMIT_DIR}" && pwd -P)"
 else
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  SCRIPT_DIR="${RUNNER_DIR}"
   PWD_REAL="$(pwd -P)"
   if [[ "${PWD_REAL}" != "${SCRIPT_DIR}" ]]; then
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
@@ -27,10 +29,11 @@ else
   fi
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-GROUP_ARTIFACTS_ROOT="${GROUP_ARTIFACTS_ROOT:-/gpfs/work5/0/prjs2120/groups/group_16/artifacts}"
+REPO_ROOT="$(cd "${RUNNER_DIR}/../../.." && pwd)"
+GROUP_ARTIFACTS_ROOT="${GROUP_ARTIFACTS_ROOT:-/projects/prjs2120/groups/group_16/artifacts}"
 RPG_ARTIFACTS_ROOT="${RPG_ARTIFACTS_ROOT:-${GROUP_ARTIFACTS_ROOT}/rpg}"
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-${RPG_ARTIFACTS_ROOT}/ckpt}"
+CACHE_DIR="${CACHE_DIR:-${RPG_ARTIFACTS_ROOT}/cache}"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/cold_start"
 COLD_START_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/repro/sports_and_outdoors.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
@@ -40,7 +43,7 @@ if [[ $# -ge 1 ]]; then
 fi
 COLD_START_CONFIG="${COLD_START_CONFIG:-${COLD_START_CONFIG_DEFAULT}}"
 COLD_START_DATASET_SLUG="${COLD_START_DATASET_SLUG:-sports_and_outdoors}"
-COLD_START_OUTPUT_DIR="${COLD_START_OUTPUT_DIR:-${RPG_ARTIFACTS_ROOT}/cold_start}"
+COLD_START_OUTPUT_DIR="${COLD_START_OUTPUT_DIR:-${REPO_ROOT}/artifacts/rpg/cold_start}"
 
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
   CHECKPOINT_PATH="$(find "${CHECKPOINT_DIR}" -maxdepth 1 -type f -name "rpg_repro_${COLD_START_DATASET_SLUG}-*.pth" | sort | tail -n 1)"
@@ -88,4 +91,5 @@ conda run -n rpg-uva python scripts/rpg_cold_start.py \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${COLD_START_CONFIG}" \
   --output-dir "${COLD_START_OUTPUT_DIR}" \
+  --cache_dir "${CACHE_DIR}" \
   "$@"

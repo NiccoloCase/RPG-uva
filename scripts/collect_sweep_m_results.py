@@ -22,7 +22,7 @@ DEFAULT_LOG_DIR = REPO_ROOT / "output" / "reproduction" / "train" / "sweep_m"
 SWEEP_START_RE = re.compile(
     r"SWEEP_START\s+dataset=(\S+)\s+n_codebook=(\d+)\s+run_id=(\S+)"
 )
-TEST_RESULTS_RE = re.compile(r"Test Results:\s*(\{.*\})")
+TEST_RESULTS_RE = re.compile(r"Test Results:\s*(.+)$")
 
 
 def parse_log(path: Path) -> dict | None:

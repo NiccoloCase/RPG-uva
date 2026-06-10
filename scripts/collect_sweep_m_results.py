@@ -29,7 +29,9 @@ def parse_log(path: Path) -> dict | None:
     dataset = n_codebook = run_id = None
     metrics: dict | None = None
 
-    for line in path.read_text(errors="replace").splitlines():
+    out = path.with_suffix(".out")
+    text = path.read_text(errors="replace") + (out.read_text(errors="replace") if out.exists() else "")
+    for line in text.splitlines():
         m = SWEEP_START_RE.search(line)
         if m:
             dataset, n_codebook, run_id = m.group(1), int(m.group(2)), m.group(3)
@@ -72,7 +74,7 @@ def main() -> int:
         return 1
 
     rows = []
-    for path in sorted(log_dir.glob("*.out")):
+    for path in sorted(log_dir.glob("*.err")):
         row = parse_log(path)
         if row:
             rows.append(row)

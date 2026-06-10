@@ -219,13 +219,11 @@ class DRPG(AbstractModel):
 
                 confidence = torch.zeros((B, self.n_digit), device=target_tokens.device)
 
+                token_emb_ocn = self.gpt2.wte.weight[1:-1].detach()
+                token_emb_ocn = F.normalize(token_emb_ocn, dim=-1, eps=1e-8)
+                token_embs_ocn = torch.chunk(token_emb_ocn, self.n_digit, dim=0)
                 for k in range(self.n_digit):
-                    start = k * self.config['codebook_size'] + 1
-                    end = start + self.config['codebook_size']
-                    token_emb_eval = self.gpt2.wte.weight[start:end].detach()
-                    token_emb_eval = F.normalize(token_emb_eval, dim=-1, eps=1e-8)
-
-                    logits_i = torch.matmul(baseline_states_chunked[k].squeeze(1), token_emb_eval.T) / self.temperature
+                    logits_i = torch.matmul(baseline_states_chunked[k].squeeze(1), token_embs_ocn[k].T) / self.temperature
                     logits_i = torch.clamp(logits_i, min=-50.0, max=50.0)
                     probs_i = F.softmax(logits_i, dim=-1)
 
@@ -270,19 +268,16 @@ class DRPG(AbstractModel):
             # Demask with Cross-Attention Head
             final_states = self.denoiser(target_tokens_multi, memory_context_multi, memory_mask_multi)
 
-            # Keep normalization
             final_states = F.normalize(final_states, dim=-1, eps=1e-8)
             final_states = torch.chunk(final_states, self.n_digit, dim=1)
 
+            token_emb = self.gpt2.wte.weight[1:-1]
+            token_emb = F.normalize(token_emb, dim=-1, eps=1e-8)
+            token_embs = torch.chunk(token_emb, self.n_digit, dim=0)
+
             token_logits = []
             for k in range(self.n_digit):
-                start = k * self.config['codebook_size'] + 1
-                end = start + self.config['codebook_size']
-                token_emb_k = self.gpt2.wte.weight[start:end]
-
-                # Keep normalization and temperature scaling
-                token_emb_k = F.normalize(token_emb_k, dim=-1, eps=1e-8)
-                logits_k = torch.matmul(final_states[k].squeeze(dim=1), token_emb_k.T) / self.temperature
+                logits_k = torch.matmul(final_states[k].squeeze(dim=1), token_embs[k].T) / self.temperature
 
                 logits_k = torch.clamp(logits_k, min=-50.0, max=50.0)
                 token_logits.append(logits_k)

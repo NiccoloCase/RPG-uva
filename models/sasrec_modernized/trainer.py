@@ -150,7 +150,10 @@ class SASRecModernizedTrainer:
                 rating_pred = self.predict_full(recommend_output)
                 rating_pred = rating_pred.cpu().numpy().copy()
                 batch_user_index = user_ids.cpu().numpy()
-                rating_pred[self.args.train_matrix[batch_user_index].toarray() > 0] = 0
+                rating_pred[:, 0] = -np.inf
+                if 0 <= self.args.mask_id < rating_pred.shape[1]:
+                    rating_pred[:, self.args.mask_id] = -np.inf
+                rating_pred[self.args.train_matrix[batch_user_index].toarray() > 0] = -np.inf
 
                 ind = np.argpartition(rating_pred, -topk_max)[:, -topk_max:]
                 arr_ind = rating_pred[np.arange(len(rating_pred))[:, None], ind]

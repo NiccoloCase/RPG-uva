@@ -30,6 +30,7 @@ fi
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/sports_and_outdoors"
 DATA_DIR="${REPO_ROOT}/artifacts/rpg/cache/AmazonReviews2014/Sports_and_Outdoors"
+ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
 
 mkdir -p "${OUTPUT_DIR}"
 source "${REPO_ROOT}/jobs/lib/runtime_stats.sh"
@@ -47,7 +48,7 @@ module load 2025
 module load Anaconda3/2025.06-1
 
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate rpg-uva
+conda activate "${ENV_PREFIX}"
 
 cd "${REPO_ROOT}"
 

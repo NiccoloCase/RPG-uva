@@ -29,6 +29,7 @@ fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/cold_start"
+ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
 COLD_START_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/repro/sports_and_outdoors.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
@@ -73,7 +74,7 @@ module load Anaconda3/2025.06-1
 
 cd "${REPO_ROOT}"
 
-conda run -n rpg-uva python scripts/rpg_cold_start.py \
+conda run -p "${ENV_PREFIX}" python scripts/rpg_cold_start.py \
   run \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${COLD_START_CONFIG}" \

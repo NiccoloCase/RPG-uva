@@ -29,6 +29,26 @@ def ensure_submodule_available() -> None:
         )
 
 
+def _resolve_local_model_dir(model_name: Union[str, object]) -> Optional[Path]:
+    if not isinstance(model_name, str):
+        return None
+
+    candidates = [
+        LOCAL_MODELS_ROOT / model_name,
+        LOCAL_MODELS_ROOT / model_name.lower(),
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            return candidate
+
+    lowered = model_name.lower()
+    for candidate in LOCAL_MODELS_ROOT.iterdir():
+        if candidate.is_dir() and candidate.name.lower() == lowered:
+            return candidate
+
+    return None
+
+
 def _resolve_model_config_path(model_name: Union[str, object], genrec_root: Path) -> Optional[Path]:
     if not isinstance(model_name, str):
         return None
@@ -37,7 +57,11 @@ def _resolve_model_config_path(model_name: Union[str, object], genrec_root: Path
     if vendored_config.is_file():
         return vendored_config
 
-    local_config = LOCAL_MODELS_ROOT / model_name / "config.yaml"
+    local_model_dir = _resolve_local_model_dir(model_name)
+    if local_model_dir is None:
+        return None
+
+    local_config = local_model_dir / "config.yaml"
     if local_config.is_file():
         return local_config
 
@@ -116,9 +140,17 @@ def prepare_genrec_runtime(model_name: str) -> None:
 
     genrec_utils.get_config = _build_get_config(genrec_utils)
 
-    local_model_dir = LOCAL_MODELS_ROOT / model_name
-    if not local_model_dir.is_dir():
+    local_model_dir = _resolve_local_model_dir(model_name)
+    if local_model_dir is None:
         return
 
-    model_module = importlib.import_module(f"genrec.models.{model_name}.model")
+    package_name = f"genrec.models.{local_model_dir.name}"
+    package_module = importlib.import_module(package_name)
+    sys.modules[f"genrec.models.{model_name}"] = package_module
+
+    for submodule_name in ("model", "tokenizer", "trainer", "dataset"):
+        submodule = importlib.import_module(f"{package_name}.{submodule_name}")
+        sys.modules[f"genrec.models.{model_name}.{submodule_name}"] = submodule
+
+    model_module = sys.modules[f"genrec.models.{model_name}.model"]
     setattr(genrec_models, model_name, getattr(model_module, model_name))

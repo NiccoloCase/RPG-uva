@@ -36,6 +36,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/beauty"
 DATA_DIR="${REPO_ROOT}/artifacts/rpg/cache/AmazonReviews2014/Beauty"
 CKPT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
+ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
 CHECKPOINT_PATH="${CHECKPOINT_PATH:-}"
 EVAL_SEED="${EVAL_SEED:-2024}"
 
@@ -69,7 +70,7 @@ module load 2025
 module load Anaconda3/2025.06-1
 
 source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate rpg-uva
+conda activate "${ENV_PREFIX}"
 
 cd "${REPO_ROOT}"
 

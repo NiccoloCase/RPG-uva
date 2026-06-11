@@ -1,19 +1,16 @@
 #!/usr/bin/env python3
-"""Collect RPG grid-search results into tidy CSVs.
+"""Collect RPG grid-search results into CSVs.
 
 Two independent grids, two CSVs:
 
   inference grid  (run_infer_grid.sh):
     output/reproduction/rpg/grid/infer/{ds}/b{B}_k{K}_q{Q}/{session}/summary.json
     -> long rows: dataset,num_beams,n_edges,propagation_steps,metric,mean,std,n_seeds
-    Reads the eval-seed mean/std written by scripts/rpg_eval_seeds.py, so it picks
-    up whatever cutoffs were requested (e.g. ndcg@50, ndcg@100).
 
   training grid   (run_train_grid.sh):
     output/reproduction/rpg/grid/train/{ds}/*.err  (single-seed pipeline eval)
     -> long rows: dataset,lr,temperature,metric,value
-    Parses the "Test Results: OrderedDict([...])" line (KV regex; the pipeline
-    emits an OrderedDict repr, not a plain dict).
+    
 
 stdlib only -- runs anywhere, no conda needed.
 

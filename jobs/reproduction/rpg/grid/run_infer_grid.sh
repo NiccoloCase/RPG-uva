@@ -58,7 +58,10 @@ read -r -a EDGE_LIST  <<< "${EDGES:-30 50 100 200 500}"
 read -r -a QSTEP_LIST <<< "${QSTEPS:-1 2 3 5}"
 HIGH_BEAMS="${HIGH_BEAMS:-200}"          # beam width used while sweeping k and q
 EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026}"
-TOPK="${TOPK:-[5,10,50,100]}"
+# Reported NDCG/Recall cutoffs. The evaluator ASSERTS preds.shape[1] == max(topk)
+# and generate() returns at most num_beams candidates, so per cell we can only
+# request cutoffs <= num_beams. CUTOFFS is filtered per cell below.
+read -r -a CUTOFFS <<< "${CUTOFFS:-5 10 50 100}"
 FORCE="${FORCE:-0}"
 
 CKPT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
@@ -68,7 +71,17 @@ CFG="configs/rpg/repro/${DS}.yaml"
 
 mkdir -p "${OUT_ROOT}"
 
-echo "INFER_GRID_START dataset=${CAT} preset=${DS} m=${M} base(b/k/q)=${b0}/${k0}/${q0} topk=${TOPK} seeds=${EVAL_SEEDS}"
+echo "INFER_GRID_START dataset=${CAT} preset=${DS} m=${M} base(b/k/q)=${b0}/${k0}/${q0} cutoffs='${CUTOFFS[*]}' seeds=${EVAL_SEEDS}"
+
+# Python list literal of cutoffs <= the given beam width (assert needs max(topk) <= beams).
+topk_for_beams() {
+  local b="$1" out="" c
+  for c in "${CUTOFFS[@]}"; do
+    (( c <= b )) && out="${out:+$out,}$c"
+  done
+  [[ -z "$out" ]] && out="$b"   # guarantee non-empty if every cutoff exceeds beams
+  printf '[%s]' "$out"
+}
 
 module purge
 module load 2025
@@ -126,7 +139,8 @@ for cell in "${CELLS[@]}"; do
     fi
   fi
 
-  echo "  CELL b=${b} k=${k} q=${q} -> ${OUT_DIR}"
+  TOPK_CELL="$(topk_for_beams "${b}")"
+  echo "  CELL b=${b} k=${k} q=${q} topk=${TOPK_CELL} -> ${OUT_DIR}"
   conda run -n rpg-uva python scripts/rpg_eval_seeds.py \
     --checkpoint "${CKPT}" \
     --config "${CFG}" \
@@ -136,7 +150,7 @@ for cell in "${CELLS[@]}"; do
     --num_beams "${b}" \
     --n_edges "${k}" \
     --propagation_steps "${q}" \
-    --topk "${TOPK}"
+    --topk "${TOPK_CELL}"
 done
 
 echo "INFER_GRID_END dataset=${CAT} preset=${DS}"

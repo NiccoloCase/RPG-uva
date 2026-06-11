@@ -22,8 +22,8 @@ git submodule update --init --recursive
 Create the conda environment from the repo root:
 
 ```bash
-conda env create -f environment.yml
-conda activate rpg-uva
+conda env create -p "$(pwd)/artifacts/conda/rpg-uva" -f environment.yml
+conda activate "$(pwd)/artifacts/conda/rpg-uva"
 ```
 
 `environment.yml` mirrors the upstream dependency list and keeps the upstream CUDA 12.9 PyTorch index. If you need CPU-only PyTorch or a different CUDA build, change the `torch` lines there instead of touching `third_party/requirements.txt`.

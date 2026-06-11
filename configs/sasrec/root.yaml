@@ -1,0 +1,6 @@
+run_id: sasrec_repro
+data_dir: artifacts/sasrec/data
+log_dir: artifacts/sasrec/logs
+tensorboard_log_dir: artifacts/sasrec/tensorboard
+ckpt_dir: artifacts/sasrec/ckpt
+output_dir: output/reproduction/sasrec

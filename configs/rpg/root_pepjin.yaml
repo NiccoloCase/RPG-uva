@@ -1,0 +1,5 @@
+run_id: pepjin_root
+cache_dir: artifacts/pepjin/cache
+log_dir: artifacts/pepjin/logs
+tensorboard_log_dir: artifacts/pepjin/tensorboard
+ckpt_dir: artifacts/pepjin/ckpt

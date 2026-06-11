@@ -52,7 +52,7 @@ It uses:
 Validate graph fidelity on the original Sports pool:
 
 ```bash
-conda run -n rpg-uva python scripts/rpg_perf.py \
+conda run -p /gpfs/home6/$USER/RPG-uva/artifacts/conda/rpg-uva python scripts/rpg_perf.py \
   validate-graph \
   --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml
@@ -67,7 +67,7 @@ This writes `graphs/validate_graph_report.json` with three comparisons:
 Prebuild adjacency caches only:
 
 ```bash
-conda run -n rpg-uva python scripts/rpg_perf.py \
+conda run -p /gpfs/home6/$USER/RPG-uva/artifacts/conda/rpg-uva python scripts/rpg_perf.py \
   profile \
   --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml \
@@ -77,7 +77,7 @@ conda run -n rpg-uva python scripts/rpg_perf.py \
 Run inference-only profiling with cached graphs:
 
 ```bash
-conda run -n rpg-uva python scripts/rpg_perf.py \
+conda run -p /gpfs/home6/$USER/RPG-uva/artifacts/conda/rpg-uva python scripts/rpg_perf.py \
   profile \
   --checkpoint /gpfs/home6/$USER/RPG/artifacts/rpg/ckpt/model.pth \
   --config configs/rpg/perf/sports.yaml \
@@ -87,7 +87,7 @@ conda run -n rpg-uva python scripts/rpg_perf.py \
 Render the summary plot from a profiling session directory:
 
 ```bash
-conda run -n rpg-uva python scripts/rpg_perf.py \
+conda run -p /gpfs/home6/$USER/RPG-uva/artifacts/conda/rpg-uva python scripts/rpg_perf.py \
   plot \
   --input artifacts/rpg/perf/sports/<session-id> \
   --output artifacts/rpg/perf/sports/<session-id>/plots/perf_rpg.png

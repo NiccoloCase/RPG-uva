@@ -1,18 +1,23 @@
 #!/bin/bash
 
 # Training-hyperparameter grid for RPG: full retrain per (dataset, lr, temperature)
-# cell, then the pipeline's built-in test evaluation. Codebook length m is held at
-# each dataset's best-m (Sports 16, Beauty 32) 
+# cell, then the pipeline's built-in (single-seed) test evaluation. Codebook length m
+# is held at each dataset's best-m (Sports 16, Beauty 32)
+# The lr grid is centered per dataset on its tuned optimum so both heatmaps bracket
+# the optimum on each side (Sports tuned lr=0.003, Beauty tuned lr=0.01):
+#   Sports lr {0.001, 0.003, 0.01}   Beauty lr {0.003, 0.01, 0.03}   temp {0.01,0.03,0.07}
+# The tuned center cell of each dataset is already trained (the best-m sweep
+# checkpoint; its single-seed result is redecode_compare.csv repo_orig)
 #
-# Flattened array over 2 datasets x len(LRS) x len(TEMPS) cells (default 2x3x3 = 18).
+# Flattened array over 2 datasets x N_LR x N_TEMP cells (default 2x3x3 = 18).
 # Each task trains one cell from scratch and logs "Test Results: {...}" to its .err.
 #
 # Submit from this directory:
 #   cd jobs/reproduction/rpg/grid
 #   mkdir -p ../../../../output/reproduction/rpg/grid/train
 #   sbatch run_train_grid.sh
-# Override grids via env: LRS, TEMPS (space-separated). Keep --array in sync with
-# the cell count: 2 * |LRS| * |TEMPS| - 1.
+# Override grids via env: LRS_SPORTS, LRS_BEAUTY, TEMPS (space-separated). The two lr
+# grids MUST stay the same length, and keep --array in sync: 2 * N_LR * N_TEMP - 1.
 
 #SBATCH --job-name=rpg_train_grid
 #SBATCH --partition=gpu_a100
@@ -32,10 +37,16 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd -P)"
 
 DATASETS=(sports_and_outdoors beauty)
 BEST_M=(16 32)
-read -r -a LRS   <<< "${LRS:-0.001 0.003 0.01}"
-read -r -a TEMPS <<< "${TEMPS:-0.01 0.03 0.07}"
+read -r -a TEMPS      <<< "${TEMPS:-0.01 0.03 0.07}"
+read -r -a LRS_SPORTS <<< "${LRS_SPORTS:-0.001 0.003 0.01}"   # centered on tuned 0.003
+read -r -a LRS_BEAUTY <<< "${LRS_BEAUTY:-0.003 0.01 0.03}"    # centered on tuned 0.01
 
-N_LR=${#LRS[@]}
+if (( ${#LRS_SPORTS[@]} != ${#LRS_BEAUTY[@]} )); then
+  echo "ERROR: LRS_SPORTS and LRS_BEAUTY must be the same length (uniform array math)" >&2
+  exit 2
+fi
+
+N_LR=${#LRS_SPORTS[@]}
 N_TEMP=${#TEMPS[@]}
 CELLS_PER_DS=$(( N_LR * N_TEMP ))
 
@@ -52,6 +63,10 @@ fi
 
 DS=${DATASETS[$ds_idx]}
 M=${BEST_M[$ds_idx]}
+case "${ds_idx}" in
+  0) LRS=("${LRS_SPORTS[@]}") ;;
+  *) LRS=("${LRS_BEAUTY[@]}") ;;
+esac
 LR=${LRS[$lr_idx]}
 TEMP=${TEMPS[$temp_idx]}
 RUN_ID="rpg_grid_${DS}_lr${LR}_t${TEMP}"

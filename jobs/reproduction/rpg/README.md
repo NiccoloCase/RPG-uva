@@ -21,3 +21,6 @@ cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/beauty
 sbatch ./train.sh
 sbatch ./eval.sh
 ```
+
+For datasets not covered by the paper (e.g. Video_Games, Pet_Supplies), see
+`jobs/new_datasets/rpg/`.

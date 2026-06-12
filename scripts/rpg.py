@@ -20,6 +20,8 @@ PRESET_CONFIGS = {
     "beauty": REPO_ROOT / "configs" / "rpg" / "repro" / "beauty.yaml",
     "toys_and_games": REPO_ROOT / "configs" / "rpg" / "repro" / "toys_and_games.yaml",
     "cds_and_vinyl": REPO_ROOT / "configs" / "rpg" / "repro" / "cds_and_vinyl.yaml",
+    "video_games": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "video_games.yaml",
+    "pet_supplies": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "pet_supplies.yaml",
 }
 
 

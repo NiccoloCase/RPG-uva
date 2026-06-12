@@ -78,10 +78,10 @@ conda activate "${ENV_PREFIX}"
 runtime_stats_run python - <<'PY'
 import sys
 
-import recbole
+import accelerate
 import torch
 
 print("python_executable:", sys.executable)
-print("recbole_version:", getattr(recbole, "__version__", "unknown"))
+print("accelerate_version:", getattr(accelerate, "__version__", "unknown"))
 print("torch_version:", torch.__version__)
 PY

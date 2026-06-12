@@ -41,21 +41,35 @@ COLD_START_DATASET_SLUG="${COLD_START_DATASET_SLUG:-sports_and_outdoors}"
 COLD_START_PRESET="${COLD_START_PRESET:-${COLD_START_DATASET_SLUG}}"
 COLD_START_DATASET="${COLD_START_DATASET:-Sports_and_Outdoors}"
 COLD_START_OUTPUT_DIR="${COLD_START_OUTPUT_DIR:-${REPO_ROOT}/artifacts/sasrec/cold_start}"
-CHECKPOINT_DIR="${CHECKPOINT_DIR:-${REPO_ROOT}/artifacts/sasrec_modernized/ckpt}"
+LOCAL_CHECKPOINT_DIR="${REPO_ROOT}/artifacts/sasrec_modernized/ckpt"
+SHARED_CHECKPOINT_DIR="/projects/prjs2120/groups/group_16/artifacts/sasrec_modernized/ckpt"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
 if [[ $# -ge 1 ]]; then
   shift_count=1
 fi
 
+DEFAULT_CHECKPOINT_BASENAME="sasrec_modernized_${COLD_START_DATASET_SLUG}.pt"
+if [[ -z "${CHECKPOINT_DIR}" ]]; then
+  if [[ -f "${LOCAL_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" ]]; then
+    CHECKPOINT_DIR="${LOCAL_CHECKPOINT_DIR}"
+  elif [[ -f "${SHARED_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" ]]; then
+    CHECKPOINT_DIR="${SHARED_CHECKPOINT_DIR}"
+  else
+    CHECKPOINT_DIR="${LOCAL_CHECKPOINT_DIR}"
+  fi
+fi
+
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
-  CHECKPOINT_PATH="${CHECKPOINT_DIR}/sasrec_modernized_${COLD_START_DATASET_SLUG}.pt"
+  CHECKPOINT_PATH="${CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}"
 fi
 
 if [[ "${CHECKPOINT_PATH}" == *"<"* || "${CHECKPOINT_PATH}" == *">"* ]]; then
   echo "ERROR: checkpoint path contains angle-bracket placeholders: ${CHECKPOINT_PATH}" >&2
-  echo "Use a real path under ${REPO_ROOT}, for example:" >&2
-  echo "  ${CHECKPOINT_DIR}/sasrec_modernized_${COLD_START_DATASET_SLUG}.pt" >&2
+  echo "Use a real path, for example:" >&2
+  echo "  ${LOCAL_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" >&2
+  echo "  ${SHARED_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" >&2
   exit 3
 fi
 

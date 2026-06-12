@@ -33,21 +33,35 @@ ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/sasrec/perf/sports.yaml"
 PERF_CONFIG="${PERF_CONFIG:-${PERF_CONFIG_DEFAULT}}"
 PERF_DATASET_SLUG="${PERF_DATASET_SLUG:-sports_and_outdoors}"
-CHECKPOINT_DIR="${CHECKPOINT_DIR:-${REPO_ROOT}/artifacts/sasrec_modernized/ckpt}"
+LOCAL_CHECKPOINT_DIR="${REPO_ROOT}/artifacts/sasrec_modernized/ckpt"
+SHARED_CHECKPOINT_DIR="/projects/prjs2120/groups/group_16/artifacts/sasrec_modernized/ckpt"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
 if [[ $# -ge 1 ]]; then
   shift_count=1
 fi
 
+DEFAULT_CHECKPOINT_BASENAME="sasrec_modernized_${PERF_DATASET_SLUG}.pt"
+if [[ -z "${CHECKPOINT_DIR}" ]]; then
+  if [[ -f "${LOCAL_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" ]]; then
+    CHECKPOINT_DIR="${LOCAL_CHECKPOINT_DIR}"
+  elif [[ -f "${SHARED_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" ]]; then
+    CHECKPOINT_DIR="${SHARED_CHECKPOINT_DIR}"
+  else
+    CHECKPOINT_DIR="${LOCAL_CHECKPOINT_DIR}"
+  fi
+fi
+
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
-  CHECKPOINT_PATH="${CHECKPOINT_DIR}/sasrec_modernized_${PERF_DATASET_SLUG}.pt"
+  CHECKPOINT_PATH="${CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}"
 fi
 
 if [[ "${CHECKPOINT_PATH}" == *"<"* || "${CHECKPOINT_PATH}" == *">"* ]]; then
   echo "ERROR: checkpoint path contains angle-bracket placeholders: ${CHECKPOINT_PATH}" >&2
-  echo "Use a real path under ${REPO_ROOT}, for example:" >&2
-  echo "  ${CHECKPOINT_DIR}/sasrec_modernized_${PERF_DATASET_SLUG}.pt" >&2
+  echo "Use a real path, for example:" >&2
+  echo "  ${LOCAL_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" >&2
+  echo "  ${SHARED_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" >&2
   exit 3
 fi
 

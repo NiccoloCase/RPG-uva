@@ -81,31 +81,30 @@ def collect_train(train_root: Path) -> list[dict]:
     rows: list[dict] = []
     if not train_root.exists():
         return rows
-    for ds_dir in sorted(p for p in train_root.iterdir() if p.is_dir()):
-        for err in sorted(ds_dir.glob("*.err")):
-            text = err.read_text(errors="replace")
-            start = TRAIN_START_RE.search(text)
-            if not start:
-                continue
-            last_pairs: list[tuple[str, str]] = []
-            for line in text.splitlines():
-                if TEST_RESULTS_RE.search(line):
-                    pairs = KV_RE.findall(line)
-                    if pairs:
-                        last_pairs = pairs  # keep the final (test) eval
-            if not last_pairs:
-                print(f"  skip {ds_dir.name}/{err.name}: no Test Results yet")
-                continue
-            for metric, value in last_pairs:
-                rows.append(
-                    {
-                        "dataset": start["ds"],
-                        "lr": float(start["lr"]),
-                        "temperature": float(start["temp"]),
-                        "metric": metric,
-                        "value": float(value),
-                    }
-                )
+    for err in sorted(train_root.rglob("*.err")):
+        text = err.read_text(errors="replace")
+        start = TRAIN_START_RE.search(text)
+        if not start:
+            continue
+        last_pairs: list[tuple[str, str]] = []
+        for line in text.splitlines():
+            if TEST_RESULTS_RE.search(line):
+                pairs = KV_RE.findall(line)
+                if pairs:
+                    last_pairs = pairs  # keep the final (test) eval
+        if not last_pairs:
+            print(f"  skip {err.name}: no Test Results yet")
+            continue
+        for metric, value in last_pairs:
+            rows.append(
+                {
+                    "dataset": start["ds"],
+                    "lr": float(start["lr"]),
+                    "temperature": float(start["temp"]),
+                    "metric": metric,
+                    "value": float(value),
+                }
+            )
     rows.sort(key=lambda r: (r["dataset"], r["lr"], r["temperature"], r["metric"]))
     return rows
 

@@ -8,13 +8,14 @@ import os
 import sys
 from pathlib import Path
 
-from accelerate import Accelerator
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
 
+from accelerate import Accelerator
 from perf.config import build_repo_config_files, ensure_submodule_available, parse_override_args
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
 PRESET_CONFIGS = {
     "sports_and_outdoors": REPO_ROOT / "configs" / "rpg" / "repro" / "sports_and_outdoors.yaml",
     "beauty": REPO_ROOT / "configs" / "rpg" / "repro" / "beauty.yaml",

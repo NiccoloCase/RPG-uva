@@ -48,9 +48,6 @@ module purge
 module load 2025
 module load Anaconda3/2025.06-1
 
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
-
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/rpg.py --preset pet_supplies
+runtime_stats_run "${ENV_PREFIX}/bin/python" scripts/rpg.py --preset pet_supplies

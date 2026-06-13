@@ -16,9 +16,8 @@ from genrec.model import AbstractModel
 from genrec.tokenizer import AbstractTokenizer
 
 
-# Technically not denoising but demasking, because discrete diffusion
 class Denoiser(nn.Module):
-    def __init__(self, n_digit, n_embd, vocab_size, mask_token_id, n_layers, n_heads, dropout):
+    def __init__(self, n_digit, n_embd, vocab_size, mask_token_id, n_layers, n_heads, dropout, do_norm_and_scale):
         super().__init__()
         self.n_digit = n_digit
         self.n_embd = n_embd
@@ -45,6 +44,8 @@ class Denoiser(nn.Module):
             norm=final_norm,
         )
 
+        self.do_norm_and_scale = do_norm_and_scale
+
 
     def init_target_embeddings(self, gpt2_wte_weights):
         # Share embedding table weights with encoder
@@ -66,12 +67,14 @@ class Denoiser(nn.Module):
         # Get token embeddings for unmasked tokens
         safe_tokens = target_tokens.masked_fill(is_masked, 0)
         token_embs = self.target_embeddings(safe_tokens) # (B, n_digit, n_embd)
-        token_embs = F.normalize(token_embs, dim=-1, eps=1e-8)
+        if self.do_norm_and_scale:
+            token_embs = F.normalize(token_embs, dim=-1, eps=1e-8)
 
         # Get mask embeddings for masked tokens
         pos_ids = torch.arange(self.n_digit, device=target_tokens.device)
         mask_embs = self.mask_embeddings(pos_ids).unsqueeze(0).expand(B, -1, -1) # (B, n_digit, n_embd)
-        mask_embs = F.normalize(mask_embs, dim=-1, eps=1e-8)
+        if self.do_norm_and_scale:
+            mask_embs = F.normalize(mask_embs, dim=-1, eps=1e-8)
 
         # Set token/ mask embeddings
         tgt = torch.where(is_masked.unsqueeze(-1), mask_embs, token_embs)
@@ -115,6 +118,7 @@ class DRPG(AbstractModel):
 
         self.n_digit = self.tokenizer.n_digit
         self.mask_token_id = tokenizer.vocab_size
+        self.do_norm_and_scale = config['do_norm_and_scale']
 
         self.denoiser = Denoiser(
             n_digit=self.n_digit,
@@ -123,7 +127,8 @@ class DRPG(AbstractModel):
             mask_token_id=self.mask_token_id,
             n_layers=config['diffusion_layers'],
             n_heads=config['diffusion_heads'],
-            dropout=config['dropout']
+            dropout=config['dropout'],
+            do_norm_and_scale=self.do_norm_and_scale,
         )
         # Share embedding weights
         self.denoiser.init_target_embeddings(self.gpt2.wte.weight)
@@ -183,10 +188,6 @@ class DRPG(AbstractModel):
             _was_training = self.denoiser.training
             self.denoiser.eval()
 
-            codebook_range = self.n_digit * self.config['codebook_size'] + 1
-            ocn_token_emb = self.gpt2.wte.weight[1:codebook_range].detach()
-            ocn_token_emb = F.normalize(ocn_token_emb, dim=-1, eps=1e-8)
-            ocn_token_embs = torch.chunk(ocn_token_emb, self.n_digit, dim=0)
             offsets = torch.arange(self.n_digit, device=target_tokens.device) * self.config['codebook_size'] + 1
 
             def score_with_mask(mask_state: torch.Tensor) -> torch.Tensor:
@@ -227,7 +228,7 @@ class DRPG(AbstractModel):
 
                     cur_labels = target_tokens.clone()
                     cur_labels = cur_labels - offsets.unsqueeze(0)
-                    # cur_labels[~cur_mask] = self.loss_fct.ignore_index
+                    cur_labels[~cur_mask] = self.loss_fct.ignore_index
 
                     all_target_tokens.append(cur_tokens)
                     all_labels.append(cur_labels)
@@ -300,18 +301,23 @@ class DRPG(AbstractModel):
 
         # Pass through the denoiser
         states = self.denoiser(target_tokens, memory_context, memory_padding_mask)
-        states = F.normalize(states, dim=-1, eps=1e-8)
+        if self.do_norm_and_scale:
+            states = F.normalize(states, dim=-1, eps=1e-8)
 
         # Extract token embeddings for logit computation
         codebook_range = self.n_digit * self.config['codebook_size'] + 1
         token_emb = self.gpt2.wte.weight[1:codebook_range]
-        token_emb = F.normalize(token_emb, dim=-1, eps=1e-8)
+        if self.do_norm_and_scale:
+            token_emb = F.normalize(token_emb, dim=-1, eps=1e-8)
         token_embs = torch.chunk(token_emb, self.n_digit, dim=0)
 
         # Compute logits per digit
         logits = []
         for i in range(self.n_digit):
-            logit = torch.matmul(states[:, i, :], token_embs[i].T) / self.temperature
+            if self.do_norm_and_scale:
+                logit = torch.matmul(states[:, i, :], token_embs[i].T) / self.temperature
+            else:
+                logit = torch.matmul(states[:, i, :], token_embs[i].T)
             logits.append(logit)
 
         logits_stack = torch.stack(logits, dim=1)  # (B, n_digit, codebook_size)
@@ -479,7 +485,7 @@ class DRPG(AbstractModel):
 
                 offsets = torch.arange(self.n_digit, device=device) * self.config['codebook_size'] + 1
 
-                final_logits_stack = None
+                final_logits = None
                 steps = min(denoise_steps, self.n_digit)
 
                 for step in range(1, steps+1):
@@ -494,7 +500,7 @@ class DRPG(AbstractModel):
                     logits = denoiser_outputs['logits']
 
                     if step == steps:
-                        final_logits_stack = logits  # (B, n_digit, codebook_size)
+                        final_logits = logits  # (B, n_digit, codebook_size)
 
                     probs = torch.softmax(logits, dim=-1)
                     max_probs, pred_ids = probs.max(dim=-1)
@@ -519,7 +525,7 @@ class DRPG(AbstractModel):
 
                     current_targets = next_targets
 
-                token_logits = F.log_softmax(final_logits_stack, dim=-1).view(B, -1)
+                token_logits = F.log_softmax(final_logits, dim=-1).view(B, -1)
 
                 if self.generate_w_decoding_graph:
                     if not self.init_flag:
@@ -537,12 +543,6 @@ class DRPG(AbstractModel):
                         index=(self.item_id2tokens[1:,:] - 1).unsqueeze(0).expand(token_logits.shape[0], -1, -1)
                     ).mean(dim=-1)
 
-                    # ----------------------------
-                    # top_scores, top_idx = item_logits[0].topk(5, dim=-1)
-                    # print(f"\n[DEBUG GENERATE] Top 5 Item Scores (Batch 0): {top_scores.tolist()}")
-                    # print(f"[DEBUG GENERATE] Top 5 Item Indices (Batch 0): {top_idx.tolist()}")
-                    # print("Logit Spread (Max - Min):", (logits.max() - logits.min()).item())
-                    # ----------------------------
                     preds = item_logits.topk(n_return_sequences, dim=-1).indices + 1
                     return preds.unsqueeze(-1)
         finally:

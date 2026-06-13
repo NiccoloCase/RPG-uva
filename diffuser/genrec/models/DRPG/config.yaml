@@ -52,3 +52,4 @@ denoise_inference_steps: 4
 n_views: 2
 
 label_smoothing: 0.1
+do_norm_and_scale: true

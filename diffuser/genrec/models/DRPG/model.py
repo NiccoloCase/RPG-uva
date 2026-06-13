@@ -18,16 +18,15 @@ from genrec.tokenizer import AbstractTokenizer
 
 # Technically not denoising but demasking, because discrete diffusion
 class Denoiser(nn.Module):
-    def __init__(self, n_digit, n_embd, vocab_size, n_layers, n_heads, dropout):
+    def __init__(self, n_digit, n_embd, vocab_size, mask_token_id, n_layers, n_heads, dropout):
         super().__init__()
         self.n_digit = n_digit
         self.n_embd = n_embd
-        self.mask_token_id = vocab_size  # Last index is [MASK] token
+        self.mask_token_id = mask_token_id
 
         self.target_embeddings = nn.Embedding(vocab_size, n_embd)
-        # Seperate mask embedding per position so no positional embeddings, like in diffGRM
+        # Separate mask embedding per position so no positional embeddings, like in diffGRM
         self.mask_embeddings = nn.Embedding(n_digit, n_embd)
-        self.pos_embedding = nn.Embedding(n_digit, n_embd)
 
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=n_embd,
@@ -38,7 +37,14 @@ class Denoiser(nn.Module):
             activation='gelu',
             norm_first=True,
         )
-        self.transformer = nn.TransformerDecoder(decoder_layer, num_layers=n_layers)
+
+        final_norm = nn.LayerNorm(n_embd)
+        self.transformer = nn.TransformerDecoder(
+            decoder_layer,
+            num_layers=n_layers,
+            norm=final_norm,
+        )
+
 
     def init_target_embeddings(self, gpt2_wte_weights):
         # Share embedding table weights with encoder
@@ -46,11 +52,11 @@ class Denoiser(nn.Module):
         with torch.no_grad():
             self.mask_embeddings.weight.normal_(0, 0.02)
 
-    def forward(self, target_tokens, memory_context, memory_padding_mask):
+    def forward(self, target_tokens, user_history, memory_padding_mask):
         """
         Args:
             target_tokens (batch_size, n_digit): (Partially) masked target token IDs
-            memory_context (batch_size, seq_len, n_embd): Full sequence context history
+            user_history (batch_size, seq_len, n_embd): Full sequence context history
             memory_padding_mask (batch_size, seq_len): Boolean mask where True blocks attention
         """
         B = target_tokens.size(0)
@@ -60,18 +66,19 @@ class Denoiser(nn.Module):
         # Get token embeddings for unmasked tokens
         safe_tokens = target_tokens.masked_fill(is_masked, 0)
         token_embs = self.target_embeddings(safe_tokens) # (B, n_digit, n_embd)
+        token_embs = F.normalize(token_embs, dim=-1, eps=1e-8)
 
         # Get mask embeddings for masked tokens
         pos_ids = torch.arange(self.n_digit, device=target_tokens.device)
         mask_embs = self.mask_embeddings(pos_ids).unsqueeze(0).expand(B, -1, -1) # (B, n_digit, n_embd)
+        mask_embs = F.normalize(mask_embs, dim=-1, eps=1e-8)
 
         # Set token/ mask embeddings
         tgt = torch.where(is_masked.unsqueeze(-1), mask_embs, token_embs)
-        tgt = tgt + self.pos_embedding(pos_ids).unsqueeze(0)
 
         output_states = self.transformer(
             tgt=tgt,
-            memory=memory_context,
+            memory=user_history,
             memory_key_padding_mask=memory_padding_mask
         )
 
@@ -89,9 +96,8 @@ class DRPG(AbstractModel):
 
         self.item_id2tokens = self._map_item_tokens().to(self.config['device'])
 
-        # TODO: Replace self.gpt with just an nn.Embedding() (with same hparams as self.gpt has) and a custom encoder
         gpt2config = GPT2Config(
-            vocab_size=tokenizer.vocab_size,
+            vocab_size=tokenizer.vocab_size + 1,  # +1 for the MASK token
             n_positions=tokenizer.max_token_seq_len,
             n_embd=config['n_embd'],
             n_layer=config['n_layer'],
@@ -109,17 +115,12 @@ class DRPG(AbstractModel):
 
         self.n_digit = self.tokenizer.n_digit
         self.mask_token_id = tokenizer.vocab_size
-        self.num_timesteps = config['num_timesteps']
-
-        # Digit positional embeddings instead of diffGRM's itemMLP, since the itemMLP contains way to many parameters due to our large n_digits compared to diffGRM's 4 digits.
-        self.digit_pos_emb = nn.Embedding(self.n_digit, config['n_embd'])
-        with torch.no_grad():
-            self.digit_pos_emb.weight.normal_(0, 0.02)
 
         self.denoiser = Denoiser(
             n_digit=self.n_digit,
             n_embd=config['n_embd'],
             vocab_size=tokenizer.vocab_size,
+            mask_token_id=self.mask_token_id,
             n_layers=config['diffusion_layers'],
             n_heads=config['diffusion_heads'],
             dropout=config['dropout']
@@ -128,7 +129,7 @@ class DRPG(AbstractModel):
         self.denoiser.init_target_embeddings(self.gpt2.wte.weight)
 
         self.temperature = self.config['temperature']
-        self.loss_fct = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.ignored_label, label_smoothing=0.1)  # Label smoothing like in eq. 3 from https://arxiv.org/pdf/2510.21805
+        self.loss_fct = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.ignored_label, label_smoothing=config['label_smoothing'])  # Label smoothing like in eq. 3 from https://arxiv.org/pdf/2510.21805
 
         # Graph-constrained decoding
         self.generate_w_decoding_graph = False
@@ -161,130 +162,112 @@ class DRPG(AbstractModel):
                 f'#Total trainable parameters: {total_params}\n'
 
     def forward(self, batch: dict, return_loss=True) -> torch.Tensor:
-        input_tokens = self.item_id2tokens[batch['input_ids']]  # (B, seq_len, n_codebook)
-
-        # Mix item position into input embeddings
+        input_tokens = batch['history_sid']
         tok_emb = self.gpt2.wte(input_tokens)
-        pos_ids = torch.arange(self.n_digit, device=tok_emb.device)
-        pos_emb = self.digit_pos_emb(pos_ids)
-        tok_emb = tok_emb + pos_emb.view(1, 1, self.n_digit, -1)
+
         input_embs = tok_emb.mean(dim=-2)
 
-        # Run encoder
         outputs = self.gpt2(
             inputs_embeds=input_embs,
-            attention_mask=batch['attention_mask']
-        )  # outputs.last_hidden_state: (B, seq_len_ n_embed)
+            attention_mask=batch['history_mask'].long(),  # 1=valid, 0=pad for GPT2 encoder
+        )  # outputs.last_hidden_state: (B, seq_len, n_embed)
 
         if return_loss:
-            assert 'labels' in batch, 'The batch must contain the labels.'
-            target_labels = self.item_id2tokens[batch['labels']]  # (B, seq_len, n_digit)
-            label_mask = batch['labels'].view(-1) != -100  # (B*seq_len)
+            memory_context = outputs.last_hidden_state  # (B, seq_len, n_embd)
+            memory_padding_mask = ~batch['history_mask']  # (B, seq_len)
 
-            batch_idx, time_idx = torch.where(label_mask)
+            target_tokens = batch['decoder_labels'].clone()
+            B = target_tokens.size(0)
 
-            B = batch_idx.size(0)
-            seq_len = outputs.last_hidden_state.size(1)
-
-            full_sequence_context = outputs.last_hidden_state[batch_idx]  # (B, seq_len, n_embd)
-
-            base_pad_mask = (batch['attention_mask'] == 0)  # (B, seq_len)
-            mem_pad_mask = base_pad_mask[batch_idx]  # (B, seq_len)
-
-            # Get last non-padding item
-            seq_range = torch.arange(seq_len, device=outputs.last_hidden_state.device).unsqueeze(0)
-            valid_indices = (~mem_pad_mask).long() * seq_range
-            masked_valid_indices = torch.where(seq_range <= time_idx.unsqueeze(1), valid_indices, -1)
-            safe_time_idx = masked_valid_indices.max(dim=1)[0]
-
-            safe_time_idx = torch.where(safe_time_idx == -1, time_idx, safe_time_idx)
-            causal_mask = seq_range > safe_time_idx.unsqueeze(1)  # (B, seq_len)
-            # Mask out padding AND future tokens
-            final_memory_mask = mem_pad_mask | causal_mask  # (B, seq_len)
-
-            selected_target_labels = target_labels[batch_idx, time_idx]  # (B, n_digit)
-            target_tokens = selected_target_labels.clone()  # (B, n_digit)
-
-            # On-Policy Confidence Estimation (OCN). See section 3.3 in https://arxiv.org/pdf/2510.21805. Focus on most uncertain digits.
-            # "we compute the difficulty order once per example with a single fully masked pass, reuse the encoder output across the 𝑅 views"
+            # On-Policy Confidence Estimation (OCN)
             _was_training = self.denoiser.training
             self.denoiser.eval()
-            with torch.no_grad():
-                # "run the MD-Decoder once on a fully masked 𝑛-digit input"
-                dummy_masked = torch.full_like(target_tokens, self.denoiser.mask_token_id)
 
-                baseline_states = self.denoiser(dummy_masked, full_sequence_context, final_memory_mask)
-                baseline_states = F.normalize(baseline_states, dim=-1, eps=1e-8)
-                baseline_states_chunked = torch.chunk(baseline_states, self.n_digit, dim=1)
+            codebook_range = self.n_digit * self.config['codebook_size'] + 1
+            ocn_token_emb = self.gpt2.wte.weight[1:codebook_range].detach()
+            ocn_token_emb = F.normalize(ocn_token_emb, dim=-1, eps=1e-8)
+            ocn_token_embs = torch.chunk(ocn_token_emb, self.n_digit, dim=0)
+            offsets = torch.arange(self.n_digit, device=target_tokens.device) * self.config['codebook_size'] + 1
 
-                confidence = torch.zeros((B, self.n_digit), device=target_tokens.device)
+            def score_with_mask(mask_state: torch.Tensor) -> torch.Tensor:
+                """Scores confidence given an arbitrary mixture of masks and true values."""
+                temp_tokens = target_tokens.clone()
+                temp_tokens[mask_state] = self.denoiser.mask_token_id
 
-                token_emb_ocn = self.gpt2.wte.weight[1:-1].detach()
-                token_emb_ocn = F.normalize(token_emb_ocn, dim=-1, eps=1e-8)
-                token_embs_ocn = torch.chunk(token_emb_ocn, self.n_digit, dim=0)
-                for k in range(self.n_digit):
-                    logits_i = torch.matmul(baseline_states_chunked[k].squeeze(1), token_embs_ocn[k].T) / self.temperature
-                    logits_i = torch.clamp(logits_i, min=-50.0, max=50.0)
-                    probs_i = F.softmax(logits_i, dim=-1)
+                denoiser_outputs = self.forward_denoiser_only({
+                    'target_tokens': temp_tokens,
+                    'memory_context': memory_context,
+                    'memory_padding_mask': memory_padding_mask
+                })
 
-                    confidence[:, k] = probs_i.max(dim=-1).values
-            if _was_training:
-                self.denoiser.train()
+                # logits = torch.clamp(denoiser_outputs['logits'], min=-50.0, max=50.0)
+                logits = denoiser_outputs['logits']
+                probs = F.softmax(logits, dim=-1)
 
-            # Sort digits by confidence
-            order = torch.argsort(confidence, dim=-1, descending=False)
+                conf = probs.max(dim=-1).values
+
+                return conf
 
             all_target_tokens = []
             all_labels = []
-            offsets = torch.arange(self.n_digit, device=target_tokens.device) * self.config['codebook_size'] + 1
 
-            # "OCN constructs a small nested set of views per sample"
             n_views = self.config['n_views']
-            # "OCN constructs a small nested set of views per sample ordered from light to heavy corruption"
             mask_steps = torch.linspace(1, self.n_digit, steps=n_views).long().tolist()
-            for num_to_mask in mask_steps:
-                cur_mask = torch.zeros((B, self.n_digit), dtype=torch.bool, device=target_tokens.device)
+            # Sort descending to build a trajectory from heavy corruption to light corruption
+            mask_steps_descending = sorted(mask_steps, reverse=True)
 
-                # Select least confident digits and mask them
-                cols_to_mask = order[:, :num_to_mask]
-                cur_mask.scatter_(1, cols_to_mask, True)
-                cur_tokens = target_tokens.clone()
-                cur_tokens[cur_mask] = self.denoiser.mask_token_id
+            # Start with a fully masked tracking state (True = Masked)
+            cur_mask = torch.ones((B, self.n_digit), dtype=torch.bool, device=target_tokens.device)
 
-                # Shift to 0-based codebook index & ignore unmasked positions
-                cur_labels = selected_target_labels.clone()
-                cur_labels = cur_labels - offsets.unsqueeze(0)
-                cur_labels[~cur_mask] = self.loss_fct.ignore_index
+            with torch.no_grad():
+                for i, num_to_mask in enumerate(mask_steps_descending):
+                    # 2. Build and store training inputs/labels for this view state
+                    cur_tokens = target_tokens.clone()
+                    cur_tokens[cur_mask] = self.denoiser.mask_token_id
 
-                all_target_tokens.append(cur_tokens)
-                all_labels.append(cur_labels)
+                    cur_labels = target_tokens.clone()
+                    cur_labels = cur_labels - offsets.unsqueeze(0)
+                    # cur_labels[~cur_mask] = self.loss_fct.ignore_index
+
+                    all_target_tokens.append(cur_tokens)
+                    all_labels.append(cur_labels)
+
+                    # 3. Update the mask dynamically for the next lighter view step
+                    if i < len(mask_steps_descending) - 1:
+                        next_num_to_mask = mask_steps_descending[i + 1]
+                        num_to_reveal = num_to_mask - next_num_to_mask
+
+                        # Guard against potential 0 step adjustments from integer rounding
+                        if num_to_reveal > 0:
+                            # Contextual evaluation on the current arbitrary mask layout
+                            confidence = score_with_mask(cur_mask)
+
+                            # Ignore already unmasked slots by penalizing their confidence
+                            confidence[~cur_mask] = -1e9
+
+                            # Reveal the slots the model is currently most certain about
+                            _, cols_to_reveal = torch.topk(confidence, k=num_to_reveal, dim=-1, largest=True)
+                            cur_mask.scatter_(1, cols_to_reveal, False)
+
+            if _was_training:
+                self.denoiser.train()
 
             target_tokens_multi = torch.cat(all_target_tokens, dim=0)  # (B * n_views, n_digit)
             shifted_labels_multi = torch.cat(all_labels, dim=0)  # (B * n_views, n_digit)
 
-            memory_context_multi = full_sequence_context.repeat(n_views, 1, 1)  # (B * n_views, seq_len, d)
-            memory_mask_multi = final_memory_mask.repeat(n_views, 1)  # (B * n_views, seq_len)
+            memory_context_multi = memory_context.repeat(n_views, 1, 1)  # (B * n_views, seq_len, d)
+            memory_mask_multi = memory_padding_mask.repeat(n_views, 1)  # (B * n_views, seq_len)
 
-            # Demask with Cross-Attention Head
-            final_states = self.denoiser(target_tokens_multi, memory_context_multi, memory_mask_multi)
+            denoiser_outputs = self.forward_denoiser_only({
+                'target_tokens': target_tokens_multi,
+                'memory_context': memory_context_multi,
+                'memory_padding_mask': memory_mask_multi
+            })
 
-            final_states = F.normalize(final_states, dim=-1, eps=1e-8)
-            final_states = torch.chunk(final_states, self.n_digit, dim=1)
-
-            token_emb = self.gpt2.wte.weight[1:-1]
-            token_emb = F.normalize(token_emb, dim=-1, eps=1e-8)
-            token_embs = torch.chunk(token_emb, self.n_digit, dim=0)
-
-            token_logits = []
-            for k in range(self.n_digit):
-                logits_k = torch.matmul(final_states[k].squeeze(dim=1), token_embs[k].T) / self.temperature
-
-                logits_k = torch.clamp(logits_k, min=-50.0, max=50.0)
-                token_logits.append(logits_k)
+            logits = denoiser_outputs['logits']  # (B_multi, n_digit, codebook_size)
 
             # micro-averaging loss like diffGRM instead of macro-avg loss in RPG, slightly more stable because not every digit is masked an equal number of time
-            logits_stack = torch.stack(token_logits, dim=1)  # (B_multi, n_digit, codebook_size)
-            logits_flat = logits_stack.view(-1, self.config['codebook_size'])
+            logits_flat = logits.view(-1, self.config['codebook_size'])
             labels_flat = shifted_labels_multi.view(-1)
 
             outputs.loss = self.loss_fct(logits_flat, labels_flat)
@@ -292,9 +275,51 @@ class DRPG(AbstractModel):
         # in order to predict with all context. Decoding is done in generate()
         else:
             outputs.memory_context = outputs.last_hidden_state  # (B, seq_len, n_embd)
-            outputs.memory_padding_mask = (batch['attention_mask'] == 0)  # (B, seq_len)
+            outputs.memory_padding_mask = ~batch['history_mask']  # (B, seq_len)
 
         return outputs
+
+    def forward_denoiser_only(self, batch: dict) -> dict:
+        """
+        Runs only the denoiser (decoder) part of the model.
+
+        Args:
+            batch: Dictionary containing:
+                - target_tokens: (B, n_digit)
+                - memory_context: (B, seq_len, n_embd)
+                - memory_padding_mask: (B, seq_len)
+
+        Returns:
+            A dictionary containing 'hidden_states' and 'logits'.
+        """
+        device = next(self.parameters()).device
+
+        target_tokens = batch['target_tokens'].to(device)  # decoder_inputs in DiffGRM
+        memory_context = batch['memory_context'].to(device)  # encoder_hidden in DiffGRM
+        memory_padding_mask = batch['memory_padding_mask'].to(device)  # Different from DiffGRM's mask_positions. Masks are already in target_tokens and read in Denoiser.forward()
+
+        # Pass through the denoiser
+        states = self.denoiser(target_tokens, memory_context, memory_padding_mask)
+        states = F.normalize(states, dim=-1, eps=1e-8)
+
+        # Extract token embeddings for logit computation
+        codebook_range = self.n_digit * self.config['codebook_size'] + 1
+        token_emb = self.gpt2.wte.weight[1:codebook_range]
+        token_emb = F.normalize(token_emb, dim=-1, eps=1e-8)
+        token_embs = torch.chunk(token_emb, self.n_digit, dim=0)
+
+        # Compute logits per digit
+        logits = []
+        for i in range(self.n_digit):
+            logit = torch.matmul(states[:, i, :], token_embs[i].T) / self.temperature
+            logits.append(logit)
+
+        logits_stack = torch.stack(logits, dim=1)  # (B, n_digit, codebook_size)
+
+        return {
+            "hidden_states": states,
+            "logits": logits_stack
+        }
 
     def build_ii_sim_mat(self):
         # Assuming n_digit=32, codebook_size=256
@@ -305,13 +330,15 @@ class DRPG(AbstractModel):
         # 1) Reshape first 8192 rows of token embeddings into [32, 256, d]
         #    ignoring 2 rows which might be special tokens
         #    shape: (32, 256, d)
-        token_embs = self.gpt2.wte.weight[1:-1].view(n_digit, codebook_size, -1)
+        # token_embs = self.gpt2.wte.weight[1:-1].view(n_digit, codebook_size, -1)
+        codebook_range = self.n_digit * self.config['codebook_size'] + 1
+        token_embs = self.gpt2.wte.weight[1:codebook_range].view(n_digit, codebook_size, -1)
 
         # 2) Normalize each (256, d) sub-matrix to compute pairwise cosine similarities
         #    We'll do this in a batch for all 32 groups.
         # We do a batch matrix multiply to get (256 x 256) for each group
         # => token_sims: (32, 256, 256)
-        token_embs = F.normalize(token_embs, dim=-1)
+        token_embs = F.normalize(token_embs, dim=-1, eps=1e-8)
         token_sims = torch.bmm(token_embs, token_embs.transpose(1, 2))
 
         # 3) Convert [-1, 1] to [0, 1] range
@@ -431,79 +458,93 @@ class DRPG(AbstractModel):
         return topk_nodes_sorted[:,:n_return_sequences].unsqueeze(-1), visited_counts
 
     def generate(self, batch, n_return_sequences=1):
-        outputs = self.forward(batch, return_loss=False)
-        memory_context = outputs.memory_context
-        memory_padding_mask = outputs.memory_padding_mask
-        B = memory_context.size(0)
-        device = memory_context.device
+        was_training = self.training
+        self.eval()
+        try:
+            with torch.no_grad():
+                outputs = self.forward(batch, return_loss=False)
+                memory_context = outputs.memory_context
+                memory_padding_mask = outputs.memory_padding_mask
+                B = memory_context.size(0)
+                device = memory_context.device
 
-        denoise_steps = self.config['denoise_inference_steps']
+                denoise_steps = self.config['denoise_inference_steps']
 
-        # Target starts fully masked
-        current_targets = torch.full(
-            (B, self.n_digit),
-            self.denoiser.mask_token_id,
-            device=device
-        )
+                # Target starts fully masked
+                current_targets = torch.full(
+                    (B, self.n_digit),
+                    self.denoiser.mask_token_id,
+                    device=device
+                )
 
-        token_emb = self.gpt2.wte.weight[1:-1]
-        token_emb = F.normalize(token_emb, dim=-1)
-        token_embs = torch.chunk(token_emb, self.n_digit, dim=0)
-        for step in range(1, denoise_steps + 1):
-            states = self.denoiser(current_targets, memory_context, memory_padding_mask)  # (B, n_digit, n_embd)
-            states = F.normalize(states, dim=-1)
+                offsets = torch.arange(self.n_digit, device=device) * self.config['codebook_size'] + 1
 
-            logits = [torch.matmul(states[:,i,:], token_embs[i].T) / self.temperature for i in range(self.n_digit)]
+                final_logits_stack = None
+                steps = min(denoise_steps, self.n_digit)
 
-            # If final step, prepare logit matrix for Graph Search
-            if step == denoise_steps:
-                logits = [F.log_softmax(logit, dim=-1) for logit in logits]
-                token_logits = torch.cat(logits, dim=-1)  # (B, n_digit * codebook_size)
-                break
+                for step in range(1, steps+1):
+                    is_masked = (current_targets == self.denoiser.mask_token_id)
 
-            # If intermediate step, lock in the most confident predictions
-            logits_stack = torch.stack(logits, dim=1)  # (B, n_digit, codebook_size)
-            probs = torch.softmax(logits_stack, dim=-1)
-            max_probs, pred_ids = probs.max(dim=-1)  # max confidence, ID (0-codebook_size-1)
+                    denoiser_outputs = self.forward_denoiser_only({
+                        'target_tokens': current_targets,
+                        'memory_context': memory_context,
+                        'memory_padding_mask': memory_padding_mask
+                    })
 
-            # Local pred_id (0-codebook_size-1) to global vocab token ID
-            offsets = torch.arange(self.n_digit, device=device) * self.config['codebook_size'] + 1
-            global_pred_ids = pred_ids + offsets.unsqueeze(0)
+                    logits = denoiser_outputs['logits']
 
-            offsets = torch.arange(self.n_digit, device=device) * self.config['codebook_size'] + 1
-            global_pred_ids = pred_ids + offsets.unsqueeze(0)
+                    if step == steps:
+                        final_logits_stack = logits  # (B, n_digit, codebook_size)
 
-            is_masked = (current_targets == self.denoiser.mask_token_id)
+                    probs = torch.softmax(logits, dim=-1)
+                    max_probs, pred_ids = probs.max(dim=-1)
 
-            confidence = max_probs.clone()
-            confidence[~is_masked] = 1e9
+                    global_pred_ids = pred_ids + offsets.unsqueeze(0)
 
-            # Unmask with cosine strategy similar to maskGIT. Unmask few tokens early on and more later when the model has more context.
-            progress = step / denoise_steps
-            ratio_to_mask = math.cos(progress * math.pi / 2.0)
-            num_to_mask = max(0, int(self.n_digit * ratio_to_mask))
+                    confidence = max_probs.clone()
+                    confidence[~is_masked] = 1e9
 
-            next_targets = global_pred_ids.clone()
-            # Reapply mask to lowest confidence positions
-            if num_to_mask > 0:
-                mask_idx = torch.topk(confidence, k=num_to_mask, dim=-1, largest=False).indices
-                next_targets.scatter_(1, mask_idx, self.denoiser.mask_token_id)
-            current_targets = next_targets
+                    if step == steps:
+                        # If it's the final step munmask everything that is left. 0 tokens remain masked.
+                        num_to_mask = 0
+                    else:
+                        # Else only unmask one (n_digit=4 & step=1 = 3 masked.)
+                        num_to_mask = self.n_digit - step
 
-        if self.generate_w_decoding_graph:
-            if not self.init_flag:
-                self.init_graph()
-                self.init_flag = True
-            outputs = self.graph_propagation(
-                token_logits=token_logits,
-                n_return_sequences=n_return_sequences
-            )
-            return outputs
-        else:
-            item_logits = torch.gather(
-                input=token_logits.unsqueeze(-2).expand(-1, self.dataset.n_items, -1),  # (batch_size, n_items, n_digit)
-                dim=-1,
-                index=(self.item_id2tokens[1:,:] - 1).unsqueeze(0).expand(token_logits.shape[0], -1, -1)  # (batch_size, n_items, code_dim)
-            ).mean(dim=-1)
-            preds = item_logits.topk(n_return_sequences, dim=-1).indices + 1
-            return preds.unsqueeze(-1)
+                    next_targets = torch.where(is_masked, global_pred_ids, current_targets)
+                    if num_to_mask > 0:
+                        # Keep lowest confidence masked
+                        mask_idx = torch.topk(confidence, k=num_to_mask, dim=-1, largest=False).indices
+                        next_targets.scatter_(1, mask_idx, self.denoiser.mask_token_id)
+
+                    current_targets = next_targets
+
+                token_logits = F.log_softmax(final_logits_stack, dim=-1).view(B, -1)
+
+                if self.generate_w_decoding_graph:
+                    if not self.init_flag:
+                        self.init_graph()
+                        self.init_flag = True
+                    outputs = self.graph_propagation(
+                        token_logits=token_logits,
+                        n_return_sequences=n_return_sequences
+                    )
+                    return outputs
+                else:
+                    item_logits = torch.gather(
+                        input=token_logits.unsqueeze(-2).expand(-1, self.dataset.n_items, -1),
+                        dim=-1,
+                        index=(self.item_id2tokens[1:,:] - 1).unsqueeze(0).expand(token_logits.shape[0], -1, -1)
+                    ).mean(dim=-1)
+
+                    # ----------------------------
+                    # top_scores, top_idx = item_logits[0].topk(5, dim=-1)
+                    # print(f"\n[DEBUG GENERATE] Top 5 Item Scores (Batch 0): {top_scores.tolist()}")
+                    # print(f"[DEBUG GENERATE] Top 5 Item Indices (Batch 0): {top_idx.tolist()}")
+                    # print("Logit Spread (Max - Min):", (logits.max() - logits.min()).item())
+                    # ----------------------------
+                    preds = item_logits.topk(n_return_sequences, dim=-1).indices + 1
+                    return preds.unsqueeze(-1)
+        finally:
+            if was_training:
+                self.train()

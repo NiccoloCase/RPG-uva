@@ -1,3 +1,4 @@
+# Adapted from
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 
@@ -115,7 +116,7 @@ class DRPGTokenizer(AbstractTokenizer):
                 convert_to_numpy=True,
                 batch_size=self.config['sent_emb_batch_size'],
                 show_progress_bar=True,
-                device=self.config['device']
+                device=self.config['device'],
             )
         elif 'text-embedding-3' in self.config['sent_emb_model']:
             from openai import OpenAI
@@ -343,53 +344,50 @@ class DRPGTokenizer(AbstractTokenizer):
 
     def tokenize_function(self, example: dict, split: str) -> dict:
         """
-        Tokenizes the input example based on the specified split.
-
-        Args:
-            example (dict): The input example containing the item sequence.
-            split (str): The split type ('train' or 'val' or 'test').
-
-        Returns:
-            dict: A dictionary containing the tokenized input, attention mask, and labels.
+        Returns separated history and target latents.
         """
-        max_item_seq_len = self.config['max_item_seq_len']
+        max_history_len = self.config.get('max_history_len', 50)
         item_seq = example['item_seq'][0]
+
         if split == 'train':
-            n_return_examples = max(len(item_seq) - max_item_seq_len, 1)
+            all_history_sid, all_history_mask = [], []
+            all_decoder_inputs, all_decoder_labels = [], []
 
-            # Tokenize the first n items if len(item_seq) <= max_item_seq_len + 1
-            input_ids, attention_mask, labels, seq_lens = self._tokenize_first_n_items(
-                # Add 1 as the target item is not included in the input sequence
-                item_seq=item_seq[:min(len(item_seq), max_item_seq_len + 1)]
-            )
-            all_input_ids, all_attention_mask, all_labels, all_seq_lens = \
-                [input_ids], [attention_mask], [labels], [seq_lens]
+            # start from the second item so there is at least 1 history item
+            for i in range(1, len(item_seq)):
+                # Extract history window and target
+                history_items = item_seq[max(0, i - max_history_len) : i]
+                target_item = item_seq[i]
 
-            # Tokenize the later items if len(item_seq) > max_item_seq_len + 1
-            for i in range(1, n_return_examples):
-                cur_item_seq = item_seq[i:i+max_item_seq_len+1]
-                input_ids, attention_mask, labels, seq_lens = self._tokenize_later_items(cur_item_seq)
-                all_input_ids.append(input_ids)
-                all_attention_mask.append(attention_mask)
-                all_labels.append(labels)
-                all_seq_lens.append(seq_lens)
+                # Encode
+                h_sid, h_mask = self.encode_history(history_items, max_history_len)
+                # t_sid = self.encode_target(target_item)
+                t_input, t_label = self.encode_target(target_item)
+
+                all_history_sid.append(h_sid)
+                all_history_mask.append(h_mask)
+                all_decoder_inputs.append(t_input)
+                all_decoder_labels.append(t_label)
 
             return {
-                'input_ids': all_input_ids,
-                'attention_mask': all_attention_mask,
-                'labels': all_labels,
-                'seq_lens': all_seq_lens,
+                'history_sid': all_history_sid,
+                'history_mask': all_history_mask,
+                'decoder_input_ids': all_decoder_inputs,
+                'decoder_labels': all_decoder_labels
             }
         else:
-            input_ids, attention_mask, labels, seq_lens = self._tokenize_later_items(
-                item_seq=item_seq[-(max_item_seq_len+1):],
-                pad_labels=False
-            )
+            # For validation/testing, just use the traditional split
+            history_items = item_seq[:-1][-max_history_len:]
+            target_item = item_seq[-1]
+
+            h_sid, h_mask = self.encode_history(history_items, max_history_len)
+
+            target_id = self.item2id[target_item]
+
             return {
-                'input_ids': [input_ids],
-                'attention_mask': [attention_mask],
-                'labels': [labels[-1:]],
-                'seq_lens': [seq_lens]
+                'history_sid': [h_sid],
+                'history_mask': [h_mask],
+                'labels': [[target_id]]
             }
 
     def tokenize(self, datasets: dict) -> dict:
@@ -417,3 +415,32 @@ class DRPGTokenizer(AbstractTokenizer):
             tokenized_datasets[split].set_format(type='torch')
 
         return tokenized_datasets
+
+    def encode_history(self, history_items: list, max_history_len: int) -> tuple:
+        """Encodes past items into a padded array with a mask for conditioning."""
+        history_sid = []
+        history_mask = []
+
+        for item in history_items:
+            if item in self.item2tokens:
+                history_sid.append(list(self.item2tokens[item]))
+                history_mask.append(True)
+            else:
+                history_sid.append([0] * self.n_digit)
+                history_mask.append(False)
+
+        # Pad to fixed length
+        while len(history_sid) < max_history_len:
+            history_sid.append([0] * self.n_digit)
+            history_mask.append(False)
+
+        return history_sid, history_mask
+
+    def encode_target(self, target_item) -> list:
+        """Encodes the target item. Returns (input_ids, labels)."""
+        if target_item in self.item2tokens:
+            tokens = list(self.item2tokens[target_item])
+            return tokens, tokens
+        else:
+            # 0 acts as the pad value for the decoder target
+            return [0] * self.n_digit, [self.ignored_label] * self.n_digit

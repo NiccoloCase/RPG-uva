@@ -85,13 +85,17 @@ def collect_train(train_root: Path) -> list[dict]:
         text = err.read_text(errors="replace")
         start = TRAIN_START_RE.search(text)
         if not start:
+            out = err.with_suffix(".out")
+            if out.exists():
+                start = TRAIN_START_RE.search(out.read_text(errors="replace"))
+        if not start:
             continue
         last_pairs: list[tuple[str, str]] = []
         for line in text.splitlines():
             if TEST_RESULTS_RE.search(line):
                 pairs = KV_RE.findall(line)
                 if pairs:
-                    last_pairs = pairs  # keep the final (test) eval
+                    last_pairs = pairs  
         if not last_pairs:
             print(f"  skip {err.name}: no Test Results yet")
             continue

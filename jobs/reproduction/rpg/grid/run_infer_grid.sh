@@ -1,7 +1,8 @@
 #!/bin/bash
 
-# Inference-parameter grid for RPG, re-decoding the best-m sweep checkpoint
-# (Sports m=16, Beauty m=32) WITHOUT retraining. Reports NDCG/Recall@{5,10,50,100}.
+# Inference-parameter grid for RPG, re-decoding each dataset's best-m sweep
+# checkpoint (Sports m=16, Beauty m=32, Toys m=16, CDs m=64) WITHOUT retraining.
+# Reports NDCG/Recall@{5,10,50,100}.
 #
 # Probes how decode hyper-parameters trade off against ranking quality:
 #   - num_beams (b): candidate frontier width. NDCG@k is CAPPED at k=num_beams
@@ -26,7 +27,7 @@
 #SBATCH --gpus=1
 #SBATCH --mem=120G
 #SBATCH --time=12:00:00
-#SBATCH --array=0-1
+#SBATCH --array=0-3
 #SBATCH --output=../../../../output/reproduction/rpg/grid/infer/%x-%A_%a.out
 #SBATCH --error=../../../../output/reproduction/rpg/grid/infer/%x-%A_%a.err
 
@@ -37,13 +38,13 @@ SCRIPT_DIR="$(cd "${SLURM_SUBMIT_DIR:-$(dirname "${BASH_SOURCE[0]}")}" && pwd -P
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd -P)"
 
 # dataset preset name -> Title_Case cache category -> best-m (from Claim 2 sweep)
-DATASETS=(sports_and_outdoors beauty)
-CATEGORIES=(Sports_and_Outdoors Beauty)
-BEST_M=(16 32)
-# repo-config decode base (b k q) per dataset
-BASE_B=(100 20)
-BASE_K=(30 200)
-BASE_Q=(5 3)
+DATASETS=(sports_and_outdoors beauty toys_and_games cds_and_vinyl)
+CATEGORIES=(Sports_and_Outdoors Beauty Toys_and_Games CDs_and_Vinyl)
+BEST_M=(16 32 16 64)
+# repo-config decode base (b k q) per dataset (from configs/rpg/repro/*.yaml)
+BASE_B=(100 20 200 20)
+BASE_K=(30 200 20 500)
+BASE_Q=(5 3 3 5)
 
 idx=${SLURM_ARRAY_TASK_ID:-0}
 DS=${DATASETS[$idx]}

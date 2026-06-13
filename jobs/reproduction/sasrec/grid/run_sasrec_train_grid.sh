@@ -104,11 +104,9 @@ echo "SASREC_GRID_START dataset=${DS} lr=${LR} dropout=${DROP} blocks=${LAYERS} 
 module purge
 module load 2025
 module load Anaconda3/2025.06-1
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
 cd "${REPO_ROOT}"
 
-python3 scripts/sasrec.py \
+conda run -n rpg-uva python3 scripts/sasrec.py \
   --preset "${DS}" \
   --dataset "${CAT}" \
   --lr "${LR}" \

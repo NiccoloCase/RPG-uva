@@ -58,7 +58,7 @@ read -r -a BEAM_LIST  <<< "${BEAMS:-10 20 50 100 200}"
 read -r -a EDGE_LIST  <<< "${EDGES:-30 50 100 200 500}"
 read -r -a QSTEP_LIST <<< "${QSTEPS:-1 2 3 5}"
 HIGH_BEAMS="${HIGH_BEAMS:-200}"          # beam width used while sweeping k and q
-EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026}"
+EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026,2027,2028,2029,2030,2031,2032,2033}"
 # Reported NDCG/Recall cutoffs. The evaluator ASSERTS preds.shape[1] == max(topk)
 # and generate() returns at most num_beams candidates, so per cell we can only
 # request cutoffs <= num_beams. CUTOFFS is filtered per cell below.

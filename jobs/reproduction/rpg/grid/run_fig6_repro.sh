@@ -63,7 +63,7 @@ q0="${BASE_Q:-2}"
 read -r -a BEAM_LIST  <<< "${BEAMS:-10 20 30 40 50}"
 read -r -a EDGE_LIST  <<< "${EDGES:-10 20 50 100 200 300}"
 read -r -a QSTEP_LIST <<< "${QSTEPS:-0 1 2 3 4 5}"
-EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026}"
+EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026,2027,2028,2029,2030,2031,2032,2033}"
 TOPK="${TOPK:-[5,10]}"          # base b=10 caps cutoffs at 10; paper reports @10
 FORCE="${FORCE:-0}"
 

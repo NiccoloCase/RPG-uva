@@ -13,6 +13,12 @@ from torch.utils.data import DataLoader
 
 from .config import THIRD_PARTY_ROOT
 
+SCRIPTS_ROOT = THIRD_PARTY_ROOT.parent / "scripts"
+if str(SCRIPTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS_ROOT))
+
+from genrec_repo_support import prepare_genrec_runtime
+
 
 @dataclass
 class EvaluationHarness:
@@ -26,7 +32,11 @@ class EvaluationHarness:
     checkpoint_path: Path
 
     @staticmethod
-    def _semantic_id_cache_path(config: dict[str, Any], dataset: Any) -> Path:
+    def _semantic_id_cache_path(
+        config: dict[str, Any],
+        dataset: Any,
+        tokenizer_cls: type | None = None,
+    ) -> Path:
         """Reconstruct the semantic-ID cache path used by the upstream tokenizer.
 
         Args:
@@ -37,6 +47,9 @@ class EvaluationHarness:
             Absolute or repository-relative path to the `.sem_ids` cache file
             expected by `RPGTokenizer`.
         """
+        if tokenizer_cls is not None and hasattr(tokenizer_cls, "semantic_id_cache_path"):
+            return Path(tokenizer_cls.semantic_id_cache_path(config, dataset))
+
         n_codebook_bits = int(math.log2(config["codebook_size"]))
         index_factory = (
             f'OPQ{config["n_codebook"]},IVF1,PQ{config["n_codebook"]}x{n_codebook_bits}'
@@ -55,6 +68,7 @@ class EvaluationHarness:
         checkpoint_path: str | Path,
         config_files: list[str],
         config_overrides: dict[str, Any] | None = None,
+        model_name: str = "RPG",
     ) -> "EvaluationHarness":
         """Construct a ready-to-evaluate RPG stack from a checkpoint.
 
@@ -77,8 +91,7 @@ class EvaluationHarness:
             RuntimeError: If semantic-ID caches are required but cannot be
                 generated safely with the active embedding configuration.
         """
-        if str(THIRD_PARTY_ROOT) not in sys.path:
-            sys.path.insert(0, str(THIRD_PARTY_ROOT))
+        prepare_genrec_runtime(model_name)
 
         from genrec.utils import (
             get_config,
@@ -95,7 +108,7 @@ class EvaluationHarness:
             raise FileNotFoundError(f"Checkpoint not found: {checkpoint}")
 
         config = get_config(
-            model_name="RPG",
+            model_name=model_name,
             dataset_name="AmazonReviews2014",
             config_file=config_files or None,
             config_dict=config_overrides or None,
@@ -111,7 +124,8 @@ class EvaluationHarness:
         dataset = get_dataset(config["dataset"])(config)
         split_datasets = dataset.split()
 
-        semantic_id_cache = cls._semantic_id_cache_path(config, dataset)
+        tokenizer_cls = get_tokenizer(config["model"])
+        semantic_id_cache = cls._semantic_id_cache_path(config, dataset, tokenizer_cls)
         if (
             config.get("metadata") == "sentence"
             and "text-embedding-3" in str(config.get("sent_emb_model", ""))
@@ -126,7 +140,7 @@ class EvaluationHarness:
                 "sentence-transformers encoder before profiling."
             )
 
-        tokenizer = get_tokenizer(config["model"])(config, dataset)
+        tokenizer = tokenizer_cls(config, dataset)
         tokenized_test = tokenizer.tokenize({"test": split_datasets["test"]})["test"]
 
         model = get_model(config["model"])(config, dataset, tokenizer)

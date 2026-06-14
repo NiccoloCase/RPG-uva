@@ -24,4 +24,5 @@ dependencies:
       - tokenizers==0.22.0
       - tqdm==4.67.1
       - transformers==4.56.1
+      - vector-quantize-pytorch==1.29.1
       - openai>=1.0.0

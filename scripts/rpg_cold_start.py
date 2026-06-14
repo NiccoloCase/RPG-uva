@@ -46,6 +46,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     def add_common_inputs(subparser: argparse.ArgumentParser) -> None:
         subparser.add_argument(
+            "--model",
+            default="RPG",
+            help="Model name exposed by the vendored or repo-owned GenRec registry.",
+        )
+        subparser.add_argument(
             "--checkpoint",
             required=True,
             help="Path to a trained RPG checkpoint.",
@@ -325,6 +330,7 @@ def _run_cold_start(args: argparse.Namespace, override_tokens: list[str]) -> int
         checkpoint_path=args.checkpoint,
         config_files=config_files,
         config_overrides=config_overrides,
+        model_name=args.model,
     )
 
     token2item = _build_token2item_identity(harness.dataset)

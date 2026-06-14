@@ -32,6 +32,11 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--model",
+        default="RPG",
+        help="Model name exposed by the vendored or repo-owned GenRec registry.",
+    )
+    parser.add_argument(
         "--checkpoint",
         required=True,
         help="Path to a trained RPG checkpoint.",
@@ -348,6 +353,7 @@ def main(argv: list[str] | None = None) -> int:
         checkpoint_path=args.checkpoint,
         config_files=config_files,
         config_overrides=config_overrides,
+        model_name=args.model,
     )
     if harness.config["use_ddp"]:
         raise RuntimeError("scripts/rpg_eval_seeds.py only supports single-process evaluation.")

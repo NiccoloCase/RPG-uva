@@ -11,6 +11,7 @@ from pathlib import Path
 from accelerate import Accelerator
 
 from perf.config import build_repo_config_files, ensure_submodule_available, parse_override_args
+from genrec_repo_support import prepare_genrec_runtime
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -58,6 +59,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def semantic_id_cache_path(config: dict, dataset) -> Path:
+    from genrec.utils import get_tokenizer
+
+    tokenizer_cls = get_tokenizer(config["model"])
+    if hasattr(tokenizer_cls, "semantic_id_cache_path"):
+        return Path(tokenizer_cls.semantic_id_cache_path(config, dataset))
+
     n_codebook_bits = int(math.log2(config["codebook_size"]))
     index_factory = (
         f'OPQ{config["n_codebook"]},IVF1,PQ{config["n_codebook"]}x{n_codebook_bits}'
@@ -76,6 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     args, override_tokens = parser.parse_known_args(argv)
 
     ensure_submodule_available()
+    prepare_genrec_runtime(args.model)
 
     config_files = build_repo_config_files(
         extra_configs=args.config,
@@ -85,9 +93,6 @@ def main(argv: list[str] | None = None) -> int:
     if args.preset:
         config_files.append(str(PRESET_CONFIGS[args.preset]))
     config_overrides = parse_override_args(override_tokens)
-
-    if str(THIRD_PARTY_ROOT) not in sys.path:
-        sys.path.insert(0, str(THIRD_PARTY_ROOT))
 
     from genrec.utils import get_config, get_dataset, get_tokenizer, init_logger, init_seed
 

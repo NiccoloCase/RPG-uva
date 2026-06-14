@@ -26,6 +26,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     def add_common_arguments(subparser: argparse.ArgumentParser) -> None:
         subparser.add_argument(
+            "--model",
+            default="RPG",
+            help="Model name exposed by the vendored or repo-owned GenRec registry.",
+        )
+        subparser.add_argument(
             "--checkpoint",
             required=True,
             help="Path to a trained RPG checkpoint.",
@@ -134,6 +139,7 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_path=args.checkpoint,
             config_files=config_files,
             config_overrides=config_overrides,
+            model_name=args.model,
             output_root=args.output_dir,
         )
         print(result["report_path"])
@@ -146,6 +152,7 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_path=args.checkpoint,
             config_files=config_files,
             config_overrides=config_overrides,
+            model_name=args.model,
             output_root=args.output_dir,
             pool_sizes_override=parse_int_list(args.pool_sizes),
             prepare_only=args.prepare_only,

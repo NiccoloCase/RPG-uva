@@ -198,6 +198,7 @@ def run_validate_graph_command(
     checkpoint_path: str | Path,
     config_files: list[str],
     config_overrides: dict[str, Any] | None,
+    model_name: str = "RPG",
     output_root: str | None = None,
 ) -> dict[str, Any]:
     """Validate sparse graph builders against the original dense reference.
@@ -221,6 +222,7 @@ def run_validate_graph_command(
         checkpoint_path=checkpoint_path,
         config_files=config_files,
         config_overrides=config_overrides,
+        model_name=model_name,
     )
     session_root = _session_root(harness.config, output_root=output_root)
     topk = int(harness.config.get("graph_topk", harness.config["n_edges"]))
@@ -312,6 +314,7 @@ def run_profile_command(
     checkpoint_path: str | Path,
     config_files: list[str],
     config_overrides: dict[str, Any] | None,
+    model_name: str = "RPG",
     output_root: str | None = None,
     pool_sizes_override: list[int] | None = None,
     prepare_only: bool = False,
@@ -357,6 +360,7 @@ def run_profile_command(
         checkpoint_path=checkpoint_path,
         config_files=config_files,
         config_overrides=config_overrides,
+        model_name=model_name,
     )
     session_root = _session_root(preview_harness.config, output_root=output_root)
     pool_sizes = _resolve_pool_sizes(preview_harness.config, pool_sizes_override)
@@ -374,6 +378,7 @@ def run_profile_command(
             checkpoint_path=checkpoint_path,
             config_files=config_files,
             config_overrides=config_overrides,
+            model_name=model_name,
         )
         dummy_seed = int(harness.config.get("dummy_pool_seed", harness.config["rand_seed"]))
         augmentation = augment_candidate_pool(

@@ -1,0 +1,4 @@
+dataset,sel_lr,sel_dropout,sel_blocks,sel_test_mean,sel_test_std,released_test_mean,released_test_std,delta
+Sports,0.0003,0.5,2,0.01943,0.0008,0.018,0.00061,0.00143
+Beauty,0.0003,0.2,2,0.0324,0.00223,0.02943,0.00153,0.00297
+Toys,0.0003,0.5,2,0.04203,0.00112,0.03813,0.00059,0.0039

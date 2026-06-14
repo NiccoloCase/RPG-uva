@@ -8,12 +8,10 @@ of the original paper (Beauty/Sports/Toys/CDs), kept separate from
 - `output/new_datasets/rpg/...`
 - `configs/rpg/new_datasets/<dataset>.yaml`
 
-Dataset jobs currently present:
+For the full pipeline (RPG + SASRec, training + multi-seed eval) and stage
+ordering, see `jobs/new_datasets/README.md`.
 
-- `video_games`
-- `pet_supplies`
-
-These have no pre-existing cache, so run `prepare_semantic_ids.sh` first to
+These datasets have no pre-existing cache, so run `prepare_semantic_ids.sh` first to
 download the raw data, generate sentence embeddings, and build the
 semantic-ID cache before submitting `train.sh`:
 

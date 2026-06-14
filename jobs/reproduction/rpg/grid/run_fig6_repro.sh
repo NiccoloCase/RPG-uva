@@ -142,6 +142,9 @@ for cell in "${CELLS[@]}"; do
     --n_edges "${k}" \
     --propagation_steps "${q}" \
     --topk "${TOPK}"
+
+  # Drop the large per-user dumps once summary.json is written; the collector only reads summary.json.
+  find "${OUT_DIR}" -type f \( -name 'per_user_metrics.csv' -o -name 'per_user_metrics.jsonl' \) -delete
 done
 
 echo "FIG6_END dataset=${CAT} preset=${DS}"

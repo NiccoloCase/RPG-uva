@@ -116,4 +116,7 @@ conda run -n rpg-uva python3 scripts/sasrec.py \
   --seed "${SEED}" \
   --run_id "${RUN_ID}"
 
+# The cell's metrics are now in the .out log; the checkpoint is disposable (never re-decoded).
+rm -f "${REPO_ROOT}/artifacts/sasrec/ckpt/${RUN_ID}"*
+
 echo "SASREC_GRID_END dataset=${DS} lr=${LR} dropout=${DROP} blocks=${LAYERS} seed=${SEED}"

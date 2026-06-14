@@ -152,6 +152,9 @@ for cell in "${CELLS[@]}"; do
     --n_edges "${k}" \
     --propagation_steps "${q}" \
     --topk "${TOPK_CELL}"
+
+  # Drop the large per-user dumps once summary.json is written; the collector only reads summary.json.
+  find "${OUT_DIR}" -type f \( -name 'per_user_metrics.csv' -o -name 'per_user_metrics.jsonl' \) -delete
 done
 
 echo "INFER_GRID_END dataset=${CAT} preset=${DS}"

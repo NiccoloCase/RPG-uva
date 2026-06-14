@@ -114,4 +114,7 @@ conda run -n rpg-uva python scripts/rpg.py \
   --rand_seed "${SEED}" \
   --run_id "${RUN_ID}"
 
+# The cell's metrics are now in the .err log; the checkpoint is disposable (never re-decoded).
+rm -f "${REPO_ROOT}/artifacts/rpg/ckpt/${RUN_ID}"*
+
 echo "TRAIN_GRID_END dataset=${DS} lr=${LR} temperature=${TEMP} seed=${SEED}"

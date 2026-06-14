@@ -29,6 +29,17 @@ if str(SASREC_SCRIPT_DIR) not in sys.path:
 
 from models.sasrec_modernized import SASRecModernizedDataset, SASRecModernizedModel  # noqa: E402
 from models.sasrec_modernized.utils import get_user_seqs, set_seed  # noqa: E402
+from popularity_metrics import (  # noqa: E402
+    ItemPopularity,
+    assign_popularity_groups,
+    compute_item_popularity,
+    compute_long_tail_items,
+    compute_profile_popularity,
+    group_metric_summary,
+    percentage_long_tail,
+    popularity_metric_names,
+    recommendation_popularity,
+)
 from sasrec_modernized import (  # noqa: E402
     PRESET_CONFIGS,
     build_config_files,
@@ -114,6 +125,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.95,
         help="Two-sided bootstrap confidence level for metric summaries.",
     )
+    parser.add_argument(
+        "--short-head-fraction",
+        type=float,
+        default=0.2,
+        help="Fraction of items (by training-set popularity) treated as the short head for APLT.",
+    )
+    parser.add_argument(
+        "--popularity-low-quantile",
+        type=float,
+        default=0.2,
+        help="Users below this quantile of profile popularity are grouped as 'niche'.",
+    )
+    parser.add_argument(
+        "--popularity-high-quantile",
+        type=float,
+        default=0.8,
+        help="Users above this quantile of profile popularity are grouped as 'blockbuster_focused'.",
+    )
     return parser
 
 
@@ -135,6 +164,10 @@ def _load_args(parsed_args: argparse.Namespace, override_tokens: list[str]) -> S
 
 def _metric_names(args: SimpleNamespace) -> list[str]:
     return [f"{metric}@{k}" for k in args.topk for metric in ("recall", "ndcg")]
+
+
+def _all_metric_names(args: SimpleNamespace) -> list[str]:
+    return _metric_names(args) + popularity_metric_names(sorted(int(k) for k in args.topk))
 
 
 def _session_root(output_root: str | Path) -> Path:
@@ -241,6 +274,8 @@ def _single_target_metrics(
     target: int,
     predictions: np.ndarray,
     topk_values: list[int],
+    item_popularity: ItemPopularity,
+    long_tail_items: set[int],
 ) -> dict[str, float]:
     metrics: dict[str, float] = {}
     prediction_list = predictions.tolist()
@@ -253,6 +288,8 @@ def _single_target_metrics(
         else:
             metrics[f"recall@{k}"] = 0.0
             metrics[f"ndcg@{k}"] = 0.0
+        metrics[f"arp@{k}"] = recommendation_popularity(topk, item_popularity)
+        metrics[f"aplt@{k}"] = percentage_long_tail(topk, long_tail_items)
     return metrics
 
 
@@ -271,6 +308,9 @@ def _collect_seed_rows(
     user_ids: list[str],
     eval_seed: int,
     device: torch.device,
+    item_popularity: ItemPopularity,
+    long_tail_items: set[int],
+    user_groups: dict[int, str],
 ) -> list[dict[str, Any]]:
     set_seed(eval_seed)
     model.eval()
@@ -304,13 +344,16 @@ def _collect_seed_rows(
 
             for batch_index, (target, predictions) in enumerate(zip(targets, pred_list)):
                 user_index = user_offset + batch_index
-                per_user = _single_target_metrics(int(target), predictions, topk_values)
+                per_user = _single_target_metrics(
+                    int(target), predictions, topk_values, item_popularity, long_tail_items
+                )
                 row = {
                     "user_index": user_index,
                     "user_raw_id": user_ids[user_index],
                     "eval_seed": eval_seed,
                     "label_item_id": int(target),
                     "n_visited_items": float(args.mask_id - 1),
+                    "pop_group": user_groups[user_index],
                 }
                 row.update(per_user)
                 rows.append(row)
@@ -418,6 +461,18 @@ def main(argv: list[str] | None = None) -> int:
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
     args.train_matrix = test_rating_matrix
 
+    item_popularity = compute_item_popularity(seq[:-2] for seq in user_seq)
+    long_tail_items = compute_long_tail_items(item_popularity, short_head_fraction=parsed_args.short_head_fraction)
+    profile_popularity = {
+        user_index: compute_profile_popularity(seq[:-1], item_popularity)
+        for user_index, seq in enumerate(user_seq)
+    }
+    user_groups = assign_popularity_groups(
+        profile_popularity,
+        low_quantile=parsed_args.popularity_low_quantile,
+        high_quantile=parsed_args.popularity_high_quantile,
+    )
+
     eval_seeds = _eval_seeds_for_mode(parsed_args, args)
     set_seed(eval_seeds[0])
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
@@ -428,7 +483,7 @@ def main(argv: list[str] | None = None) -> int:
         batch_size=args.eval_batch_size,
     )
     model = _build_model(args, device)
-    metric_names = _metric_names(args)
+    metric_names = _all_metric_names(args)
 
     all_rows: list[dict[str, Any]] = []
     for eval_seed in eval_seeds:
@@ -440,6 +495,9 @@ def main(argv: list[str] | None = None) -> int:
                 user_ids=user_ids,
                 eval_seed=eval_seed,
                 device=device,
+                item_popularity=item_popularity,
+                long_tail_items=long_tail_items,
+                user_groups=user_groups,
             )
         )
 
@@ -452,12 +510,25 @@ def main(argv: list[str] | None = None) -> int:
         bootstrap_seed=parsed_args.bootstrap_seed,
         ci_level=parsed_args.ci_level,
     )
+    group_rows = group_metric_summary(
+        rows=all_rows,
+        user_groups=user_groups,
+        metric_names=metric_names,
+        bootstrap_ci=lambda values: _bootstrap_ci(
+            values=values,
+            n_samples=parsed_args.bootstrap_samples,
+            seed=parsed_args.bootstrap_seed,
+            ci_level=parsed_args.ci_level,
+        ),
+        ci_level=parsed_args.ci_level,
+    )
 
     session_root = _session_root(parsed_args.output_dir)
     per_user_csv = session_root / "per_user_metrics.csv"
     per_user_jsonl = session_root / "per_user_metrics.jsonl"
     per_seed_csv = session_root / "per_seed_summary.csv"
     summary_csv = session_root / "summary.csv"
+    group_summary_csv = session_root / "group_summary.csv"
     summary_json = session_root / "summary.json"
     manifest_path = session_root / "manifest.json"
 
@@ -465,6 +536,7 @@ def main(argv: list[str] | None = None) -> int:
     _write_jsonl(per_user_jsonl, all_rows)
     _write_csv(per_seed_csv, per_seed_rows)
     _write_csv(summary_csv, metric_rows)
+    _write_csv(group_summary_csv, group_rows)
 
     summary_payload = {
         "checkpoint_path": str(Path(args.checkpoint_path).resolve()),
@@ -478,8 +550,20 @@ def main(argv: list[str] | None = None) -> int:
         "bootstrap_samples": parsed_args.bootstrap_samples,
         "bootstrap_seed": parsed_args.bootstrap_seed,
         "ci_level": parsed_args.ci_level,
+        "popularity": {
+            "short_head_fraction": parsed_args.short_head_fraction,
+            "n_items_with_train_interactions": len(item_popularity),
+            "n_long_tail_items": len(long_tail_items),
+            "popularity_low_quantile": parsed_args.popularity_low_quantile,
+            "popularity_high_quantile": parsed_args.popularity_high_quantile,
+            "group_sizes": {
+                group: sum(1 for value in user_groups.values() if value == group)
+                for group in sorted(set(user_groups.values()))
+            },
+        },
         "per_seed_summary": per_seed_rows,
         "metric_summary": metric_rows,
+        "group_metric_summary": group_rows,
     }
     summary_json.write_text(json.dumps(summary_payload, indent=2))
 
@@ -489,6 +573,7 @@ def main(argv: list[str] | None = None) -> int:
         "per_user_jsonl": str(per_user_jsonl),
         "per_seed_csv": str(per_seed_csv),
         "summary_csv": str(summary_csv),
+        "group_summary_csv": str(group_summary_csv),
         "summary_json": str(summary_json),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2))

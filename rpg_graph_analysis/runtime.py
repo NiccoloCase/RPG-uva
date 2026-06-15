@@ -48,11 +48,14 @@ def build_harness_from_args(args: argparse.Namespace) -> EvaluationHarness:
 def topk_from_config(config: dict[str, Any]) -> int:
     """Resolve the width of the prepared graph cache.
 
-    ``graph_topk`` is the graph-analysis-specific setting. ``n_edges`` is kept
-    only as a compatibility fallback for old configs.
+    ``graph_topk`` is intentionally separate from RPG decoding ``n_edges``.
+    Static graph analysis should fail loudly if the graph cache width is not
+    configured, rather than silently reusing a dynamic inference parameter.
     """
 
-    return int(config.get("graph_topk", config.get("n_edges", 100)))
+    if "graph_topk" not in config or config["graph_topk"] is None:
+        raise ValueError("Static graph analysis requires graph_topk in the graph-analysis config.")
+    return int(config["graph_topk"])
 
 
 def k_values_from_config(config: dict[str, Any], topk: int) -> list[int]:
@@ -70,4 +73,3 @@ def random_seeds_from_config(config: dict[str, Any]) -> list[int]:
     """Resolve fixed seeds used for random-pair and random-graph baselines."""
 
     return [int(seed) for seed in config.get("graph_analysis_random_seeds", DEFAULT_RANDOM_SEEDS)]
-

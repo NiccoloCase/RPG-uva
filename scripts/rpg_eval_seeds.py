@@ -58,6 +58,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated eval seeds, for example '2024,2025,2026'.",
     )
     parser.add_argument(
+        "--split",
+        choices=("test", "val"),
+        default="test",
+        help=(
+            "Evaluation split. 'test' (default) reproduces reported metrics; "
+            "'val' scores the validation split for hyperparameter selection."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         default="artifacts/rpg/eval_seeds",
         help="Directory under which a timestamped eval session will be written.",
@@ -201,6 +210,7 @@ def _build_graph_once(harness: EvaluationHarness) -> None:
 
 def _collect_seed_rows(
     harness: EvaluationHarness,
+    dataloader: Any,
     eval_seed: int,
     user_ids: list[str],
     metric_names: list[str],
@@ -217,8 +227,8 @@ def _collect_seed_rows(
     maxk = harness.trainer.evaluator.maxk
 
     progress = tqdm(
-        harness.test_dataloader,
-        total=len(harness.test_dataloader),
+        dataloader,
+        total=len(dataloader),
         desc=f"Eval seed {eval_seed}",
     )
     with torch.no_grad():
@@ -354,12 +364,22 @@ def main(argv: list[str] | None = None) -> int:
 
     metric_names = _metric_names(harness.config)
 
-    test_split = harness.dataset.split()["test"]
-    user_ids = [str(user) for user in test_split["user"]]
-    if len(user_ids) != len(harness.test_dataloader.dataset):
+    if args.split == "val":
+        dataloader = harness.val_dataloader
+        if dataloader is None:
+            raise RuntimeError(
+                "Validation dataloader is unavailable; the dataset split() did not "
+                "expose a 'val' split."
+            )
+    else:
+        dataloader = harness.test_dataloader
+
+    eval_split = harness.dataset.split()[args.split]
+    user_ids = [str(user) for user in eval_split["user"]]
+    if len(user_ids) != len(dataloader.dataset):
         raise RuntimeError(
-            f"Test user count ({len(user_ids)}) does not match tokenized test rows "
-            f"({len(harness.test_dataloader.dataset)})."
+            f"{args.split} user count ({len(user_ids)}) does not match tokenized "
+            f"{args.split} rows ({len(dataloader.dataset)})."
         )
 
     _build_graph_once(harness)
@@ -369,6 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         all_rows.extend(
             _collect_seed_rows(
                 harness=harness,
+                dataloader=dataloader,
                 eval_seed=eval_seed,
                 user_ids=user_ids,
                 metric_names=metric_names,
@@ -403,6 +424,7 @@ def main(argv: list[str] | None = None) -> int:
         "dataset": harness.config["dataset"],
         "category": harness.config.get("category"),
         "model": harness.config["model"],
+        "split": args.split,
         "eval_seeds": eval_seeds,
         "metrics": metric_names,
         "bootstrap_samples": args.bootstrap_samples,

@@ -1,33 +1,5 @@
 #!/bin/bash
 
-# Training-hyperparameter grid for RPG: full RETRAIN per (dataset, lr, temperature,
-# seed) cell, then the pipeline's built-in test evaluation. Codebook length m is held
-# at each dataset's best-m (Sports 16, Beauty 32, Toys 16) -- m was already swept in
-# Claim 2, so this grid isolates the two trained-in HPs (lr, temperature).
-#
-# THREE deliberate design choices (vs the earlier single-seed 2-dataset version):
-#   1. SEEDS: every cell is retrained over SEEDS (default 2024,2025,2026) via
-#      --rand_seed, which reseeds torch/cuda/accelerate at pipeline init
-#      (genrec/pipeline.py:52). The sem_ids cache is seed-INDEPENDENT, so each seed
-#      reuses identical semantic IDs and we isolate pure training stochasticity
-#      (weight init + data order). seed 2024 == genrec default == the old single-seed
-#      runs, so those legitimately count as the seed-2024 sample (collector dedups).
-#   2. EXTENDED lr: lr grids are widened DOWNWARD because the single-seed Sports
-#      optimum sat on the old grid's lower edge (lr=0.001). Each dataset's 4-value lr
-#      grid now brackets its tuned optimum on BOTH sides, including a value below it:
-#        Sports tuned 0.003 -> {0.0003, 0.001, 0.003, 0.01}
-#        Beauty tuned 0.01  -> {0.001, 0.003, 0.01, 0.03}
-#        Toys   tuned 0.003 -> {0.0003, 0.001, 0.003, 0.01}
-#   3. FULL lr x temperature grid (not OFAT): 4 lr x 3 temp, so we get seeded
-#      heatmaps with error bars on BOTH axes.
-#
-# Everything else (architecture n_embd=448/n_layer=2, dropout embd/attn=0.5, early
-# stopping patience=20 on val ndcg@10, 150 max epochs, batch 256) is the released
-# RPG default, UNCHANGED -- this is a reproducibility study of their model.
-#
-# Flattened array over N_DS x N_LR x N_TEMP x N_SEED cells (default 3x4x3x3 = 108).
-# Each task retrains one cell from scratch and logs "Test Results: {...}" to its .err.
-#
 # Submit from this directory:
 #   cd jobs/reproduction/rpg/grid
 #   mkdir -p ../../../../output/reproduction/rpg/grid/train

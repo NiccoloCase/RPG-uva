@@ -1,19 +1,6 @@
 #!/bin/bash
 
-# Inference-parameter grid for RPG, re-decoding each dataset's best-m sweep
-# checkpoint (Sports m=16, Beauty m=32, Toys m=16, CDs m=64) WITHOUT retraining.
-# Reports NDCG/Recall@{5,10,50,100}.
-#
-# Probes how decode hyper-parameters trade off against ranking quality:
-#   - num_beams (b): candidate frontier width. NDCG@k is CAPPED at k=num_beams
-#     because generate() returns at most num_beams items, so @50/@100 only become
-#     meaningful once beams cross 50/100 -- this is the core experiment.
-#   - n_edges (k): per-node neighbours in the decoding graph (rebuilds the graph).
-#   - propagation_steps (q): graph propagation iterations.
-#
-# Sweeps are one-factor-at-a-time around each dataset's repo base, deduplicated.
-# n_edges / propagation sweeps use beams=200 so @100 stays valid throughout.
-#
+
 # Submit from this directory:
 #   cd jobs/reproduction/rpg/grid
 #   mkdir -p ../../../../output/reproduction/rpg/grid/infer

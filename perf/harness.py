@@ -24,6 +24,7 @@ class EvaluationHarness:
     trainer: Any
     test_dataloader: DataLoader
     checkpoint_path: Path
+    val_dataloader: DataLoader | None = None
 
     @staticmethod
     def _semantic_id_cache_path(config: dict[str, Any], dataset: Any) -> Path:
@@ -127,7 +128,12 @@ class EvaluationHarness:
             )
 
         tokenizer = get_tokenizer(config["model"])(config, dataset)
-        tokenized_test = tokenizer.tokenize({"test": split_datasets["test"]})["test"]
+       
+        splits_to_tokenize = {"test": split_datasets["test"]}
+        if "val" in split_datasets:
+            splits_to_tokenize["val"] = split_datasets["val"]
+        tokenized = tokenizer.tokenize(splits_to_tokenize)
+        tokenized_test = tokenized["test"]
 
         model = get_model(config["model"])(config, dataset, tokenizer)
         state_dict = torch.load(checkpoint, map_location="cpu")
@@ -143,6 +149,15 @@ class EvaluationHarness:
             collate_fn=tokenizer.collate_fn["test"],
         )
 
+        val_dataloader = None
+        if "val" in tokenized:
+            val_dataloader = DataLoader(
+                tokenized["val"],
+                batch_size=config["eval_batch_size"],
+                shuffle=False,
+                collate_fn=tokenizer.collate_fn["val"],
+            )
+
         return cls(
             config=config,
             accelerator=accelerator,
@@ -152,6 +167,7 @@ class EvaluationHarness:
             trainer=trainer,
             test_dataloader=test_dataloader,
             checkpoint_path=checkpoint,
+            val_dataloader=val_dataloader,
         )
 
     def warmup(self, num_batches: int) -> None:

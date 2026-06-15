@@ -219,6 +219,89 @@ def collect_sasrec_train(train_root: Path) -> list[dict]:
     return rows
 
 
+README_CONFIG = {
+    "sports_and_outdoors": (100, 30, 5),
+    "beauty": (20, 200, 3),
+    "toys_and_games": (200, 20, 3),
+    "cds_and_vinyl": (20, 500, 5),
+}
+APPENDIX_CONFIG = {
+    "sports_and_outdoors": (10, 100, 2),
+    "beauty": (10, 100, 3),
+    "toys_and_games": (10, 50, 5),
+    "cds_and_vinyl": (10, 500, 3),
+}
+
+_AXIS_SPAN = (200 - 10, 500 - 20, 5 - 1)
+
+
+def _normalised_distance(a: tuple, b: tuple) -> float:
+    return sum(abs(x - y) / s for x, y, s in zip(a, b, _AXIS_SPAN))
+
+
+def select_val_cluster(decode_rows: list[dict], metric: str = "ndcg@10") -> tuple[list[dict], list[dict]]:
+    """Per dataset, find the val argmax and the cluster of cells statistically
+    tied with it (gap <= combined 1-SE band, SE = std / sqrt(n_seeds)).
+
+    Returns (cluster_rows, summary_rows):
+      cluster_rows  -- every (dataset, b, k, q) to re-decode on test at 10 seeds.
+      summary_rows  -- one row/dataset: argmax, cluster size, and the README /
+                       appendix coords + val scores + which source is nearest.
+    """
+    by_dataset: dict[str, list[dict]] = {}
+    for row in decode_rows:
+        if row["metric"] == metric and row["mean"] is not None:
+            by_dataset.setdefault(row["dataset"], []).append(row)
+
+    def _se(row: dict) -> float:
+        n = row.get("n_seeds") or 1
+        return (row["std"] or 0.0) / (float(n) ** 0.5)
+
+    def _cell_mean(rows: list[dict], cfg: tuple) -> float | str:
+        for r in rows:
+            if (r["num_beams"], r["n_edges"], r["propagation_steps"]) == cfg:
+                return r["mean"]
+        return ""  
+
+    cluster_rows: list[dict] = []
+    summary_rows: list[dict] = []
+    for dataset in sorted(by_dataset):
+        rows = by_dataset[dataset]
+        best = max(rows, key=lambda r: r["mean"])
+        best_se = _se(best)
+        cluster = [r for r in rows if (best["mean"] - r["mean"]) <= (best_se + _se(r))]
+        cluster.sort(key=lambda r: -r["mean"])
+        for r in cluster:
+            cluster_rows.append({
+                "dataset": dataset,
+                "num_beams": r["num_beams"], "n_edges": r["n_edges"],
+                "propagation_steps": r["propagation_steps"],
+                "val_mean": r["mean"], "val_std": r["std"], "n_seeds": r["n_seeds"],
+                "is_argmax": int(r is best),
+            })
+
+        sel = (best["num_beams"], best["n_edges"], best["propagation_steps"])
+        readme, appendix = README_CONFIG.get(dataset), APPENDIX_CONFIG.get(dataset)
+        nearest = ""
+        if readme and appendix:
+            dr, da = _normalised_distance(sel, readme), _normalised_distance(sel, appendix)
+            nearest = "readme" if dr < da else ("appendix" if da < dr else "tie")
+        summary_rows.append({
+            "dataset": dataset, "metric": metric,
+            "sel_b": sel[0], "sel_k": sel[1], "sel_q": sel[2],
+            "sel_val_mean": best["mean"], "sel_val_std": best["std"],
+            "cluster_size": len(cluster), "n_seeds": best["n_seeds"],
+            "readme_b": readme[0] if readme else "", "readme_k": readme[1] if readme else "",
+            "readme_q": readme[2] if readme else "",
+            "readme_val_mean": _cell_mean(rows, readme) if readme else "",
+            "appendix_b": appendix[0] if appendix else "", "appendix_k": appendix[1] if appendix else "",
+            "appendix_q": appendix[2] if appendix else "",
+            "appendix_val_mean": _cell_mean(rows, appendix) if appendix else "",
+            "nearest_source": nearest,
+        })
+    return cluster_rows, summary_rows
+
+
 def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -236,11 +319,16 @@ def main() -> int:
                         default="output/reproduction/rpg/grid/train")
     parser.add_argument("--fig6-root",
                         default="output/reproduction/rpg/grid/fig6")
+    parser.add_argument("--decode-val-root",
+                        default="output/reproduction/rpg/grid/decode_val")
     parser.add_argument("--sasrec-train-root",
                         default="output/reproduction/sasrec/grid/train")
     parser.add_argument("--infer-csv", default="infer_grid.csv")
     parser.add_argument("--train-csv", default="train_grid.csv")
     parser.add_argument("--fig6-csv", default="fig6_grid.csv")
+    parser.add_argument("--decode-val-csv", default="decode_val_grid.csv")
+    parser.add_argument("--decode-val-cluster-csv", default="decode_val_cluster.csv")
+    parser.add_argument("--decode-val-selected-csv", default="decode_val_selected.csv")
     parser.add_argument("--sasrec-train-csv", default="sasrec_train_grid.csv")
     args = parser.parse_args()
 
@@ -250,6 +338,7 @@ def main() -> int:
 
     infer_rows = collect_infer(_resolve(args.infer_root))
     fig6_rows = collect_infer(_resolve(args.fig6_root))  # same summary.json layout
+    decode_val_rows = collect_infer(_resolve(args.decode_val_root))  # same layout
     train_rows = collect_train(_resolve(args.train_root))
     sasrec_rows = collect_sasrec_train(_resolve(args.sasrec_train_root))
 
@@ -257,6 +346,18 @@ def main() -> int:
                      "metric", "mean", "std", "n_seeds"]
     _write_csv(_resolve(args.infer_csv), infer_rows, decode_fields)
     _write_csv(_resolve(args.fig6_csv), fig6_rows, decode_fields)
+    _write_csv(_resolve(args.decode_val_csv), decode_val_rows, decode_fields)
+
+    cluster_rows, selected_rows = select_val_cluster(decode_val_rows)
+    _write_csv(_resolve(args.decode_val_cluster_csv), cluster_rows,
+               ["dataset", "num_beams", "n_edges", "propagation_steps",
+                "val_mean", "val_std", "n_seeds", "is_argmax"])
+    _write_csv(_resolve(args.decode_val_selected_csv), selected_rows,
+               ["dataset", "metric", "sel_b", "sel_k", "sel_q",
+                "sel_val_mean", "sel_val_std", "cluster_size", "n_seeds",
+                "readme_b", "readme_k", "readme_q", "readme_val_mean",
+                "appendix_b", "appendix_k", "appendix_q", "appendix_val_mean",
+                "nearest_source"])
     _write_csv(_resolve(args.train_csv), train_rows,
                ["dataset", "lr", "temperature", "metric", "mean", "std", "n_seeds",
                 "val_ndcg10_mean", "val_ndcg10_std"])

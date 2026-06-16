@@ -43,8 +43,22 @@ class BatchTrace:
     novelty_ratio_by_step: list[list[float]]
 
 
-def _compute_token_logits(model: Any, batch: dict[str, torch.Tensor]) -> torch.Tensor:
-    """Compute token log-probabilities exactly as upstream ``RPG.generate``.
+@dataclass
+class DecodingContext:
+    """Model states needed by traced decoding and optional downstream rerankers.
+
+    ``token_logits`` is exactly the tensor used by upstream RPG graph
+    propagation. ``user_hidden`` is the raw GPT hidden state at the last real
+    input item in each sequence. Keeping both in one object lets intervention
+    experiments reuse the same forward pass instead of recomputing the model.
+    """
+
+    token_logits: torch.Tensor
+    user_hidden: torch.Tensor
+
+
+def compute_decoding_context(model: Any, batch: dict[str, torch.Tensor]) -> DecodingContext:
+    """Compute RPG token log-probabilities and the final user hidden state.
 
     This function intentionally duplicates the upstream sequence-state gather,
     token-embedding normalization, temperature scaling, and per-head log-softmax
@@ -54,6 +68,12 @@ def _compute_token_logits(model: Any, batch: dict[str, torch.Tensor]) -> torch.T
     """
 
     outputs = model.forward(batch, return_loss=False)
+    user_hidden = outputs.last_hidden_state.gather(
+        dim=1,
+        index=(batch["seq_lens"] - 1)
+        .view(-1, 1, 1)
+        .expand(-1, 1, model.config["n_embd"]),
+    ).squeeze(1)
     states = outputs.final_states.gather(
         dim=1,
         index=(batch["seq_lens"] - 1)
@@ -70,7 +90,16 @@ def _compute_token_logits(model: Any, batch: dict[str, torch.Tensor]) -> torch.T
         for index in range(model.n_pred_head)
     ]
     logits = [F.log_softmax(logit, dim=-1) for logit in logits]
-    return torch.cat(logits, dim=-1)
+    return DecodingContext(
+        token_logits=torch.cat(logits, dim=-1),
+        user_hidden=user_hidden,
+    )
+
+
+def _compute_token_logits(model: Any, batch: dict[str, torch.Tensor]) -> torch.Tensor:
+    """Compute token log-probabilities exactly as upstream ``RPG.generate``."""
+
+    return compute_decoding_context(model, batch).token_logits
 
 
 def traced_graph_propagation(

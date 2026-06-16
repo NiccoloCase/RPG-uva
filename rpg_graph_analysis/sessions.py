@@ -7,6 +7,7 @@ artifacts/rpg/graph_analysis/sports/<session>/
   graphs/
   static/
   dynamic/
+  rerank/
   manifest.json
 ```
 
@@ -37,6 +38,7 @@ class SessionPaths:
     graphs: Path
     static: Path
     dynamic: Path
+    rerank: Path
     manifest: Path
 
 
@@ -80,11 +82,13 @@ def make_session_paths(root: Path) -> SessionPaths:
         graphs=root / "graphs",
         static=root / "static",
         dynamic=root / "dynamic",
+        rerank=root / "rerank",
         manifest=root / "manifest.json",
     )
     paths.graphs.mkdir(parents=True, exist_ok=True)
     paths.static.mkdir(parents=True, exist_ok=True)
     paths.dynamic.mkdir(parents=True, exist_ok=True)
+    paths.rerank.mkdir(parents=True, exist_ok=True)
     return paths
 
 

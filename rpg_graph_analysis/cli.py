@@ -7,6 +7,7 @@ import argparse
 from .dynamic import run_dynamic
 from .prepare import prepare_graph
 from .pruning import run_pruning
+from .reranking.eval import run_reranking
 from .static import run_static
 
 
@@ -75,6 +76,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(pruning_parser)
 
+    rerank_parser = subparsers.add_parser(
+        "rerank",
+        help="Run a lightweight candidate-reranking intervention from a prepared graph.",
+    )
+    add_common_inputs(rerank_parser)
+
     return parser
 
 
@@ -93,5 +100,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_dynamic(args)
     if args.command == "pruning":
         return run_pruning(args)
+    if args.command == "rerank":
+        return run_reranking(args)
     parser.error(f"Unsupported command: {args.command}")
     return 2

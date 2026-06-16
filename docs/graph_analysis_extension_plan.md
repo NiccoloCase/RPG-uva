@@ -249,6 +249,10 @@ The goal is not to implement every possible dynamic diagnostic at once. The firs
 - B4: if the target is reached, how many propagation steps are needed?
 - B6: do these dynamic diagnostics saturate at the same time as recommendation performance?
 
+After inspecting the first dynamic results, add one lightweight diagnostic:
+
+- B7: when a target is reached, is it lost by intermediate beam pruning or by final ranking?
+
 The implementation should save raw decoding traces first, then compute aggregate metrics from those traces. This is safer than saving only aggregates, because it lets us fix or redefine metrics later without rerunning decoding.
 
 Important implementation rule:
@@ -396,6 +400,44 @@ Interpretation:
 - If visited set size keeps growing but reachability and diversity saturate, extra budget is mostly adding redundant candidates.
 - If none of the dynamic diagnostics saturate, then the static graph explanation is probably incomplete.
 
+### B7. Beam-Pruning Diagnostic
+
+Question: when the target is reached but not selected, where is it lost?
+
+This is a small follow-up diagnostic, not another full dynamic sweep. Keep graph traversal fixed and sweep only the pruning budget:
+
+- dataset: `Sports_and_Outdoors`
+- graph width: `n_edges = 100`
+- propagation depth: `propagation_steps = 5`
+- eval seed: `2024`
+- test subset: fixed first `2000` users
+- beam sizes: `num_beams = [50, 100, 200, 500]`
+
+Important caveat: in the current RPG implementation, `num_beams` controls both the number of random initial candidates and the number of candidates kept after each propagation step. Therefore B7 is a beam-budget diagnostic, not a perfectly isolated pruning-only intervention.
+
+For each user and beam size, classify the target into exactly one bucket:
+
+- `not_reached`: target never appears in the considered graph candidates
+- `considered_never_in_beam`: target appears in candidates but never survives into the beam
+- `in_beam_not_selected`: target survives into the beam but is not in final top-k
+- `selected`: target is in the final top-k
+
+Report:
+
+- bucket rates by `num_beams`
+- target considered rate
+- target in-beam rate
+- target selected rate
+- Recall@K and NDCG@K
+- mean visited item count
+
+Interpretation:
+
+- If larger beams reduce `considered_never_in_beam` and improve Recall@K, intermediate pruning is a bottleneck.
+- If larger beams reduce `considered_never_in_beam` but Recall@K barely improves, final ranking/scoring is still the bottleneck.
+- If `in_beam_not_selected` grows with larger beams, targets survive pruning more often but are still not ranked high enough.
+- If bucket rates barely change, beam size is probably not the right lever; score misalignment or local distractors are more likely.
+
 ### B Implementation Notes
 
 Use one dynamic trace runner rather than separate scripts for each B experiment.
@@ -426,6 +468,7 @@ dynamic_reachability_summary.csv
 dynamic_redundancy_summary.csv
 dynamic_first_hit_summary.csv
 dynamic_saturation_summary.csv
+pruning_summary.csv
 ```
 
 The first implementation milestone should be:

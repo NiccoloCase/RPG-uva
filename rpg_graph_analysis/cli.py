@@ -6,6 +6,7 @@ import argparse
 
 from .dynamic import run_dynamic
 from .prepare import prepare_graph
+from .pruning import run_pruning
 from .static import run_static
 
 
@@ -68,6 +69,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(dynamic_parser)
 
+    pruning_parser = subparsers.add_parser(
+        "pruning",
+        help="Run a lightweight beam-pruning diagnostic from a prepared graph.",
+    )
+    add_common_inputs(pruning_parser)
+
     return parser
 
 
@@ -84,5 +91,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_static(args)
     if args.command == "dynamic":
         return run_dynamic(args)
+    if args.command == "pruning":
+        return run_pruning(args)
     parser.error(f"Unsupported command: {args.command}")
     return 2

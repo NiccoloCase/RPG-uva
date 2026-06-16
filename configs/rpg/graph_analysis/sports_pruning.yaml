@@ -1,0 +1,18 @@
+run_id: rpg_graph_analysis_sports_pruning
+
+# Lightweight B7 diagnostic: is failure after reachability caused by beam
+# pruning or by final ranking? Keep traversal settings fixed and sweep only the
+# pruning budget.
+temperature: 0.03
+n_edges: 100
+propagation_steps: 5
+num_beams: 100
+
+graph_analysis_pruning_n_edges: 100
+graph_analysis_pruning_num_beams: [50, 100, 200, 500]
+graph_analysis_pruning_max_users: 2000
+graph_analysis_eval_seeds: [2024]
+
+# One parity batch per beam setting is enough for this diagnostic because the
+# traced decoder is already checked by the full dynamic run.
+graph_analysis_trace_parity_batches: 1

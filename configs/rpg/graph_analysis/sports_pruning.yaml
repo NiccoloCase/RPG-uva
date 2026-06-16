@@ -1,8 +1,8 @@
 run_id: rpg_graph_analysis_sports_pruning
 
-# Lightweight B7 diagnostic: is failure after reachability caused by beam
-# pruning or by final ranking? Keep traversal settings fixed and sweep only the
-# pruning budget.
+# Lightweight B7 diagnostic: does increasing RPG's coupled beam/search budget
+# solve failure after reachability? In upstream RPG, num_beams controls the
+# initial random items, expanded frontier size, and kept beam size together.
 temperature: 0.03
 n_edges: 100
 propagation_steps: 5

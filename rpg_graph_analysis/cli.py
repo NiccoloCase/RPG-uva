@@ -71,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     pruning_parser = subparsers.add_parser(
         "pruning",
-        help="Run a lightweight beam-pruning diagnostic from a prepared graph.",
+        help="Run a lightweight beam-budget diagnostic from a prepared graph.",
     )
     add_common_inputs(pruning_parser)
 

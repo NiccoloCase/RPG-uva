@@ -251,7 +251,7 @@ The goal is not to implement every possible dynamic diagnostic at once. The firs
 
 After inspecting the first dynamic results, add one lightweight diagnostic:
 
-- B7: when a target is reached, is it lost by intermediate beam pruning or by final ranking?
+- B7: does increasing RPG's coupled beam/search budget solve failures after reachability?
 
 The implementation should save raw decoding traces first, then compute aggregate metrics from those traces. This is safer than saving only aggregates, because it lets us fix or redefine metrics later without rerunning decoding.
 
@@ -400,11 +400,11 @@ Interpretation:
 - If visited set size keeps growing but reachability and diversity saturate, extra budget is mostly adding redundant candidates.
 - If none of the dynamic diagnostics saturate, then the static graph explanation is probably incomplete.
 
-### B7. Beam-Pruning Diagnostic
+### B7. Beam-Budget Diagnostic
 
-Question: when the target is reached but not selected, where is it lost?
+Question: if we increase RPG's total beam/search budget, do reached targets become selected more often?
 
-This is a small follow-up diagnostic, not another full dynamic sweep. Keep graph traversal fixed and sweep only the pruning budget:
+This is a small follow-up diagnostic, not another full dynamic sweep. Keep graph width and depth fixed, then sweep `num_beams`:
 
 - dataset: `Sports_and_Outdoors`
 - graph width: `n_edges = 100`
@@ -413,12 +413,12 @@ This is a small follow-up diagnostic, not another full dynamic sweep. Keep graph
 - test subset: fixed first `2000` users
 - beam sizes: `num_beams = [50, 100, 200, 500]`
 
-Important caveat: in the current RPG implementation, `num_beams` controls both the number of random initial candidates and the number of candidates kept after each propagation step. Therefore B7 is a beam-budget diagnostic, not a perfectly isolated pruning-only intervention.
+Important caveat: in the current RPG implementation, `num_beams` controls the number of random initial candidates, the number of frontier nodes expanded, the number of raw neighbors considered, and the number of candidates kept after each propagation step. Therefore B7 is a coupled beam-budget diagnostic, not a perfectly isolated pruning intervention.
 
-For each user and beam size, classify the target into exactly one bucket:
+For each user and beam size, classify the target into exactly one outcome bucket:
 
 - `not_reached`: target never appears in the considered graph candidates
-- `considered_never_in_beam`: target appears in candidates but never survives into the beam
+- `considered_never_in_beam`: target appears in candidates but never survives into the beam in that run
 - `in_beam_not_selected`: target survives into the beam but is not in final top-k
 - `selected`: target is in the final top-k
 
@@ -433,10 +433,10 @@ Report:
 
 Interpretation:
 
-- If larger beams reduce `considered_never_in_beam` and improve Recall@K, intermediate pruning is a bottleneck.
-- If larger beams reduce `considered_never_in_beam` but Recall@K barely improves, final ranking/scoring is still the bottleneck.
-- If `in_beam_not_selected` grows with larger beams, targets survive pruning more often but are still not ranked high enough.
-- If bucket rates barely change, beam size is probably not the right lever; score misalignment or local distractors are more likely.
+- If larger beams improve target considered/in-beam rates and Recall@K, then extra RPG beam/search budget helps.
+- If larger beams improve considered/in-beam rates but Recall@K barely improves, simply spending more beam budget is not enough; final scoring/ranking is likely still limiting.
+- If `in_beam_not_selected` grows with larger beams, targets survive into the beam more often but are still not ranked high enough.
+- If bucket rates barely change, beam budget is probably not the right lever; score misalignment or local distractors are more likely.
 
 ### B Implementation Notes
 

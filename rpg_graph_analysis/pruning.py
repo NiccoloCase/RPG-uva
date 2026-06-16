@@ -1,4 +1,4 @@
-"""Lightweight beam-pruning diagnostic for RPG graph decoding.
+"""Lightweight beam-budget diagnostic for RPG graph decoding.
 
 Experiment B7 asks where reachable targets are lost:
 
@@ -8,7 +8,10 @@ Experiment B7 asks where reachable targets are lost:
 * selected.
 
 The command runs this diagnostic on a bounded test subset while sweeping
-``num_beams``. It reuses the prepared graph cache and the traced RPG decoder.
+``num_beams``. In RPG, ``num_beams`` controls initial random items, expanded
+frontier size, and kept beam size at the same time. Therefore this command is
+a coupled beam/search-budget diagnostic, not an isolated pruning intervention.
+It reuses the prepared graph cache and the traced RPG decoder.
 """
 
 from __future__ import annotations
@@ -48,7 +51,7 @@ def pruning_output_paths(paths: SessionPaths) -> dict[str, Path]:
 
 
 def pruning_num_beams_from_config(config: dict[str, Any]) -> list[int]:
-    """Resolve the beam-size sweep used by the pruning diagnostic."""
+    """Resolve the coupled beam/search-budget sweep."""
 
     raw_values = config.get("graph_analysis_pruning_num_beams", [50, 100, 200, 500])
     values = sorted({int(value) for value in raw_values})
@@ -90,7 +93,7 @@ def _classify_target(
     target: int,
     predictions: list[int],
 ) -> dict[str, Any]:
-    """Classify one target into the mutually exclusive B7 failure buckets."""
+    """Classify one target into mutually exclusive B7 outcome buckets."""
 
     first_considered = _first_step_containing(trace.unique_candidates_by_step[batch_index], target)
     first_beam = _first_step_containing(trace.frontier_by_step[batch_index], target)
@@ -127,7 +130,7 @@ def _collect_pruning_rows(
     metric_names: list[str],
     parity_batches: int,
 ) -> list[dict[str, Any]]:
-    """Run one B7 beam setting and return per-example scalar rows."""
+    """Run one B7 beam-budget setting and return per-example scalar rows."""
 
     from genrec.utils import init_seed
 
@@ -142,7 +145,7 @@ def _collect_pruning_rows(
     progress = tqdm(
         harness.test_dataloader,
         total=len(harness.test_dataloader),
-        desc=f"Pruning n_edges={n_edges} beams={num_beams}",
+        desc=f"Beam budget n_edges={n_edges} beams={num_beams}",
     )
     with torch.no_grad():
         for batch_index_global, batch in enumerate(progress):
@@ -227,7 +230,7 @@ def _summarize_pruning(frame: pd.DataFrame, metric_names: list[str]) -> list[dic
 
 
 def run_pruning(args: Any) -> int:
-    """Run B7 lightweight beam-pruning analysis."""
+    """Run B7 lightweight coupled beam-budget analysis."""
 
     harness = build_harness_from_args(args)
     if harness.config["use_ddp"]:

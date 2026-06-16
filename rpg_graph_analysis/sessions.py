@@ -6,6 +6,7 @@ Every run writes into a single session directory:
 artifacts/rpg/graph_analysis/sports/<session>/
   graphs/
   static/
+  dynamic/
   manifest.json
 ```
 
@@ -35,6 +36,7 @@ class SessionPaths:
     root: Path
     graphs: Path
     static: Path
+    dynamic: Path
     manifest: Path
 
 
@@ -77,10 +79,12 @@ def make_session_paths(root: Path) -> SessionPaths:
         root=root,
         graphs=root / "graphs",
         static=root / "static",
+        dynamic=root / "dynamic",
         manifest=root / "manifest.json",
     )
     paths.graphs.mkdir(parents=True, exist_ok=True)
     paths.static.mkdir(parents=True, exist_ok=True)
+    paths.dynamic.mkdir(parents=True, exist_ok=True)
     return paths
 
 
@@ -164,4 +168,3 @@ def append_or_update_manifest(paths: SessionPaths, updates: dict[str, Any]) -> d
     manifest.update(updates)
     write_json(paths.manifest, manifest)
     return manifest
-

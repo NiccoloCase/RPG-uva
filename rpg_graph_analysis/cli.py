@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from .dynamic import run_dynamic
 from .prepare import prepare_graph
 from .static import run_static
 
@@ -12,7 +13,7 @@ def build_parser() -> argparse.ArgumentParser:
     """Create the CLI parser used by the thin launcher script."""
 
     parser = argparse.ArgumentParser(
-        description="Prepare and analyze static RPG decoding graphs.",
+        description="Prepare and analyze RPG decoding graphs.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -33,8 +34,9 @@ def build_parser() -> argparse.ArgumentParser:
             default=None,
             help=(
                 "Optional graph-analysis session directory. prepare-graph creates it; "
-                "static reads/writes it. If omitted, prepare-graph creates a timestamped "
-                "session and static uses the latest session with graph metadata."
+                "static and dynamic read/write it. If omitted, prepare-graph creates a "
+                "timestamped session and analysis commands use the latest session with "
+                "graph metadata."
             ),
         )
         subparser.add_argument(
@@ -60,6 +62,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(static_parser)
 
+    dynamic_parser = subparsers.add_parser(
+        "dynamic",
+        help="Run dynamic/query-conditioned graph analysis from a prepared graph.",
+    )
+    add_common_inputs(dynamic_parser)
+
     return parser
 
 
@@ -74,6 +82,7 @@ def main(argv: list[str] | None = None) -> int:
         return prepare_graph(args)
     if args.command == "static":
         return run_static(args)
+    if args.command == "dynamic":
+        return run_dynamic(args)
     parser.error(f"Unsupported command: {args.command}")
     return 2
-

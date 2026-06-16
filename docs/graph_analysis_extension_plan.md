@@ -240,80 +240,202 @@ Interpretation:
 
 ## Experiment Block B: Dynamic / Query-Conditioned Analysis
 
-Dynamic experiments analyze the actual RPG decoding process for test users. This should probably be the main contribution, because it directly connects graph structure to recommendation performance.
+Dynamic experiments analyze the actual RPG decoding process for test users. This should probably be the strongest part of the extension, because it directly connects graph structure to recommendation performance.
+
+The goal is not to implement every possible dynamic diagnostic at once. The first dynamic pass should focus on B1, B2, B4, and B6:
+
+- B1: is the target item reached by graph decoding?
+- B2: does extra budget add genuinely new regions, or mostly redundant neighbors?
+- B4: if the target is reached, how many propagation steps are needed?
+- B6: do these dynamic diagnostics saturate at the same time as recommendation performance?
+
+The implementation should save raw decoding traces first, then compute aggregate metrics from those traces. This is safer than saving only aggregates, because it lets us fix or redefine metrics later without rerunning decoding.
+
+Important implementation rule:
+
+- Tracing must not change decoding behavior.
+- The first validation should compare normal RPG evaluation metrics against RPG evaluation with tracing enabled. If the metrics differ, the dynamic analysis is invalid.
 
 ### B1. Target Reachability
 
-For each test user, measure whether the ground-truth next item is reachable from the randomly initialized beams within `q` graph-propagation steps.
+Question: does graph decoding ever reach the ground-truth next item?
+
+For each test example, record the initial candidate items, the step-wise visited set, the final prediction, and the ground-truth item. Then check whether the target appears anywhere in the visited set.
 
 Default inference setting:
 
 - Use the released README Sports inference hyperparameters as the default dynamic-analysis setting: `num_beams = 100`, `n_edges = 30`, and `propagation_steps = 5`.
-- The paper-appendix/perf setting, `num_beams = 10`, `n_edges = 100`, and `propagation_steps = 2`, can be kept as a secondary comparison only if needed.
+- Do not use the paper-appendix/perf setting as the default for B. It can be kept as a secondary comparison only if needed.
 
-Potential variables:
+First sweep:
 
-- `q`: propagation steps, for example `0, 1, 2, 3, 5`
-- `k`: graph neighbors per node, for example `10, 20, 50, 100, 200`
-- `b`: beam size, for example `10, 20, 50, 100`
-- eval seed, because RPG's initial beams are random
+- `n_edges = [10, 20, 30, 50, 100]`
+- `propagation_steps = 5`
+- `num_beams = 100`
+- `temperature = 0.03`
 
-Possible outputs:
+Optional second sweep:
 
-- reachable target rate vs `q`
-- reachable target rate vs `k`
-- reachable target rate vs `b`
-- NDCG@10 vs reachable target rate
-- performance when target is reachable vs unreachable
+- `n_edges = 30`
+- `propagation_steps = [1, 2, 3, 5]`
+- `num_beams = 100`
+- `temperature = 0.03`
 
-### B2. Marginal Utility Per Propagation Step
+Per-example trace fields:
 
-For each propagation step, measure what new information is gained.
+- example id
+- user/session id if available
+- target item
+- budget config
+- initial items
+- visited items by step
+- final visited set
+- final prediction
+- target reachable
+- target first reached step
+- target selected in final recommendation
 
-Possible metrics:
+Aggregate metrics:
 
-- number of new unique nodes discovered
-- overlap with previously visited nodes
-- average model score of newly discovered nodes
-- fraction of final top-10 items first discovered at this step
-- fraction of target items first discovered at this step
-
-This is one of the most direct ways to explain performance saturation. If later steps add many nodes but almost no useful high-scoring nodes, then the graph search budget has diminishing returns.
-
-### B3. Visited-Set Oracle
-
-Separate graph-search failure from model-ranking failure.
-
-For each user:
-
-- Was the target item visited?
-- If visited, what was the target's rank among visited nodes?
-- What Recall@10 would be possible with an oracle reranker over only visited nodes?
+- reachable target rate
+- reachable target rate by budget
+- target selected rate
+- reachable-but-not-selected rate
+- mean visited set size
+- target first-reached-step distribution
 
 Interpretation:
 
-- target not visited: graph/search budget failure
-- target visited but ranked low: model scoring failure
+- If target reachability saturates early, then additional graph budget has limited room to improve recommendation metrics.
+- If many targets are never reached, then the bottleneck is graph search or initial beam selection.
+- If targets are reached but not selected, then the bottleneck is ranking/scoring rather than graph reachability.
 
-### B4. Score Gap Analysis
+### B2. Redundancy of Visited Candidates
 
-Compare scores among visited and unvisited items.
+Question: when the budget grows, are the newly visited items genuinely new semantic regions, or mostly redundant neighbors?
 
-Possible metrics:
+For each test example and budget, compare newly added items at each propagation step against the items already visited before that step.
 
-- best model score among visited nodes
-- best model score among all items, if feasible for the original item pool
-- target item score
-- final recommended item scores
-- score gap between best visited and best global item
+Core metrics:
 
-Question: does graph decoding quickly reach the high-scoring part of the item space?
+- number of new unique nodes discovered
+- visited set size by step
+- marginal new items by step
+- mean RPG similarity between newly added items and previous visited items
+- mean semantic-ID Hamming distance between newly added items and previous visited items
+- unique semantic-ID prefixes covered by the visited set
 
-### B5. Seed Sensitivity
+Simple prefix choices:
 
-Repeat reachability and visited-set analysis across multiple eval seeds.
+- prefix length 1
+- prefix length 2
+- prefix length 4
 
-Question: how much of RPG's metric variance comes from random initial beam selection?
+Keep prefix analysis simple at first. It is only meant to indicate semantic-region diversity, not define a new clustering algorithm.
+
+Interpretation:
+
+- If the visited set grows but prefix diversity saturates, extra budget is expanding within the same semantic regions.
+- If newly added items are highly similar to already visited items, extra budget is likely redundant.
+- If new items become less similar and prefix diversity keeps growing, then saturation is less likely to be explained by local redundancy.
+
+### B4. First-Hit / Path-Depth Analysis
+
+Question: if the target is reachable, how many graph-expansion steps are needed?
+
+This is related to B1 but focuses on depth. B1 asks whether the target is reached at all; B4 asks when it is first reached.
+
+Core metrics:
+
+- fraction of targets reached at step 0
+- fraction first reached at step 1
+- fraction first reached at step 2
+- fraction first reached at step 3
+- fraction first reached at step 5
+- fraction never reached
+- mean first reached step among reachable targets
+- median first reached step among reachable targets
+
+Optional metric:
+
+- shortest graph distance from the initial candidate set to the target, if this is cheap to compute from the saved graph and trace.
+
+The optional shortest-distance metric should not block the first implementation. The step-wise trace already gives the most important quantity: when RPG actually reaches the target under its real beam pruning.
+
+Interpretation:
+
+- If most reachable targets appear within the first one or two propagation steps, increasing propagation depth should have limited benefit.
+- If many targets require deeper paths but are pruned before reaching them, beam pruning may be the real bottleneck.
+- If targets are theoretically close in the graph but not reached dynamically, model scoring or beam pruning is steering search away from them.
+
+### B6. Saturation Curves
+
+Question: do dynamic diagnostics saturate at the same time as recommendation performance?
+
+This is the synthesis experiment. For each budget setting, plot recommendation metrics and dynamic diagnostics together.
+
+Budget axes:
+
+- main axis: `n_edges = [10, 20, 30, 50, 100]`, with `propagation_steps = 5`
+- secondary axis if needed: `propagation_steps = [1, 2, 3, 5]`, with `n_edges = 30`
+
+Report per budget:
+
+- Recall@K and/or NDCG@K
+- reachable target rate
+- mean visited set size
+- mean new items per step
+- target first-hit distribution
+- redundancy metrics from B2
+- semantic-prefix diversity
+
+Interpretation:
+
+- If performance, reachability, and diversity all saturate together, the graph-search explanation is strong.
+- If performance saturates but reachability keeps increasing, the bottleneck is probably ranking/scoring after reachability.
+- If visited set size keeps growing but reachability and diversity saturate, extra budget is mostly adding redundant candidates.
+- If none of the dynamic diagnostics saturate, then the static graph explanation is probably incomplete.
+
+### B Implementation Notes
+
+Use one dynamic trace runner rather than separate scripts for each B experiment.
+
+The raw trace should be saved under the graph-inspection/graph-analysis artifact tree, not mixed into normal evaluation outputs. A possible structure is:
+
+```text
+artifacts/rpg/graph_analysis/sports/<session>/
+  graphs/
+  static/
+  dynamic/
+    traces/
+    summaries/
+```
+
+Suggested raw trace output:
+
+```text
+dynamic_traces.parquet
+```
+
+CSV is acceptable for the first implementation if arrays are stored in a simple JSON-string column, but Parquet is cleaner for nested trace fields.
+
+Suggested aggregate outputs:
+
+```text
+dynamic_reachability_summary.csv
+dynamic_redundancy_summary.csv
+dynamic_first_hit_summary.csv
+dynamic_saturation_summary.csv
+```
+
+The first implementation milestone should be:
+
+1. Run RPG evaluation with tracing enabled.
+2. Confirm recommendation metrics match normal RPG evaluation.
+3. Save per-example visited-set traces.
+4. Compute B1 reachability.
+5. Add B2 redundancy and B4 first-hit metrics from the same traces.
+6. Build B6 plots only after the trace fields are trusted.
 
 ## Visualization Ideas
 
@@ -353,21 +475,23 @@ For Sports, the saved top-100 graph can likely support analyses for smaller `k` 
 
 ## Recommended First Version
 
-The first implementation should probably be narrow:
+The first implementation should be narrow:
 
 1. Use Sports only.
-2. Use the cached original-pool top-100 graph if possible.
-3. Compute static graph summaries: neighbor similarity, reciprocity, hubness, connected components, and clustering.
-4. Instrument or reimplement graph propagation to record per-user visited sets and per-step frontiers.
-5. Run target reachability and marginal utility analysis for a small grid of `q`, `k`, and `b`.
-6. Add one or two query-trace visualizations only after the quantitative results are clear.
+2. Keep the static A outputs as the structural baseline.
+3. Instrument graph propagation to record per-example visited sets and per-step frontiers.
+4. Validate that tracing does not change RPG evaluation metrics.
+5. Run the main `n_edges` sweep: `[10, 20, 30, 50, 100]` with README defaults for the other dynamic hyperparameters.
+6. Compute B1, B2, B4, and B6 from saved traces.
+7. Add query-trace visualizations only after the quantitative dynamic results are clear.
 
 This keeps the extension aligned with the paper's Figure 6 while limiting scope.
 
 ## Open Questions
 
-- Should the paper-appendix inference settings be included as a secondary dynamic-analysis comparison, or should we keep only the released README settings?
-- Should the dynamic analysis use the upstream dense graph or the repo-owned cached flat graph?
-- How many eval seeds are enough for stable reachability estimates?
-- Do we need all datasets, or is Sports enough because Figure 6 is based on Sports?
+- Should the paper-appendix inference settings be included as a secondary comparison, or should B use only the released README settings?
+- Should B reuse the prepared static top-100 graph, or should it build the decoding graph exactly through the upstream RPG path for every budget?
+- How many eval seeds are needed for stable reachability estimates?
+- Is Sports enough for the extension, or do we need one additional dataset after the method is stable?
+- Should shortest-path analysis be included in B4, or is first-hit step from actual decoding enough?
 - Should visualization be part of the core contribution or only supporting material?

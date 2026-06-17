@@ -10,6 +10,13 @@ Three grids, three CSVs:
     output/reproduction/rpg/grid/fig6/{ds}/b{B}_k{K}_q{Q}/{session}/summary.json
     -> long rows: dataset,num_beams,n_edges,propagation_steps,metric,mean,std,n_seeds
 
+    output/reproduction/rpg/grid/decode_test_confirm/{ds}/b{B}_k{K}_q{Q}/{session}/summary.json
+    -> long rows (TEST @10 seeds, the val-selected cluster re-decoded):
+       dataset,num_beams,n_edges,propagation_steps,metric,mean,std,n_seeds
+       plus a per-dataset reporting-rule summary (decode_test_selected.csv):
+       the val-argmax cell's TEST number (zero test-peeking) alongside the
+       best-of-cluster TEST number (a secondary ceiling that does peek at test).
+
   training grid   (run_train_grid.sh) -- seeded retrain over lr x temperature:
     output/reproduction/rpg/grid/train/*.err  (one retrain per lr/temp/seed cell)
     -> long rows aggregated over seeds: dataset,lr,temperature,metric,mean,std,n_seeds
@@ -304,6 +311,61 @@ def select_val_cluster(decode_rows: list[dict], metric: str = "ndcg@10") -> tupl
     return cluster_rows, summary_rows
 
 
+def select_test_confirm(
+    test_rows: list[dict],
+    val_selected_rows: list[dict],
+    metric: str = "ndcg@10",
+) -> list[dict]:
+    """Per dataset, summarise the TEST confirmation of the val-selected cluster.
+
+    Reporting rule (mirrors the authors' A3: select on val, report on test):
+      - val_argmax_test_*   -- TEST score of the cell that won on VAL. Headline,
+                               zero-test-peeking number.
+      - best_cluster_test_* -- best TEST score among the confirmed cluster cells.
+                               This DOES peek at test; report only as a secondary
+                               "ceiling", never as the primary result.
+    README / appendix TEST scores are filled in only when those exact configs
+    happened to fall inside the confirmed cluster (otherwise blank -- they were
+    not re-decoded on test).
+    """
+    by_ds: dict[str, dict[tuple, dict]] = {}
+    for r in test_rows:
+        if r["metric"] == metric and r["mean"] is not None:
+            coord = (r["num_beams"], r["n_edges"], r["propagation_steps"])
+            by_ds.setdefault(r["dataset"], {})[coord] = r
+
+    val_sel = {row["dataset"]: row for row in val_selected_rows}
+
+    rows: list[dict] = []
+    for dataset in sorted(by_ds):
+        cells = by_ds[dataset]
+        vs = val_sel.get(dataset)
+        sel_coord = (vs["sel_b"], vs["sel_k"], vs["sel_q"]) if vs else None
+        argmax = cells.get(sel_coord) if sel_coord else None
+        best = max(cells.values(), key=lambda r: r["mean"])
+        best_coord = (best["num_beams"], best["n_edges"], best["propagation_steps"])
+
+        readme, appendix = README_CONFIG.get(dataset), APPENDIX_CONFIG.get(dataset)
+        readme_cell = cells.get(readme) if readme else None
+        appendix_cell = cells.get(appendix) if appendix else None
+
+        rows.append({
+            "dataset": dataset, "metric": metric,
+            "sel_b": sel_coord[0] if sel_coord else "",
+            "sel_k": sel_coord[1] if sel_coord else "",
+            "sel_q": sel_coord[2] if sel_coord else "",
+            "val_argmax_test_mean": argmax["mean"] if argmax else "",
+            "val_argmax_test_std": argmax["std"] if argmax else "",
+            "n_seeds": (argmax or best)["n_seeds"],
+            "best_b": best_coord[0], "best_k": best_coord[1], "best_q": best_coord[2],
+            "best_cluster_test_mean": best["mean"], "best_cluster_test_std": best["std"],
+            "argmax_is_best": int(argmax is not None and best_coord == sel_coord),
+            "readme_test_mean": readme_cell["mean"] if readme_cell else "",
+            "appendix_test_mean": appendix_cell["mean"] if appendix_cell else "",
+        })
+    return rows
+
+
 def _write_csv(path: Path, rows: list[dict], fieldnames: list[str]) -> None:
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
@@ -323,6 +385,8 @@ def main() -> int:
                         default="output/reproduction/rpg/grid/fig6")
     parser.add_argument("--decode-val-root",
                         default="output/reproduction/rpg/grid/decode_val")
+    parser.add_argument("--decode-test-confirm-root",
+                        default="output/reproduction/rpg/grid/decode_test_confirm")
     parser.add_argument("--sasrec-train-root",
                         default="output/reproduction/sasrec/grid/train")
     parser.add_argument("--infer-csv", default="infer_grid.csv")
@@ -331,6 +395,8 @@ def main() -> int:
     parser.add_argument("--decode-val-csv", default="results/decode_val_grid.csv")
     parser.add_argument("--decode-val-cluster-csv", default="results/decode_val_cluster.csv")
     parser.add_argument("--decode-val-selected-csv", default="results/decode_val_selected.csv")
+    parser.add_argument("--decode-test-confirm-csv", default="results/decode_test_confirm.csv")
+    parser.add_argument("--decode-test-selected-csv", default="results/decode_test_selected.csv")
     parser.add_argument("--sasrec-train-csv", default="sasrec_train_grid.csv")
     args = parser.parse_args()
 
@@ -341,6 +407,7 @@ def main() -> int:
     infer_rows = collect_infer(_resolve(args.infer_root))
     fig6_rows = collect_infer(_resolve(args.fig6_root))  # same summary.json layout
     decode_val_rows = collect_infer(_resolve(args.decode_val_root))  # same layout
+    decode_test_rows = collect_infer(_resolve(args.decode_test_confirm_root))  # same layout
     train_rows = collect_train(_resolve(args.train_root))
     sasrec_rows = collect_sasrec_train(_resolve(args.sasrec_train_root))
 
@@ -360,6 +427,16 @@ def main() -> int:
                 "readme_b", "readme_k", "readme_q", "readme_val_mean",
                 "appendix_b", "appendix_k", "appendix_q", "appendix_val_mean",
                 "nearest_source"])
+
+    _write_csv(_resolve(args.decode_test_confirm_csv), decode_test_rows, decode_fields)
+    test_selected_rows = select_test_confirm(decode_test_rows, selected_rows)
+    _write_csv(_resolve(args.decode_test_selected_csv), test_selected_rows,
+               ["dataset", "metric", "sel_b", "sel_k", "sel_q",
+                "val_argmax_test_mean", "val_argmax_test_std", "n_seeds",
+                "best_b", "best_k", "best_q",
+                "best_cluster_test_mean", "best_cluster_test_std", "argmax_is_best",
+                "readme_test_mean", "appendix_test_mean"])
+
     _write_csv(_resolve(args.train_csv), train_rows,
                ["dataset", "lr", "temperature", "metric", "mean", "std", "n_seeds",
                 "val_ndcg10_mean", "val_ndcg10_std"])

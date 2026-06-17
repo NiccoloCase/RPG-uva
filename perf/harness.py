@@ -128,7 +128,7 @@ class EvaluationHarness:
             )
 
         tokenizer = get_tokenizer(config["model"])(config, dataset)
-       
+      
         splits_to_tokenize = {"test": split_datasets["test"]}
         if "val" in split_datasets:
             splits_to_tokenize["val"] = split_datasets["val"]

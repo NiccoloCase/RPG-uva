@@ -282,9 +282,11 @@ def select_val_cluster(decode_rows: list[dict], metric: str = "ndcg@10") -> tupl
 
         sel = (best["num_beams"], best["n_edges"], best["propagation_steps"])
         readme, appendix = README_CONFIG.get(dataset), APPENDIX_CONFIG.get(dataset)
+        readme_mean = _cell_mean(rows, readme) if readme else ""
+        appendix_mean = _cell_mean(rows, appendix) if appendix else ""
         nearest = ""
-        if readme and appendix:
-            dr, da = _normalised_distance(sel, readme), _normalised_distance(sel, appendix)
+        if isinstance(readme_mean, (int, float)) and isinstance(appendix_mean, (int, float)):
+            dr, da = abs(best["mean"] - readme_mean), abs(best["mean"] - appendix_mean)
             nearest = "readme" if dr < da else ("appendix" if da < dr else "tie")
         summary_rows.append({
             "dataset": dataset, "metric": metric,
@@ -293,10 +295,10 @@ def select_val_cluster(decode_rows: list[dict], metric: str = "ndcg@10") -> tupl
             "cluster_size": len(cluster), "n_seeds": best["n_seeds"],
             "readme_b": readme[0] if readme else "", "readme_k": readme[1] if readme else "",
             "readme_q": readme[2] if readme else "",
-            "readme_val_mean": _cell_mean(rows, readme) if readme else "",
+            "readme_val_mean": readme_mean,
             "appendix_b": appendix[0] if appendix else "", "appendix_k": appendix[1] if appendix else "",
             "appendix_q": appendix[2] if appendix else "",
-            "appendix_val_mean": _cell_mean(rows, appendix) if appendix else "",
+            "appendix_val_mean": appendix_mean,
             "nearest_source": nearest,
         })
     return cluster_rows, summary_rows
@@ -326,9 +328,9 @@ def main() -> int:
     parser.add_argument("--infer-csv", default="infer_grid.csv")
     parser.add_argument("--train-csv", default="train_grid.csv")
     parser.add_argument("--fig6-csv", default="fig6_grid.csv")
-    parser.add_argument("--decode-val-csv", default="decode_val_grid.csv")
-    parser.add_argument("--decode-val-cluster-csv", default="decode_val_cluster.csv")
-    parser.add_argument("--decode-val-selected-csv", default="decode_val_selected.csv")
+    parser.add_argument("--decode-val-csv", default="results/decode_val_grid.csv")
+    parser.add_argument("--decode-val-cluster-csv", default="results/decode_val_cluster.csv")
+    parser.add_argument("--decode-val-selected-csv", default="results/decode_val_selected.csv")
     parser.add_argument("--sasrec-train-csv", default="sasrec_train_grid.csv")
     args = parser.parse_args()
 

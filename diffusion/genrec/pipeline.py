@@ -74,7 +74,7 @@ class Pipeline:
             if checkpoint_path is not None:
                 self.model.load_state_dict(torch.load(checkpoint_path, map_location=self.config['device']))
                 self.log(f'Loaded model checkpoint from {checkpoint_path}')
-        self.log("Got config:", self.config)
+        self.log(f"Got config: {self.config}")
         self.log(self.model)
         self.log(self.model.n_parameters)
 

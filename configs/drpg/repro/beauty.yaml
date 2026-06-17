@@ -1,0 +1,16 @@
+run_id: drpg_repro_beauty
+model: DRPG
+category: Beauty
+
+n_codebook: 32
+# TODO: add optimal hyperparameters found by sweep
+
+num_beams: 20
+n_edges: 200
+propagation_steps: 3
+
+train_batch_size: 1024
+eval_batch_size: 256
+label_smoothing: 0.1
+epochs: 150
+patience: 15

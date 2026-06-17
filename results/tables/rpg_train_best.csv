@@ -1,0 +1,4 @@
+dataset,released_cfg,released_test,selected_cfg,selected_test,delta
+Sports,"lr=0.003, t=0.03",0.0255,"lr=0.001, t=0.01",0.0264,0.0008
+Beauty,"lr=0.01, t=0.03",0.046,"lr=0.003, t=0.01",0.0463,0.0003
+Toys,"lr=0.003, t=0.03",0.0468,"lr=0.003, t=0.01",0.0483,0.0015

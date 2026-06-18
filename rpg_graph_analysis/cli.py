@@ -8,6 +8,7 @@ from .dynamic import run_dynamic
 from .prepare import prepare_graph
 from .pruning import run_pruning
 from .reranking.eval import run_reranking
+from .scoring import run_scoring
 from .static import run_static
 
 
@@ -82,6 +83,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(rerank_parser)
 
+    scoring_parser = subparsers.add_parser(
+        "scoring",
+        help="Run Experiment C: brute-force RPG scoring vs graph decoding.",
+    )
+    add_common_inputs(scoring_parser)
+
     return parser
 
 
@@ -102,5 +109,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_pruning(args)
     if args.command == "rerank":
         return run_reranking(args)
+    if args.command == "scoring":
+        return run_scoring(args)
     parser.error(f"Unsupported command: {args.command}")
     return 2

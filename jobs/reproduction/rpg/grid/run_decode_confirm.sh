@@ -114,7 +114,8 @@ for cell in "${CELLS[@]}"; do
     --num_beams "${b}" \
     --n_edges "${k}" \
     --propagation_steps "${q}" \
-    --topk "${TOPK}"
+    --topk "${TOPK}" \
+    --no-per-user-output
 done
 
 echo "DECODE_CONFIRM_END dataset=${CAT} preset=${DS}"

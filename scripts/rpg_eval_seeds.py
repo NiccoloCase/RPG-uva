@@ -89,6 +89,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.95,
         help="Two-sided bootstrap confidence level for metric summaries.",
     )
+    parser.add_argument(
+        "--no-per-user-output",
+        action="store_true",
+        help=(
+            "Skip writing per_user_metrics.csv/.jsonl (one row per user x seed). "
+            "summary.json, per_seed_summary.csv and summary.csv are still written. "
+            "Use for large grid sweeps where only the aggregated summary is "
+            "consumed, to avoid exhausting disk quota."
+        ),
+    )
     return parser
 
 
@@ -414,8 +424,9 @@ def main(argv: list[str] | None = None) -> int:
     summary_json = session_root / "summary.json"
     manifest_path = session_root / "manifest.json"
 
-    _write_csv(per_user_csv, all_rows)
-    _write_jsonl(per_user_jsonl, all_rows)
+    if not args.no_per_user_output:
+        _write_csv(per_user_csv, all_rows)
+        _write_jsonl(per_user_jsonl, all_rows)
     _write_csv(per_seed_csv, per_seed_rows)
     _write_csv(metric_summary_csv, metric_rows)
 
@@ -437,8 +448,8 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = {
         "session_root": str(session_root),
-        "per_user_csv": str(per_user_csv),
-        "per_user_jsonl": str(per_user_jsonl),
+        "per_user_csv": None if args.no_per_user_output else str(per_user_csv),
+        "per_user_jsonl": None if args.no_per_user_output else str(per_user_jsonl),
         "per_seed_csv": str(per_seed_csv),
         "summary_csv": str(metric_summary_csv),
         "summary_json": str(summary_json),

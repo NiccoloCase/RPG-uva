@@ -9,7 +9,7 @@ reproducibility: True
 
 train_batch_size: 256
 eval_batch_size: 32
-lr: 0.0003
+lr: 0.003
 weight_decay: 0.0
 warmup_steps: 10000
 steps: ~

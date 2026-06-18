@@ -3,7 +3,7 @@ model: DRPG
 category: Beauty
 
 n_codebook: 32
-# TODO: add optimal hyperparameters found by sweep
+diffusion_heads: 8
 
 num_beams: 20
 n_edges: 200
@@ -14,3 +14,4 @@ eval_batch_size: 256
 label_smoothing: 0.1
 epochs: 150
 patience: 15
+lr: 0.003

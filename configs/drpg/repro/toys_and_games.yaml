@@ -3,7 +3,7 @@ model: DRPG
 category: Toys_and_Games
 
 n_codebook: 16
-# TODO: add optimal hyperparameters found by sweep
+diffusion_heads: 8
 
 num_beams: 200
 n_edges: 20
@@ -14,3 +14,4 @@ eval_batch_size: 256
 label_smoothing: 0.15
 epochs: 150
 patience: 15
+lr: 0.003

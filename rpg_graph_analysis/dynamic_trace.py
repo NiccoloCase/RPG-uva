@@ -106,12 +106,17 @@ def traced_graph_propagation(
     model: Any,
     token_logits: torch.Tensor,
     n_return_sequences: int,
+    *,
+    mask_visited_frontier: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, BatchTrace]:
     """Run graph propagation and collect per-step trace data.
 
     This intentionally follows the upstream implementation line by line for
     random initialization, neighbor expansion, scoring, and beam pruning.
-    Additional bookkeeping is done with Python sets after each operation.
+    Additional bookkeeping is done with Python sets after each operation. When
+    ``mask_visited_frontier`` is true, already-seen nodes are removed before
+    choosing the next frontier when possible; if too few fresh nodes exist, the
+    remaining beam slots are backfilled with the best already-seen candidates.
 
     Args:
         model: Loaded RPG model with ``adjacency``, ``item_id2tokens``,
@@ -191,8 +196,35 @@ def traced_graph_propagation(
                 index=(model.item_id2tokens[neighbors_in_batch] - 1),
             ).mean(dim=-1)
 
-            idxs = torch.topk(scores, model.num_beams).indices
-            selected_next = neighbors_in_batch[idxs]
+            if mask_visited_frontier:
+                previous_mask = torch.tensor(
+                    [int(node) in previous for node in unique_neighbors],
+                    dtype=torch.bool,
+                    device=neighbors_in_batch.device,
+                )
+                fresh_nodes = neighbors_in_batch[~previous_mask]
+                fresh_scores = scores[~previous_mask]
+                fresh_k = min(int(model.num_beams), int(fresh_nodes.shape[0]))
+                selected_parts = []
+                if fresh_k:
+                    selected_parts.append(fresh_nodes[torch.topk(fresh_scores, fresh_k).indices])
+                remaining = int(model.num_beams) - fresh_k
+                if remaining > 0:
+                    fallback_nodes = neighbors_in_batch[previous_mask]
+                    fallback_scores = scores[previous_mask]
+                    fallback_k = min(remaining, int(fallback_nodes.shape[0]))
+                    if fallback_k:
+                        selected_parts.append(
+                            fallback_nodes[torch.topk(fallback_scores, fallback_k).indices]
+                        )
+                selected_next = torch.cat(selected_parts) if selected_parts else neighbors_in_batch[:0]
+                if selected_next.shape[0] < model.num_beams:
+                    pad_source = selected_next if selected_next.shape[0] else neighbors_in_batch
+                    repeats = int(model.num_beams) - int(selected_next.shape[0])
+                    selected_next = torch.cat([selected_next, pad_source[:1].repeat(repeats)])
+            else:
+                idxs = torch.topk(scores, model.num_beams).indices
+                selected_next = neighbors_in_batch[idxs]
             next_nodes.append(selected_next)
 
             raw_count = len(raw_neighbors)
@@ -252,4 +284,25 @@ def traced_generate(
         model=model,
         token_logits=token_logits,
         n_return_sequences=n_return_sequences,
+    )
+
+
+def traced_generate_visited_masked(
+    model: Any,
+    batch: dict[str, torch.Tensor],
+    n_return_sequences: int,
+) -> tuple[torch.Tensor, torch.Tensor, BatchTrace]:
+    """Generate with a novelty-aware frontier mask.
+
+    This intervention keeps RPG's scoring rule and initial random beams, but
+    prefers unvisited graph candidates when selecting the next frontier. It is
+    intended for analysis only and does not mirror upstream RPG behavior.
+    """
+
+    token_logits = _compute_token_logits(model, batch)
+    return traced_graph_propagation(
+        model=model,
+        token_logits=token_logits,
+        n_return_sequences=n_return_sequences,
+        mask_visited_frontier=True,
     )

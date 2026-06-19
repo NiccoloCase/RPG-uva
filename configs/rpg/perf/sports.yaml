@@ -22,3 +22,8 @@ graph_hnsw_ef_search: 256
 repeats: 3
 warmup_batches: 2
 measure_cuda_memory: true
+
+# Exact no-graph RPG profiling. Every item is scored; chunking only limits
+# temporary tensor size and does not approximate the top-k result.
+bruteforce_item_chunk_size: 50000
+bruteforce_parity_batches: 1

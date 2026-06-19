@@ -6,6 +6,8 @@ import argparse
 
 from .dynamic import run_dynamic
 from .inference_perf import run_inference_perf
+from .novelty import run_novelty
+from .pool_reranking import run_pool_reranking
 from .prepare import prepare_graph
 from .pruning import run_pruning
 from .reranking.eval import run_reranking
@@ -78,6 +80,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(pruning_parser)
 
+    novelty_parser = subparsers.add_parser(
+        "novelty",
+        help="Run B8 novelty-aware graph traversal analysis from a prepared graph.",
+    )
+    add_common_inputs(novelty_parser)
+
+    pool_parser = subparsers.add_parser(
+        "pool-rerank",
+        help="Run B9 visited-pool reranking from standard RPG graph traversal.",
+    )
+    add_common_inputs(pool_parser)
+
     rerank_parser = subparsers.add_parser(
         "rerank",
         help="Run a lightweight candidate-reranking intervention from a prepared graph.",
@@ -114,6 +128,10 @@ def main(argv: list[str] | None = None) -> int:
         return run_dynamic(args)
     if args.command == "pruning":
         return run_pruning(args)
+    if args.command == "novelty":
+        return run_novelty(args)
+    if args.command == "pool-rerank":
+        return run_pool_reranking(args)
     if args.command == "rerank":
         return run_reranking(args)
     if args.command == "scoring":

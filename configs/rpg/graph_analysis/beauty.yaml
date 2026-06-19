@@ -1,0 +1,25 @@
+run_id: rpg_graph_analysis_beauty
+
+# Shared checkpoint/tokenizer reconstruction for the Beauty dataset.
+category: Beauty
+metadata: sentence
+n_codebook: 32
+
+# Static graph-analysis controls.
+# Beauty uses the released README graph width n_edges=200, so we prepare one
+# exact flat top-200 graph and slice it for smaller static budgets.
+graph_backend: flat
+graph_topk: 200
+graph_vector_batch_size: 512
+graph_analysis_output_dir: artifacts/rpg/graph_analysis/beauty
+graph_analysis_k_values: [20, 50, 100, 200]
+graph_analysis_random_seeds: [2024, 2025, 2026]
+graph_analysis_similarity_batch_size: 32768
+
+# Dynamic/query-conditioned controls for later commands. They are intentionally
+# not used by the static command, but document the README Beauty inference
+# setting.
+# temperature: 0.03
+# num_beams: 20
+# n_edges: 200
+# propagation_steps: 3

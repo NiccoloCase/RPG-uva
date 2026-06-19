@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from .dynamic import run_dynamic
+from .inference_perf import run_inference_perf
 from .prepare import prepare_graph
 from .pruning import run_pruning
 from .reranking.eval import run_reranking
@@ -89,6 +90,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(scoring_parser)
 
+    perf_parser = subparsers.add_parser(
+        "perf-inference",
+        help="Run no-trace inference timing for graph decoding vs brute-force scoring.",
+    )
+    add_common_inputs(perf_parser)
+
     return parser
 
 
@@ -111,5 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         return run_reranking(args)
     if args.command == "scoring":
         return run_scoring(args)
+    if args.command == "perf-inference":
+        return run_inference_perf(args)
     parser.error(f"Unsupported command: {args.command}")
     return 2

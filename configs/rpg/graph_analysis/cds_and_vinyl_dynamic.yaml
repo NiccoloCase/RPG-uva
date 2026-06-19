@@ -1,0 +1,21 @@
+run_id: rpg_graph_analysis_cds_and_vinyl_dynamic
+
+# Dynamic/query-conditioned controls for Experiment Block B.
+# These are the released README CDs inference defaults.
+temperature: 0.03
+num_beams: 20
+n_edges: 500
+propagation_steps: 5
+
+# Main B sweep. The prepared graph is top-500 and is sliced to these widths.
+graph_analysis_dynamic_n_edges: [50, 100, 200, 500]
+graph_analysis_eval_seeds: [2024, 2025, 2026]
+
+# Store scalar diagnostics for every example, and full item-list traces only
+# for this deterministic sample of users.
+graph_analysis_trace_sample_size: 128
+graph_analysis_trace_sample_seed: 2024
+
+# Compare traced decoding against upstream generate() on the first batches of
+# every budget/seed pair. Set to 0 only after the tracer is trusted.
+graph_analysis_trace_parity_batches: 1

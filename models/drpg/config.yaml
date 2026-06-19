@@ -1,0 +1,54 @@
+# Repo-owned DRPG overlay. It reuses the upstream RPG tokenizer/runner
+# conventions and adds masked-diffusion denoising over long semantic IDs.
+metadata: sentence
+
+# Sentence embedding model used by the inherited RPG tokenizer.
+sent_emb_model: text-embedding-3-large
+sent_emb_dim: 3072
+sent_emb_pca: 512
+openai_api_key: ~
+sent_emb_batch_size: 512
+
+# Backbone history encoder.
+max_item_seq_len: 50
+max_history_len: 50
+n_embd: 448
+n_layer: 2
+n_head: 4
+n_inner: 1024
+activation_function: gelu_new
+resid_pdrop: 0.0
+embd_pdrop: 0.5
+attn_pdrop: 0.5
+layer_norm_epsilon: 1e-12
+initializer_range: 0.02
+
+# Semantic ID configs.
+n_codebook: 32
+codebook_size: 256
+opq_use_gpu: False
+opq_gpu_id: 0
+faiss_omp_num_threads: 32
+
+# RPG graph-constrained decoding configs.
+temperature: 0.03
+num_beams: 50
+n_edges: 50
+propagation_steps: 3
+chunk_size: 1024
+num_workers: 64
+
+# DRPG denoiser configs.
+diffusion_layers: 2
+diffusion_heads: 4
+dropout: 0.3
+label_smoothing: 0.1
+do_norm_and_scale: true
+
+# If diffusion_mask_counts is empty, counts are derived from ratios and
+# diffusion_min_masks. For n_codebook=32 this defaults to [32,24,16,8,4,1].
+diffusion_mask_counts: ""
+diffusion_mask_ratios: "1.0,0.75,0.5,0.25,0.125"
+diffusion_min_masks: 1
+diffusion_ocn_strategy: static
+diffusion_final_logits: last_masked

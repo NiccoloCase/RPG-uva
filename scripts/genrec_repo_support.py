@@ -125,6 +125,19 @@ def _build_get_config(genrec_utils_module):
     return get_config_with_repo_models
 
 
+def _build_config_for_log(genrec_utils_module):
+    original_config_for_log = genrec_utils_module.config_for_log
+
+    def config_for_log_with_scalars(config: dict) -> dict:
+        logged_config = original_config_for_log(config)
+        for key, value in list(logged_config.items()):
+            if not isinstance(value, (int, float, str, bool)):
+                logged_config[key] = "" if value is None else str(value)
+        return logged_config
+
+    return config_for_log_with_scalars
+
+
 def prepare_genrec_runtime(model_name: str) -> None:
     ensure_submodule_available()
 
@@ -139,6 +152,9 @@ def prepare_genrec_runtime(model_name: str) -> None:
         genrec_models.__path__.append(local_models_root_str)
 
     genrec_utils.get_config = _build_get_config(genrec_utils)
+    genrec_utils.config_for_log = _build_config_for_log(genrec_utils)
+    if "genrec.trainer" in sys.modules:
+        sys.modules["genrec.trainer"].config_for_log = genrec_utils.config_for_log
 
     local_model_dir = _resolve_local_model_dir(model_name)
     if local_model_dir is None:

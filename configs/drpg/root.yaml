@@ -1,5 +1,0 @@
-run_id: drpg_root
-cache_dir: artifacts/rpg/cache
-log_dir: artifacts/drpg/logs
-tensorboard_log_dir: artifacts/drpg/tensorboard
-ckpt_dir: artifacts/drpg/ckpt

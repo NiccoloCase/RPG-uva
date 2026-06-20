@@ -127,13 +127,34 @@ class Pipeline:
                 self.accelerator.log({f'Test_Metric/{key}': test_results[key]})
         self.log(f'Test Results: {test_results}')
 
-        if self.config['log_pred_acc'] and getattr(self.trainer.model, 'log_pred_acc', False) and hasattr(self.trainer.model, '_total_correct_guesses'):
-            if self.trainer.model._total_free_tokens > 0:
-                final_acc = self.trainer.model._total_correct_guesses / self.trainer.model._total_free_tokens
-                print(f"\nFinal Token Accuracy on masked digits: {final_acc:.4f} ({self.trainer.model._total_correct_guesses}/{self.trainer.model._total_free_tokens})")
+        if self.config.get('log_pred_acc') and getattr(self.trainer.model, 'log_pred_acc', False) and hasattr(self.trainer.model, 'step_pred_accs'):
+            if self.accelerator.is_main_process:
+                print("\n--- Token Prediction Accuracy Per Denoise Step ---")
+                for step, stats in sorted(self.trainer.model.step_pred_accs.items()):
+                    correct = stats["correct"]
+                    total = stats["total"]
+                    if total > 0:
+                        frac = correct / total
+                        print(f"Step {step:2d}: {frac:.4f} ({correct}/{total})")
+                    else:
+                        print(f"Step {step:2d}: N/A (0 total)")
 
-            self.trainer.model._total_correct_guesses = 0
-            self.trainer.model._total_free_tokens = 0
+            self.trainer.model.step_pred_accs.clear()
+
+        if self.config.get('log_legal_item_frac') and getattr(self.trainer.model, 'log_legal_item_frac', False) and hasattr(self.trainer.model, 'legal_item_fracs'):
+            if self.accelerator.is_main_process:
+                print("\n--- Legal Item Trajectory Fractions Per Denoise Step ---")
+                # Sort by step number to ensure chronologial output
+                for step, stats in sorted(self.trainer.model.legal_item_fracs.items()):
+                    correct = stats["correct"]
+                    total = stats["total"]
+                    if total > 0:
+                        frac = correct / total
+                        print(f"Step {step:2d}: {frac:.4f} ({correct}/{total})")
+                    else:
+                        print(f"Step {step:2d}: N/A (0 total)")
+
+            self.trainer.model.legal_item_fracs.clear()
 
         self.trainer.end()
         return {

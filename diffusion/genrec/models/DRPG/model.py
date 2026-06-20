@@ -5,7 +5,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
+import collections
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -146,9 +146,15 @@ class DRPG(AbstractModel):
 
         self.oracle_generate = self.config['oracle_generate']
         self.n_oracle = self.config["n_oracle"]
-        self.log_pred_acc = self.config["log_pred_acc"]
         print(f"Using oracle generation: {self.oracle_generate} with {self.n_oracle} digits.")
+
+        self.log_pred_acc = self.config["log_pred_acc"]
+        self.step_pred_accs = collections.defaultdict(lambda: {"correct": 0, "total": 0})
         print(f"Logging token prediction accuracy: {self.log_pred_acc}")
+
+        self.log_legal_item_frac = self.config["log_legal_item_frac"]
+        self.legal_item_fracs = collections.defaultdict(lambda: {"correct": 0, "total": 0})
+        print(f"Logging legal item fraction: {self.log_legal_item_frac}")
 
     def _map_item_tokens(self) -> torch.Tensor:
         """
@@ -560,21 +566,38 @@ class DRPG(AbstractModel):
 
                     current_targets = next_targets
 
-                # Keep track of token prediction accuracy
-                if log_pred_acc and 'labels' in batch:
-                    if not hasattr(self, '_total_correct_guesses'):
-                        self._total_correct_guesses = 0
-                        self._total_free_tokens = 0
+                    if self.log_legal_item_frac:
+                        is_unmasked = (current_targets != self.denoiser.mask_token_id) # (B, n_digit)
 
-                    # Create a mask so we only calculate accuracy on unmasked tokens
-                    free_token_mask = torch.ones(B, self.n_digit, dtype=torch.bool, device=device)
-                    free_token_mask[:, :n_oracle] = False
+                        # compare current batch state against all legal items
+                        # current_targets shape expanded: (B, 1, n_digit)
+                        # item_id2tokens shape expanded: (1, n_items, n_digit)
+                        match = (current_targets.unsqueeze(1) == self.item_id2tokens.unsqueeze(0))
 
-                    correct_guesses = (current_targets == true_target_tokens) & free_token_mask
+                        # If a token is masked, it doesn't violate legality yet
+                        match_with_mask = match | ~is_unmasked.unsqueeze(1) # (B, n_items, n_digit)
 
-                    if free_token_mask.sum() > 0:
-                        self._total_correct_guesses += correct_guesses.sum().item()
-                        self._total_free_tokens += free_token_mask.sum().item()
+                        # An item is a valid future path if all unmasked digits match
+                        valid_items = match_with_mask.all(dim=-1) # (B, n_items)
+
+                        # The batch instance is "correct" if it has AT LEAST ONE valid future item path
+                        has_legal_item = valid_items.any(dim=-1) # (B,)
+
+                        self.legal_item_fracs[step]["correct"] += has_legal_item.sum().item()
+                        self.legal_item_fracs[step]["total"] += B
+
+                    if log_pred_acc and 'labels' in batch:
+                        is_unmasked = (current_targets != self.denoiser.mask_token_id)
+
+                        # Exclude the oracle tokens from our scoring pool
+                        free_unmasked_mask = is_unmasked.clone()
+                        free_unmasked_mask[:, :n_oracle] = False
+
+                        # Check where the committed tokens perfectly match the ground truth
+                        correct_guesses = (current_targets == true_target_tokens) & free_unmasked_mask
+
+                        self.step_pred_accs[step]["correct"] += correct_guesses.sum().item()
+                        self.step_pred_accs[step]["total"] += free_unmasked_mask.sum().item()
 
                 token_logits = F.log_softmax(final_logits, dim=-1).view(B, -1)
 

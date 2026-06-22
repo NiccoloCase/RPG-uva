@@ -123,9 +123,7 @@ checkpoint. The four paper datasets are already done; this section is for adding
 new Amazon category. All jobs run on Snellius.
 
 Throughout, `<ds>` is the snake_case preset name (e.g. `office_products`) and
-`<Category>` is the Title_Case cache name (e.g. `Office_Products`). Use the H100
-partition (`-p gpu_h100`) — the A100 partition is being drained — and
-`--cpus-per-task=16` is billed as a single GPU.
+`<Category>` is the Title_Case cache name (e.g. `Office_Products`). 
 
 ### Prerequisites
 

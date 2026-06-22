@@ -69,6 +69,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated eval seeds, for example '2024,2025,2026'.",
     )
     parser.add_argument(
+        "--split",
+        choices=("test", "val"),
+        default="test",
+        help=(
+            "Evaluation split. 'test' (default) reproduces reported metrics; "
+            "'val' scores the validation split for hyperparameter selection."
+        ),
+    )
+    parser.add_argument(
         "--output-dir",
         default="artifacts/rpg/eval_seeds",
         help="Directory under which a timestamped eval session will be written.",
@@ -92,6 +101,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Two-sided bootstrap confidence level for metric summaries.",
     )
     parser.add_argument(
+        "--no-per-user-output",
+        action="store_true",
+        help=(
+            "Skip writing per_user_metrics.csv/.jsonl (one row per user x seed). "
+            "summary.json, per_seed_summary.csv and summary.csv are still written. "
+            "Use for large grid sweeps where only the aggregated summary is "
+            "consumed, to avoid exhausting disk quota."
+        ),
         "--short-head-fraction",
         type=float,
         default=0.2,
@@ -265,6 +282,7 @@ def _build_graph_once(harness: EvaluationHarness) -> None:
 
 def _collect_seed_rows(
     harness: EvaluationHarness,
+    dataloader: Any,
     eval_seed: int,
     user_ids: list[str],
     metric_names: list[str],
@@ -285,8 +303,8 @@ def _collect_seed_rows(
     maxk = harness.trainer.evaluator.maxk
 
     progress = tqdm(
-        harness.test_dataloader,
-        total=len(harness.test_dataloader),
+        dataloader,
+        total=len(dataloader),
         desc=f"Eval seed {eval_seed}",
     )
     with torch.no_grad():
@@ -433,12 +451,22 @@ def main(argv: list[str] | None = None) -> int:
     topk_values = sorted(int(k) for k in harness.config["topk"])
     all_metric_names = metric_names + popularity_metric_names(topk_values)
 
-    test_split = harness.dataset.split()["test"]
-    user_ids = [str(user) for user in test_split["user"]]
-    if len(user_ids) != len(harness.test_dataloader.dataset):
+    if args.split == "val":
+        dataloader = harness.val_dataloader
+        if dataloader is None:
+            raise RuntimeError(
+                "Validation dataloader is unavailable; the dataset split() did not "
+                "expose a 'val' split."
+            )
+    else:
+        dataloader = harness.test_dataloader
+
+    eval_split = harness.dataset.split()[args.split]
+    user_ids = [str(user) for user in eval_split["user"]]
+    if len(user_ids) != len(dataloader.dataset):
         raise RuntimeError(
-            f"Test user count ({len(user_ids)}) does not match tokenized test rows "
-            f"({len(harness.test_dataloader.dataset)})."
+            f"{args.split} user count ({len(user_ids)}) does not match tokenized "
+            f"{args.split} rows ({len(dataloader.dataset)})."
         )
 
     item_popularity, long_tail_items, user_groups = _build_popularity_context(
@@ -456,6 +484,7 @@ def main(argv: list[str] | None = None) -> int:
         all_rows.extend(
             _collect_seed_rows(
                 harness=harness,
+                dataloader=dataloader,
                 eval_seed=eval_seed,
                 user_ids=user_ids,
                 metric_names=metric_names,
@@ -497,8 +526,9 @@ def main(argv: list[str] | None = None) -> int:
     summary_json = session_root / "summary.json"
     manifest_path = session_root / "manifest.json"
 
-    _write_csv(per_user_csv, all_rows)
-    _write_jsonl(per_user_jsonl, all_rows)
+    if not args.no_per_user_output:
+        _write_csv(per_user_csv, all_rows)
+        _write_jsonl(per_user_jsonl, all_rows)
     _write_csv(per_seed_csv, per_seed_rows)
     _write_csv(metric_summary_csv, metric_rows)
     _write_csv(group_summary_csv, group_rows)
@@ -508,6 +538,7 @@ def main(argv: list[str] | None = None) -> int:
         "dataset": harness.config["dataset"],
         "category": harness.config.get("category"),
         "model": harness.config["model"],
+        "split": args.split,
         "eval_seeds": eval_seeds,
         "metrics": all_metric_names,
         "bootstrap_samples": args.bootstrap_samples,
@@ -532,8 +563,8 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = {
         "session_root": str(session_root),
-        "per_user_csv": str(per_user_csv),
-        "per_user_jsonl": str(per_user_jsonl),
+        "per_user_csv": None if args.no_per_user_output else str(per_user_csv),
+        "per_user_jsonl": None if args.no_per_user_output else str(per_user_jsonl),
         "per_seed_csv": str(per_seed_csv),
         "summary_csv": str(metric_summary_csv),
         "group_summary_csv": str(group_summary_csv),

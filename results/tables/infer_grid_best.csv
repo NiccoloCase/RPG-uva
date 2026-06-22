@@ -1,0 +1,3 @@
+dataset,metric,num_beams,n_edges,propagation_steps,NDCG@10,std
+Sports,ndcg@10,200,50,5,0.0257,1e-05
+Beauty,ndcg@10,200,50,3,0.047,2e-05

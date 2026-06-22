@@ -1,0 +1,18 @@
+run_id: rpg_graph_analysis_toys_and_games_perf_inference
+
+# Performance-only benchmark: time upstream graph generation against vectorized
+# all-item RPG token scoring. This intentionally avoids tracing visited sets.
+temperature: 0.03
+num_beams: 200
+n_edges: 20
+propagation_steps: 3
+
+# Focused min/README/max graph widths for no-trace runtime comparison.
+graph_analysis_scoring_n_edges: [10, 20, 100]
+graph_analysis_eval_seeds: [2024]
+graph_analysis_perf_include_bruteforce: true
+
+# Match the existing performance-profiling methodology.
+graph_analysis_perf_repeats: 3
+graph_analysis_perf_warmup_batches: 2
+graph_analysis_perf_measure_cuda_memory: true

@@ -1,0 +1,26 @@
+run_id: rpg_graph_analysis_toys_and_games
+
+# Shared checkpoint/tokenizer reconstruction for the Toys and Games dataset.
+category: Toys_and_Games
+metadata: sentence
+n_codebook: 16
+
+# Static graph-analysis controls.
+# The released README decoding width is n_edges=20. We prepare an exact
+# top-100 graph so static and dynamic analyses can inspect modestly larger
+# budgets without making Toys expensive.
+graph_backend: flat
+graph_topk: 100
+graph_vector_batch_size: 512
+graph_analysis_output_dir: artifacts/rpg/graph_analysis/toys_and_games
+graph_analysis_k_values: [10, 20, 50, 100]
+graph_analysis_random_seeds: [2024, 2025, 2026]
+graph_analysis_similarity_batch_size: 32768
+
+# Dynamic/query-conditioned controls for later commands. They are intentionally
+# not used by the static command, but document the README Toys inference
+# setting.
+# temperature: 0.03
+# num_beams: 200
+# n_edges: 20
+# propagation_steps: 3

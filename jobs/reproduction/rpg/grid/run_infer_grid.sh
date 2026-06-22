@@ -24,11 +24,9 @@ shopt -s nullglob
 SCRIPT_DIR="$(cd "${SLURM_SUBMIT_DIR:-$(dirname "${BASH_SOURCE[0]}")}" && pwd -P)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd -P)"
 
-# dataset preset name -> Title_Case cache category -> best-m (from Claim 2 sweep)
 DATASETS=(sports_and_outdoors beauty toys_and_games cds_and_vinyl)
 CATEGORIES=(Sports_and_Outdoors Beauty Toys_and_Games CDs_and_Vinyl)
 BEST_M=(16 32 16 64)
-# repo-config decode base (b k q) per dataset (from configs/rpg/repro/*.yaml)
 BASE_B=(100 20 200 20)
 BASE_K=(30 200 20 500)
 BASE_Q=(5 3 3 5)
@@ -46,9 +44,7 @@ read -r -a EDGE_LIST  <<< "${EDGES:-30 50 100 200 500}"
 read -r -a QSTEP_LIST <<< "${QSTEPS:-1 2 3 5}"
 HIGH_BEAMS="${HIGH_BEAMS:-200}"          # beam width used while sweeping k and q
 EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026,2027,2028,2029,2030,2031,2032,2033}"
-# Reported NDCG/Recall cutoffs. The evaluator ASSERTS preds.shape[1] == max(topk)
-# and generate() returns at most num_beams candidates, so per cell we can only
-# request cutoffs <= num_beams. CUTOFFS is filtered per cell below.
+
 read -r -a CUTOFFS <<< "${CUTOFFS:-5 10 50 100}"
 FORCE="${FORCE:-0}"
 
@@ -67,7 +63,7 @@ topk_for_beams() {
   for c in "${CUTOFFS[@]}"; do
     (( c <= b )) && out="${out:+$out,}$c"
   done
-  [[ -z "$out" ]] && out="$b"   # guarantee non-empty if every cutoff exceeds beams
+  [[ -z "$out" ]] && out="$b"   
   printf '[%s]' "$out"
 }
 
@@ -98,8 +94,7 @@ if [[ ! -f "${SEMIDS}" ]]; then
 fi
 echo "checkpoint=$(basename "${CKPT}")"
 
-# Build a deduplicated set of (b k q) cells: beam sweep at base k,q;
-# n_edges sweep at HIGH_BEAMS,base q; propagation sweep at HIGH_BEAMS,base k.
+
 declare -A SEEN=()
 CELLS=()
 add_cell() {
@@ -140,7 +135,6 @@ for cell in "${CELLS[@]}"; do
     --propagation_steps "${q}" \
     --topk "${TOPK_CELL}"
 
-  # Drop the large per-user dumps once summary.json is written; the collector only reads summary.json.
   find "${OUT_DIR}" -type f \( -name 'per_user_metrics.csv' -o -name 'per_user_metrics.jsonl' \) -delete
 done
 

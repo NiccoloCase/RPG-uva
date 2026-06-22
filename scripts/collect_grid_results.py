@@ -129,26 +129,27 @@ def collect_train(train_root: Path) -> list[dict]:
             continue
         val_hit = RPG_VAL_RE.search(text)
         seed = int(start["seed"]) if start["seed"] is not None else DEFAULT_SEED
-        cell = (start["ds"], float(start["lr"]), float(start["temp"]), seed)
+        cell = (start["ds"], int(start["m"]), float(start["lr"]), float(start["temp"]), seed)
         by_cell_seed[cell] = {
-            "test": {m: float(v) for m, v in last_pairs},
+            "test": {mt: float(v) for mt, v in last_pairs},
             "val": float(val_hit.group(1)) if val_hit else None,
         }  # newest wins
 
     test_agg: dict[tuple, list[float]] = {}
     val_agg: dict[tuple, list[float]] = {}
-    for (ds, lr, temp, _seed), payload in by_cell_seed.items():
+    for (ds, m, lr, temp, _seed), payload in by_cell_seed.items():
         if payload["val"] is not None:
-            val_agg.setdefault((ds, lr, temp), []).append(payload["val"])
+            val_agg.setdefault((ds, m, lr, temp), []).append(payload["val"])
         for metric, value in payload["test"].items():
-            test_agg.setdefault((ds, lr, temp, metric), []).append(value)
+            test_agg.setdefault((ds, m, lr, temp, metric), []).append(value)
 
     rows: list[dict] = []
-    for (ds, lr, temp, metric), values in test_agg.items():
-        vals = val_agg.get((ds, lr, temp), [])
+    for (ds, m, lr, temp, metric), values in test_agg.items():
+        vals = val_agg.get((ds, m, lr, temp), [])
         rows.append(
             {
                 "dataset": ds,
+                "m": m,
                 "lr": lr,
                 "temperature": temp,
                 "metric": metric,
@@ -159,7 +160,7 @@ def collect_train(train_root: Path) -> list[dict]:
                 "val_ndcg10_std": statistics.stdev(vals) if len(vals) > 1 else 0.0,
             }
         )
-    rows.sort(key=lambda r: (r["dataset"], r["lr"], r["temperature"], r["metric"]))
+    rows.sort(key=lambda r: (r["dataset"], r["m"], r["lr"], r["temperature"], r["metric"]))
     return rows
 
 
@@ -438,7 +439,7 @@ def main() -> int:
                 "readme_test_mean", "appendix_test_mean"])
 
     _write_csv(_resolve(args.train_csv), train_rows,
-               ["dataset", "lr", "temperature", "metric", "mean", "std", "n_seeds",
+               ["dataset", "m", "lr", "temperature", "metric", "mean", "std", "n_seeds",
                 "val_ndcg10_mean", "val_ndcg10_std"])
     _write_csv(_resolve(args.sasrec_train_csv), sasrec_rows,
                ["dataset", "lr", "dropout", "n_blocks", "metric", "test_mean",

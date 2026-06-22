@@ -90,6 +90,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Rebuild adjacency caches even if matching cache files already exist.",
     )
 
+    brute_force_parser = subparsers.add_parser(
+        "profile-bruteforce",
+        help="Profile exact no-graph RPG scoring over enlarged candidate pools.",
+    )
+    add_common_arguments(brute_force_parser)
+    brute_force_parser.add_argument(
+        "--pool-sizes",
+        default=None,
+        help="Comma-separated pool sizes to override config.pool_sizes.",
+    )
+    brute_force_parser.add_argument(
+        "--item-chunk-size",
+        type=int,
+        default=None,
+        help=(
+            "Number of candidate items to score per exact brute-force chunk. "
+            "Overrides config.bruteforce_item_chunk_size."
+        ),
+    )
+    brute_force_parser.add_argument(
+        "--skip-parity-check",
+        action="store_true",
+        help="Skip the original-pool parity check against upstream no-graph generate().",
+    )
+
     plot_parser = subparsers.add_parser(
         "plot",
         help="Render a two-panel plot from a summary CSV or profiling session directory.",
@@ -152,6 +177,21 @@ def main(argv: list[str] | None = None) -> int:
             profile_only=args.profile_only,
             graph_backend_override=args.graph_backend,
             force_rebuild=args.force_rebuild,
+        )
+        print(manifest["session_root"])
+        return 0
+
+    if args.command == "profile-bruteforce":
+        from perf.bruteforce import run_bruteforce_profile_command
+
+        manifest = run_bruteforce_profile_command(
+            checkpoint_path=args.checkpoint,
+            config_files=config_files,
+            config_overrides=config_overrides,
+            output_root=args.output_dir,
+            pool_sizes_override=parse_int_list(args.pool_sizes),
+            item_chunk_size_override=args.item_chunk_size,
+            skip_parity_check=args.skip_parity_check,
         )
         print(manifest["session_root"])
         return 0

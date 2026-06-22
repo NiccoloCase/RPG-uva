@@ -1,0 +1,24 @@
+run_id: rpg_graph_analysis_sports_scoring
+
+# Experiment C: compare exhaustive RPG token scoring with graph decoding.
+# These are the released README Sports inference defaults.
+temperature: 0.03
+num_beams: 100
+n_edges: 30
+propagation_steps: 5
+
+# Keep the graph sweep aligned with Experiment B so C can explain the same
+# saturation behavior without mixing in beam-size or depth changes.
+graph_analysis_scoring_n_edges: [10, 20, 30, 50, 100]
+graph_analysis_eval_seeds: [2024, 2025, 2026]
+
+# Store enough brute-force winners to test whether graph decoding reaches the
+# best RPG-scored items, while keeping per-example files compact.
+graph_analysis_bruteforce_topk: 50
+
+# Null means full test set. Override this only for smoke tests.
+graph_analysis_scoring_max_users: null
+
+# Compare traced decoding against upstream generate() on early batches for
+# every budget/seed pair.
+graph_analysis_trace_parity_batches: 1

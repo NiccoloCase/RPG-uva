@@ -33,6 +33,8 @@ PRESET_CONFIGS = {
     "cds_and_vinyl": REPO_ROOT / "configs" / "sasrec_modernized" / "cds_and_vinyl.yaml",
     "sports_and_outdoors": REPO_ROOT / "configs" / "sasrec_modernized" / "sports_and_outdoors.yaml",
     "toys_and_games": REPO_ROOT / "configs" / "sasrec_modernized" / "toys_and_games.yaml",
+    "video_games": REPO_ROOT / "configs" / "sasrec_modernized" / "video_games.yaml",
+    "pet_supplies": REPO_ROOT / "configs" / "sasrec_modernized" / "pet_supplies.yaml",
 }
 
 

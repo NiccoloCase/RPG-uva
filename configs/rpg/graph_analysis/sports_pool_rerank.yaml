@@ -1,0 +1,16 @@
+run_id: rpg_graph_analysis_sports_pool_rerank
+
+# B9: visited-pool reranking diagnostic.
+# Run standard RPG traversal unchanged, then score every visited item with the
+# same RPG semantic-token score and return the top-k over the full visited pool.
+temperature: 0.03
+num_beams: 100
+n_edges: 100
+propagation_steps: 5
+
+graph_analysis_pool_n_edges: [30, 100]
+graph_analysis_pool_max_users: 5000
+graph_analysis_eval_seeds: [2024]
+
+# Keep the tracing path anchored to upstream RPG on the first batch.
+graph_analysis_trace_parity_batches: 1

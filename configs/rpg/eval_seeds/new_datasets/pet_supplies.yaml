@@ -1,0 +1,8 @@
+run_id: rpg_eval_seeds_new_datasets_pet_supplies
+category: Pet_Supplies
+lr: 0.003
+temperature: 0.03
+n_codebook: 16
+num_beams: 200
+n_edges: 20
+propagation_steps: 3

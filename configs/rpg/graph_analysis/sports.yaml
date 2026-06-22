@@ -1,0 +1,29 @@
+run_id: rpg_graph_analysis_sports
+
+# Shared checkpoint/tokenizer reconstruction.
+# These must match the checkpoint and semantic-ID cache used for Sports.
+category: Sports_and_Outdoors
+metadata: sentence
+n_codebook: 16
+
+# Static graph-analysis controls for Experiment Block A.
+# The script builds one exact flat top-100 graph, then slices it to the
+# raw RPG graph-width k values below. RPG adjacency includes the item itself;
+# static metrics remove self-edges, so non-self outgoing edges are usually k-1.
+graph_backend: flat
+graph_topk: 100
+graph_vector_batch_size: 512
+graph_analysis_output_dir: artifacts/rpg/graph_analysis/sports
+graph_analysis_k_values: [10, 20, 30, 50, 100]
+graph_analysis_random_seeds: [2024, 2025, 2026]
+graph_analysis_similarity_batch_size: 32768
+
+# Future dynamic/query-conditioned controls for Experiment Block B.
+# These are intentionally commented out because they do not affect static graph
+# metrics. Enable them only when running reachability/visited-set decoding
+# experiments. Defaults should follow the released README Sports inference
+# configuration, not the paper-appendix/perf setting.
+# temperature: 0.03
+# num_beams: 100
+# n_edges: 30
+# propagation_steps: 5

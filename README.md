@@ -91,6 +91,55 @@ python3 scripts/rpg_perf.py \
 
 More detailed usage, artifact layout, and Snellius job wrappers are documented in [docs/perf_profiling.md](docs/perf_profiling.md).
 
+## Graph Analysis Extension
+
+The repo also includes a graph-analysis extension for understanding why RPG's graph-constrained decoding saturates after a modest inference budget. The current working plan is in [docs/graph_analysis_extension_plan.md](docs/graph_analysis_extension_plan.md), and the combined analysis notebook is [notebooks/rpg_graph_static_analysis.ipynb](notebooks/rpg_graph_static_analysis.ipynb).
+
+### Static Graph Takeaways
+
+The constructed item graph looks structurally healthy rather than broken or random:
+
+- Graph neighbors are much more similar than random item pairs.
+- The graph becomes globally connected quickly, so fragmentation is unlikely to explain saturation alone.
+- The graph is locally clustered, suggesting redundant neighborhoods and repeated exploration of similar regions.
+- Hubness/popularity exists, but does not look like the only explanation.
+
+Static conclusion:
+
+```text
+The graph itself is coherent, connected, and locally redundant.
+Figure 6 saturation is unlikely to be caused mainly by bad graph construction or disconnected components.
+```
+
+### Dynamic Decoding Takeaways
+
+The dynamic analysis follows RPG's actual decoding process and is more directly tied to recommendation behavior:
+
+- Increasing graph width greatly improves target access.
+- Recommendation quality barely improves: reachability rises strongly, while Recall@10/NDCG@10 saturate quickly.
+- Later propagation steps add fewer new useful candidates, especially at high graph width.
+- Reachable targets are usually found early, often in the first 1-2 propagation steps.
+- Increasing RPG's coupled `num_beams` search budget makes targets more often considered and more often enter the beam, but Recall@10 barely changes. This is not a pure pruning test because `num_beams` also changes the initial random pool and frontier size.
+
+Dynamic conclusion:
+
+```text
+The main bottleneck seems to be candidate scoring/ranking after access, not graph reachability alone.
+```
+
+Overall interpretation:
+
+```text
+RPG's graph gives access to many relevant items, and the graph structure is mostly healthy.
+However, extra search budget produces many redundant/plausible candidates, and the decoder often fails to rank the true item into the final top-10.
+```
+
+Best next direction:
+
+```text
+Keep traversal cheaper or similar, then improve final candidate selection/reranking.
+```
+
 ## Config Overrides
 
 The root wrapper loads configs in this order:

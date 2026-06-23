@@ -1,0 +1,17 @@
+run_id: rpg_graph_analysis_sports_frontier_memory_budget
+
+# Budget sweep for the explicit-memory decoder. The baseline question is:
+# can prefer-unvisited traversal plus explicit candidate memory match the
+# original Sports Recall@10 while using much smaller traversal budgets?
+temperature: 0.03
+num_beams: 100
+n_edges: 100
+propagation_steps: 5
+
+graph_analysis_frontier_memory_n_edges: [10, 20, 30]
+graph_analysis_frontier_memory_num_beams: [25, 50]
+graph_analysis_frontier_memory_propagation_steps: [2, 3]
+graph_analysis_frontier_memory_sizes: [50, 100]
+graph_analysis_frontier_memory_max_users: 2000
+graph_analysis_eval_seeds: [2024]
+graph_analysis_trace_parity_batches: 1

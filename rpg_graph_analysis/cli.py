@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 
 from .dynamic import run_dynamic
+from .frontier_memory import run_frontier_memory
 from .inference_perf import run_inference_perf
 from .novelty import run_novelty
 from .pool_reranking import run_pool_reranking
@@ -92,6 +93,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(pool_parser)
 
+    frontier_memory_parser = subparsers.add_parser(
+        "frontier-memory",
+        help="Run a prefer-unvisited plus explicit candidate-memory diagnostic.",
+    )
+    add_common_inputs(frontier_memory_parser)
+
     rerank_parser = subparsers.add_parser(
         "rerank",
         help="Run a lightweight candidate-reranking intervention from a prepared graph.",
@@ -132,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_novelty(args)
     if args.command == "pool-rerank":
         return run_pool_reranking(args)
+    if args.command == "frontier-memory":
+        return run_frontier_memory(args)
     if args.command == "rerank":
         return run_reranking(args)
     if args.command == "scoring":

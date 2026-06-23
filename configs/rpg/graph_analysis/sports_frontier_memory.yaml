@@ -1,0 +1,17 @@
+run_id: rpg_graph_analysis_sports_frontier_memory
+
+# Pilot diagnostic for the hypothesis that RPG's repeated frontier re-entry
+# acts as implicit candidate memory. The command compares:
+# - original RPG graph decoding;
+# - prefer-unvisited frontier selection with seen-node fallback;
+# - prefer-unvisited traversal with explicit top-b visited-candidate memory.
+temperature: 0.03
+num_beams: 100
+n_edges: 100
+propagation_steps: 5
+
+graph_analysis_frontier_memory_n_edges: [30, 100]
+graph_analysis_frontier_memory_max_users: 2000
+graph_analysis_frontier_memory_size: 100
+graph_analysis_eval_seeds: [2024]
+graph_analysis_trace_parity_batches: 1

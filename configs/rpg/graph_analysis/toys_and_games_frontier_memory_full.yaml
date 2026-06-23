@@ -1,0 +1,16 @@
+run_id: rpg_graph_analysis_toys_and_games_frontier_memory_full
+
+# Full Toys and Games frontier-memory diagnostic for reporting. We use the
+# largest prepared analysis budget, matching the cross-dataset graph analysis.
+temperature: 0.03
+num_beams: 200
+n_edges: 100
+propagation_steps: 3
+
+graph_analysis_frontier_memory_n_edges: [100]
+graph_analysis_frontier_memory_num_beams: [200]
+graph_analysis_frontier_memory_propagation_steps: [3]
+graph_analysis_frontier_memory_sizes: [200]
+graph_analysis_frontier_memory_max_users: null
+graph_analysis_eval_seeds: [2024, 2025, 2026]
+graph_analysis_trace_parity_batches: 1

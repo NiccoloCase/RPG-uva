@@ -1,0 +1,4 @@
+dataset,best_minus_tuned,best_lower,tuned_upper,non_overlapping
+Sports,0.00081,0.02583,0.02577,True
+Beauty,0.0003,0.04585,0.04676,False
+Toys,0.0015,0.04744,0.04773,False

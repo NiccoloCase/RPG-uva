@@ -1,0 +1,5 @@
+dataset,our_best_m,our_ndcg@10,paper_best_m,paper_ndcg@10,gap_%
+Sports,16,0.0254,16,0.0263,-3.5
+Beauty,32,0.0469,32,0.0464,1.1
+Toys,32,0.0467,16,0.049,-4.6
+CDs,64,0.0403,64,0.0415,-3.0

@@ -109,6 +109,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Use for large grid sweeps where only the aggregated summary is "
             "consumed, to avoid exhausting disk quota."
         ),
+    )
+    parser.add_argument(
         "--short-head-fraction",
         type=float,
         default=0.2,

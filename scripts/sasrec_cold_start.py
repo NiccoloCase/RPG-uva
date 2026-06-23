@@ -24,32 +24,40 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from models.sasrec import SASRecDataset, SASRecModel  # noqa: E402
+from models.sasrec.utils import get_user_seqs as get_user_seqs_sasrec, set_seed as set_seed_sasrec  # noqa: E402
 from models.sasrec_modernized import SASRecModernizedDataset, SASRecModernizedModel  # noqa: E402
-from models.sasrec_modernized.utils import get_user_seqs, set_seed  # noqa: E402
+from models.sasrec_modernized.utils import get_user_seqs as get_user_seqs_modernized, set_seed as set_seed_modernized  # noqa: E402
+from sasrec import (  # noqa: E402
+    PRESET_CONFIGS as SASREC_PRESET_CONFIGS,
+    build_config_files as build_sasrec_config_files,
+    load_config as load_sasrec_config,
+    normalize_config as normalize_sasrec_config,
+    parse_override_args as parse_sasrec_override_args,
+)
 from sasrec_modernized import (  # noqa: E402
-    PRESET_CONFIGS,
-    build_config_files,
-    load_config,
-    normalize_config,
-    parse_override_args,
+    PRESET_CONFIGS as MODERNIZED_PRESET_CONFIGS,
+    build_config_files as build_modernized_config_files,
+    load_config as load_modernized_config,
+    normalize_config as normalize_modernized_config,
+    parse_override_args as parse_modernized_override_args,
 )
 
 
 DEFAULT_BUCKETS = "0-5,6-10,11-15,16-20"
 METRIC_NAMES = ("recall@5", "ndcg@5", "recall@10", "ndcg@10")
+MODEL_FAMILY_CHOICES = ("auto", "sasrec", "sasrec_modernized")
+PRESET_CHOICES = sorted(set(SASREC_PRESET_CONFIGS) | set(MODERNIZED_PRESET_CONFIGS))
 
 
 @dataclass(frozen=True)
 class ColdStartBucket:
-    """Inclusive train-frequency bucket used for cold-start evaluation."""
-
     label: str
     min_count: int
     max_count: int
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Create the CLI parser for SASRec cold-start evaluation and plotting."""
     parser = argparse.ArgumentParser(
         description=(
             "Evaluate a SASRec checkpoint by cold-start frequency buckets and "
@@ -59,93 +67,35 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     def add_common_inputs(subparser: argparse.ArgumentParser) -> None:
-        subparser.add_argument(
-            "--checkpoint",
-            required=True,
-            help="Path to a trained SASRec checkpoint.",
-        )
-        subparser.add_argument(
-            "--preset",
-            choices=sorted(PRESET_CONFIGS),
-            help="Named SASRec preset to apply.",
-        )
+        subparser.add_argument("--checkpoint", required=True, help="Path to a trained SASRec checkpoint.")
+        subparser.add_argument("--preset", choices=PRESET_CHOICES, help="Named SASRec preset to apply.")
         subparser.add_argument("--dataset", default=None, help="Dataset/category override.")
         subparser.add_argument(
-            "--config",
-            action="append",
-            default=[],
-            help="Additional YAML config file. May be provided multiple times.",
+            "--model-family",
+            choices=MODEL_FAMILY_CHOICES,
+            default="auto",
+            help="Which SASRec implementation to evaluate. Defaults to auto-detect from the checkpoint path.",
         )
-        subparser.add_argument(
-            "--no-root-config",
-            action="store_true",
-            help="Skip the default SASRec root config.",
-        )
-        subparser.add_argument(
-            "--no-local-config",
-            action="store_true",
-            help="Skip the local SASRec config even if it exists.",
-        )
+        subparser.add_argument("--config", action="append", default=[], help="Additional YAML config file.")
+        subparser.add_argument("--no-root-config", action="store_true", help="Skip the default SASRec root config.")
+        subparser.add_argument("--no-local-config", action="store_true", help="Skip the local SASRec config even if it exists.")
 
-    run_parser = subparsers.add_parser(
-        "run",
-        help="Run cold-start evaluation and render a figure in one session folder.",
-    )
+    run_parser = subparsers.add_parser("run", help="Run cold-start evaluation and render a figure in one session folder.")
     add_common_inputs(run_parser)
-    run_parser.add_argument(
-        "--output-dir",
-        default=None,
-        help="Optional session-root override. Defaults to artifacts/sasrec/cold_start.",
-    )
-    run_parser.add_argument(
-        "--buckets",
-        default=DEFAULT_BUCKETS,
-        help=(
-            "Comma-separated inclusive train-frequency ranges, for example "
-            f"'{DEFAULT_BUCKETS}'."
-        ),
-    )
-    run_parser.add_argument(
-        "--plot-metric",
-        default="ndcg@10",
-        help="Metric to visualize in the rendered figure.",
-    )
-    run_parser.add_argument(
-        "--plot-title",
-        default="SASRec Cold-Start Analysis",
-        help="Title used in the generated plot.",
-    )
+    run_parser.add_argument("--output-dir", default=None, help="Optional session-root override. Defaults to artifacts/sasrec/cold_start.")
+    run_parser.add_argument("--buckets", default=DEFAULT_BUCKETS, help=f"Comma-separated inclusive train-frequency ranges, for example '{DEFAULT_BUCKETS}'.")
+    run_parser.add_argument("--plot-metric", default="ndcg@10", help="Metric to visualize in the generated figure.")
+    run_parser.add_argument("--plot-title", default="SASRec Cold-Start Analysis", help="Title used in the generated plot.")
 
-    plot_parser = subparsers.add_parser(
-        "plot",
-        help="Render a figure from a previously generated cold-start summary JSON.",
-    )
-    plot_parser.add_argument(
-        "--input",
-        required=True,
-        help="Path to cold_start_summary.json or a session directory containing it.",
-    )
-    plot_parser.add_argument(
-        "--output",
-        required=True,
-        help="Destination image path, for example artifacts/.../cold_start_ndcg10.png.",
-    )
-    plot_parser.add_argument(
-        "--metric",
-        default="ndcg@10",
-        help="Metric to visualize from the summary JSON.",
-    )
-    plot_parser.add_argument(
-        "--title",
-        default="SASRec Cold-Start Analysis",
-        help="Title used in the generated plot.",
-    )
-
+    plot_parser = subparsers.add_parser("plot", help="Render a figure from a previously generated cold-start summary JSON.")
+    plot_parser.add_argument("--input", required=True, help="Path to cold_start_summary.json or a session directory containing it.")
+    plot_parser.add_argument("--output", required=True, help="Destination image path.")
+    plot_parser.add_argument("--metric", default="ndcg@10", help="Metric to visualize from the summary JSON.")
+    plot_parser.add_argument("--title", default="SASRec Cold-Start Analysis", help="Title used in the generated plot.")
     return parser
 
 
 def _session_root(output_root: str | None = None) -> Path:
-    """Create a unique artifact directory for one cold-start run."""
     raw_root = output_root or "artifacts/sasrec/cold_start"
     path = Path(raw_root).expanduser()
     if not path.is_absolute():
@@ -167,13 +117,10 @@ def _session_root(output_root: str | None = None) -> Path:
 
 
 def _parse_bucket_spec(raw_spec: str) -> list[ColdStartBucket]:
-    """Parse the CLI bucket specification into ordered inclusive ranges."""
     buckets: list[ColdStartBucket] = []
     for index, raw_bucket in enumerate(part.strip() for part in raw_spec.split(",") if part.strip()):
         if "-" not in raw_bucket:
-            raise ValueError(
-                f"Invalid bucket '{raw_bucket}'. Use inclusive ranges like '0-5,6-10'."
-            )
+            raise ValueError(f"Invalid bucket '{raw_bucket}'. Use inclusive ranges like '0-5,6-10'.")
         start_raw, end_raw = raw_bucket.split("-", 1)
         start = int(start_raw)
         end = int(end_raw)
@@ -186,7 +133,6 @@ def _parse_bucket_spec(raw_spec: str) -> list[ColdStartBucket]:
 
 
 def _bucket_label_for_count(count: int, buckets: list[ColdStartBucket]) -> str | None:
-    """Map one train-frequency count to the configured bucket label."""
     for bucket in buckets:
         if bucket.min_count <= count <= bucket.max_count:
             return bucket.label
@@ -194,7 +140,6 @@ def _bucket_label_for_count(count: int, buckets: list[ColdStartBucket]) -> str |
 
 
 def _build_item_frequency(user_seq: list[list[int]]) -> dict[int, int]:
-    """Count how many times each item appears in the train prefix."""
     frequencies: defaultdict[int, int] = defaultdict(int)
     for items in user_seq:
         for item_id in items[:-2]:
@@ -207,7 +152,6 @@ def _build_item_group_mapping(
     real_item_count: int,
     buckets: list[ColdStartBucket],
 ) -> dict[int, str]:
-    """Assign each target item ID to its cold-start bucket label."""
     frequencies = _build_item_frequency(user_seq)
     item2group: dict[int, str] = {}
     for item_id in range(1, real_item_count + 1):
@@ -222,16 +166,12 @@ def _mask_invalid_and_seen_items(
     args: SimpleNamespace,
     batch_user_index: np.ndarray,
 ) -> None:
-    """Remove padding, mask-token, and seen items from the recommendation pool."""
     rating_pred[:, 0] = -np.inf
-    if 0 <= args.mask_id < rating_pred.shape[1]:
-        rating_pred[:, args.mask_id] = -np.inf
     seen = args.train_matrix[batch_user_index].toarray() > 0
     rating_pred[:, : seen.shape[1]][seen] = -np.inf
 
 
 def _single_target_metrics(target: int, predictions: np.ndarray) -> dict[str, float]:
-    """Compute per-user Recall/NDCG for one held-out item."""
     metrics: dict[str, float] = {}
     for k in (5, 10):
         topk = predictions[:k].tolist()
@@ -249,7 +189,6 @@ def _aggregate_group_results(
     group2results: dict[str, dict[str, list[float]]],
     buckets: list[ColdStartBucket],
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, float]]]:
-    """Compute mean metrics and example counts per cold-start bucket."""
     rows: list[dict[str, Any]] = []
     grouped_means: dict[str, dict[str, float]] = {}
 
@@ -278,7 +217,6 @@ def _aggregate_group_results(
 
 
 def _write_group_csv(path: Path, rows: list[dict[str, Any]]) -> None:
-    """Write per-bucket cold-start metrics to CSV."""
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
         path.write_text("")
@@ -297,7 +235,6 @@ def _write_group_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def _resolve_summary_path(raw_input: str | Path) -> Path:
-    """Resolve a summary JSON path from either a file or a session directory."""
     path = Path(raw_input).expanduser().resolve()
     if path.is_dir():
         path = path / "tables" / "cold_start_summary.json"
@@ -307,14 +244,10 @@ def _resolve_summary_path(raw_input: str | Path) -> Path:
 
 
 def _plot_summary(summary_path: str | Path, output_path: str | Path, metric: str, title: str) -> Path:
-    """Render a single-metric bar chart from a cold-start summary JSON file."""
     try:
         import matplotlib.pyplot as plt
     except ImportError as exc:
-        raise SystemExit(
-            "matplotlib is required for plotting. Update the project environment "
-            "before running the cold-start plot command."
-        ) from exc
+        raise SystemExit("matplotlib is required for plotting.") from exc
 
     summary_file = _resolve_summary_path(summary_path)
     payload = json.loads(summary_file.read_text())
@@ -332,7 +265,7 @@ def _plot_summary(summary_path: str | Path, output_path: str | Path, metric: str
     ax.set_ylim(bottom=0)
 
     for index, (value, count) in enumerate(zip(values, counts)):
-        if value == value:  # NaN check
+        if value == value:
             ax.text(index, value, f"{value:.4f}\n(n={count})", ha="center", va="bottom")
         else:
             ax.text(index, 0, f"nan\n(n={count})", ha="center", va="bottom")
@@ -344,31 +277,60 @@ def _plot_summary(summary_path: str | Path, output_path: str | Path, metric: str
     return output
 
 
-def _load_args(parsed_args: argparse.Namespace, override_tokens: list[str]) -> SimpleNamespace:
-    overrides = parse_override_args(override_tokens)
+def _resolve_model_family(parsed_args: argparse.Namespace) -> str:
+    if parsed_args.model_family != "auto":
+        return parsed_args.model_family
+    checkpoint_name = Path(parsed_args.checkpoint).name.lower()
+    if "modernized" in checkpoint_name:
+        return "sasrec_modernized"
+    return "sasrec"
+
+
+def _load_args(parsed_args: argparse.Namespace, override_tokens: list[str]) -> tuple[SimpleNamespace, str]:
+    model_family = _resolve_model_family(parsed_args)
+    if model_family == "sasrec_modernized":
+        overrides = parse_modernized_override_args(override_tokens)
+        build_config_files = build_modernized_config_files
+        load_config = load_modernized_config
+        normalize_config = normalize_modernized_config
+    else:
+        overrides = parse_sasrec_override_args(override_tokens)
+        build_config_files = build_sasrec_config_files
+        load_config = load_sasrec_config
+        normalize_config = normalize_sasrec_config
+
     if parsed_args.dataset is not None:
         overrides["dataset"] = parsed_args.dataset
 
     config_files = build_config_files(parsed_args)
     merged_config = load_config(config_files, overrides)
-    return normalize_config(merged_config, parsed_args.checkpoint)
+    return normalize_config(merged_config, parsed_args.checkpoint), model_family
 
 
 def _evaluate_cold_start(
     args: SimpleNamespace,
+    model_family: str,
     user_seq: list[list[int]],
     item2group: dict[int, str],
     buckets: list[ColdStartBucket],
 ):
-    """Run SASRec full-sort evaluation and collect overall and bucket metrics."""
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-    test_dataset = SASRecModernizedDataset(args, user_seq, data_type="test")
+    if model_family == "sasrec_modernized":
+        dataset_cls = SASRecModernizedDataset
+        model_cls = SASRecModernizedModel
+        n_visited_items = float(args.mask_id - 1)
+    else:
+        dataset_cls = SASRecDataset
+        model_cls = SASRecModel
+        n_visited_items = float(args.item_size - 2)
+
+    test_dataset = dataset_cls(args, user_seq, data_type="test")
     test_dataloader = DataLoader(
         test_dataset,
         sampler=SequentialSampler(test_dataset),
         batch_size=args.eval_batch_size,
     )
-    model = SASRecModernizedModel(args).to(device)
+    model = model_cls(args).to(device)
     state_dict = torch.load(args.checkpoint_path, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
@@ -407,14 +369,14 @@ def _evaluate_cold_start(
                 per_user = _single_target_metrics(int(target), predictions)
                 for metric_name, value in per_user.items():
                     all_results[metric_name].append(value)
-                all_results["n_visited_items"].append(float(args.mask_id - 1))
+                all_results["n_visited_items"].append(n_visited_items)
 
                 group = item2group.get(int(target))
                 if group is None:
                     continue
                 for metric_name, value in per_user.items():
                     group2results[group][metric_name].append(value)
-                group2results[group]["n_visited_items"].append(float(args.mask_id - 1))
+                group2results[group]["n_visited_items"].append(n_visited_items)
 
     overall_results = {
         metric_name: float(mean(values)) if values else float("nan")
@@ -424,33 +386,36 @@ def _evaluate_cold_start(
 
 
 def _run_cold_start(parsed_args: argparse.Namespace, override_tokens: list[str]) -> int:
-    """Execute cold-start evaluation, write tables, and render a figure."""
-    args = _load_args(parsed_args, override_tokens)
+    args, model_family = _load_args(parsed_args, override_tokens)
     if not Path(args.data_file).is_file():
-        raise FileNotFoundError(
-            f"Missing SASRec data file: {args.data_file}. Run scripts/sasrec_prepare_data.py first."
-        )
+        raise FileNotFoundError(f"Missing SASRec data file: {args.data_file}. Run scripts/sasrec_prepare_data.py first.")
     if not Path(args.checkpoint_path).is_file():
         raise FileNotFoundError(f"SASRec checkpoint not found: {args.checkpoint_path}")
 
-    set_seed(args.seed)
-    user_seq, max_item, _, test_rating_matrix = get_user_seqs(args.data_file)
-    args.item_size = max_item + 2
-    args.mask_id = max_item + 1
+    if model_family == "sasrec_modernized":
+        set_seed_modernized(args.seed)
+        user_seq, max_item, _, test_rating_matrix = get_user_seqs_modernized(args.data_file)
+        args.item_size = max_item + 2
+        args.mask_id = max_item + 1
+    else:
+        set_seed_sasrec(args.seed)
+        user_seq, max_item, _, test_rating_matrix = get_user_seqs_sasrec(args.data_file)
+        args.item_size = max_item + 1
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
     args.train_matrix = test_rating_matrix
 
     session_root = _session_root(parsed_args.output_dir)
     buckets = _parse_bucket_spec(parsed_args.buckets)
     item2group = _build_item_group_mapping(user_seq, max_item, buckets)
-    overall_results, group2results = _evaluate_cold_start(args, user_seq, item2group, buckets)
+    overall_results, group2results = _evaluate_cold_start(args, model_family, user_seq, item2group, buckets)
     group_rows, grouped_means = _aggregate_group_results(group2results, buckets)
 
     summary_payload = {
         "checkpoint_path": str(Path(args.checkpoint_path).resolve()),
         "dataset": args.data_name,
         "category": getattr(args, "category", args.data_name),
-        "model": "SASRec",
+        "model": "SASRecModernized" if model_family == "sasrec_modernized" else "SASRec",
+        "model_family": model_family,
         "plot_metric": parsed_args.plot_metric,
         "bucket_spec": parsed_args.buckets,
         "overall_results": overall_results,
@@ -479,13 +444,11 @@ def _run_cold_start(parsed_args: argparse.Namespace, override_tokens: list[str])
         "figure_path": str(plotted_figure),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2))
-
     print(manifest["session_root"])
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Entry point for SASRec cold-start reproduction."""
     parser = build_parser()
     args, override_tokens = parser.parse_known_args(argv)
 

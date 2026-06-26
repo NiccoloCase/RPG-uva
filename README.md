@@ -133,7 +133,7 @@ cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/grid
 sbatch ./run_decode_confirm.sh
 ```
 
-SASRec graph ablation:
+SASRec size ablation:
 
 ```bash
 cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/ablation_size
@@ -148,13 +148,6 @@ RPG inference profiling:
 cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/perf
 sbatch ./build_graphs.sh /abs/path/to/rpg_checkpoint.pth
 sbatch ./profile_inference.sh /abs/path/to/rpg_checkpoint.pth
-```
-
-SASRec inference profiling:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/perf
-sbatch ./profile_graph_inference.sh
 ```
 
 ## New-Dataset Extension

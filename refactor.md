@@ -54,7 +54,6 @@ The runnable job scripts still live in implementation-oriented trees, but the re
 - `scripts/sasrec.py`
 - `scripts/sasrec_eval.py`
 - `scripts/sasrec_cold_start.py`
-- `scripts/sasrec_perf.py`
 - `scripts/sasrec_prepare_data.py`
 - `scripts/rpg_prepare_semantic_ids.py`
 
@@ -98,7 +97,7 @@ The following duplicate SASRec surfaces are removed from the published repo:
 ### Config mapping
 
 - public `configs/sasrec/` now contains the former modernized dataset and root presets
-- public `configs/sasrec/param_matched/`, `configs/sasrec/perf/`, and `configs/sasrec/eval_seeds/` are retained for the paper analyses
+- public `configs/sasrec/param_matched/` and `configs/sasrec/eval_seeds/` are retained for the paper analyses
 
 ### Job mapping
 
@@ -160,7 +159,6 @@ Repo entrypoints:
 - `jobs/04_search_vs_scorer/`
 - `jobs/reproduction/rpg/grid/`
 - `jobs/reproduction/sasrec/ablation_size/`
-- `jobs/reproduction/sasrec/grid/`
 
 ### 05 Efficiency
 
@@ -172,8 +170,6 @@ Repo entrypoints:
 
 - `jobs/05_efficiency/`
 - `jobs/reproduction/rpg/perf/`
-- `jobs/reproduction/sasrec/perf/`
-- `perf/`
 
 ## README Contract
 
@@ -227,7 +223,6 @@ Contains canonical presets for:
 
 - dataset-specific reproduction
 - eval-seed runs
-- graph-decoding ablations
 - performance profiling
 
 ### `jobs/`

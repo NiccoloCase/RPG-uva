@@ -2,6 +2,19 @@
 
 This directory contains Slurm job definitions only.
 
+## Paper index
+
+For a paper-aligned entrypoint, start with:
+
+- `jobs/01_reproduction/`
+- `jobs/02_accuracy_and_fairness/`
+- `jobs/03_graph_structure_and_dynamics/`
+- `jobs/04_search_vs_scorer/`
+- `jobs/05_efficiency/`
+
+The runnable job scripts still live under the implementation trees such as
+`jobs/reproduction/rpg/`, `jobs/reproduction/sasrec/`, and `jobs/new_datasets/`.
+
 ## Submission rule
 
 Always submit a job from its own folder.

@@ -25,19 +25,19 @@ submitted from that directory (relative output paths depend on it):
    are written to
    `artifacts/rpg/eval_seeds/new_datasets/<dataset>/<timestamp>_job<id>/summary.json`.
 
-4. **SASRec (basic) data prep + training** —
+4. **SASRec data prep + training** —
    `jobs/new_datasets/sasrec/<dataset>/prepare_data.sh` then `train.sh`.
    Checkpoint written to `artifacts/sasrec/ckpt/sasrec_<dataset>.pt`.
 
-5. **SASRec-modernized training + multi-seed eval** —
-   `jobs/new_datasets/sasrec_modernized/<dataset>/train.sh`, then
+5. **SASRec training + multi-seed eval** —
+   `jobs/new_datasets/sasrec/<dataset>/train.sh`, then
    `jobs/new_datasets/sasrec/eval_seeds/<dataset>/run_<dataset>.sh`.
-   Training writes `artifacts/sasrec_modernized/ckpt/sasrec_modernized_<dataset>.pt`.
+   Training writes `artifacts/sasrec/ckpt/sasrec_<dataset>.pt`.
    The eval_seeds runner evaluates that checkpoint over 10 seeds via
    `scripts/sasrec_eval.py` and writes
    `artifacts/sasrec/eval_seeds/new_datasets/<dataset>/<timestamp>_job<id>/summary.json`.
    (`jobs/new_datasets/sasrec/<dataset>/eval.sh` runs a single-seed eval of
-   the basic SASRec checkpoint instead, if needed.)
+   the same SASRec checkpoint instead, if needed.)
 
 Example, running stage 3 for `video_games`:
 

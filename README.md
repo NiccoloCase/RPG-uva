@@ -1,15 +1,23 @@
 # RPG-uva
 
-This repo keeps the upstream RPG implementation in the `third_party/` submodule and adds a root-level wrapper so you can run experiments from here without editing the submodule.
+This repository packages two things for publication:
 
-## Layout
+- the original RPG implementation, preserved as a read-only dependency in `third_party/`
+- the repo-owned reproduction, analysis, and baseline code used for the paper in `docs/RPG_NEW_report (1).pdf`
 
-- `third_party/`: upstream `facebookresearch/RPG_KDD2025` submodule. Read-only in this repo.
-- `scripts/rpg.py`: root-level runner that imports the submodule code and exposes config overlays.
-- `environment.yml`: root-level conda environment mirroring the upstream Python dependencies.
-- `configs/rpg/root.yaml`: repo-owned defaults for output paths.
-- `configs/rpg/repro/*.yaml`: paper reproduction presets.
-- `configs/rpg/local.example.yaml`: template for untracked machine-specific overrides.
+The public baseline name is `SASRec`. The older duplicate SASRec trees were removed so the repo exposes one baseline surface only.
+
+## Repository Structure
+
+- `third_party/`: pinned upstream RPG dependency. Do not edit it here.
+- `scripts/`: canonical repo entrypoints. Use `scripts/rpg.py` and `scripts/sasrec.py`.
+- `configs/`: repo-owned experiment presets. Use `configs/rpg/` and `configs/sasrec/`.
+- `jobs/`: Snellius Slurm jobs. Start with the paper index folders:
+  `jobs/01_reproduction/`, `jobs/02_accuracy_and_fairness/`, `jobs/03_graph_structure_and_dynamics/`, `jobs/04_search_vs_scorer/`, `jobs/05_efficiency/`.
+- `artifacts/`: checkpoints, caches, and runtime outputs.
+- `output/`: scheduler stdout/stderr logs.
+- `results/`: collected tables and summaries.
+- `docs/`: paper, notes, and Snellius guidance.
 
 ## Setup
 
@@ -19,265 +27,150 @@ Initialize the submodule:
 git submodule update --init --recursive
 ```
 
-Create the conda environment from the repo root:
+Create the environment from the repo root:
 
 ```bash
 conda env create -p "$(pwd)/artifacts/conda/rpg-uva" -f environment.yml
 conda activate "$(pwd)/artifacts/conda/rpg-uva"
 ```
 
-`environment.yml` mirrors the upstream dependency list and keeps the upstream CUDA 12.9 PyTorch index. If you need CPU-only PyTorch or a different CUDA build, change the `torch` lines there instead of touching `third_party/requirements.txt`.
+On Snellius, prefer the checked-in Slurm jobs. Submit every job from its own job directory.
 
-## Root Commands
+## Canonical Entry Points
 
-Show the wrapper help:
-
-```bash
-python3 scripts/rpg.py --help
-```
-
-Run one of the paper presets from the repo root:
+RPG:
 
 ```bash
-python3 scripts/rpg.py --preset sports_and_outdoors
 python3 scripts/rpg.py --preset beauty
-python3 scripts/rpg.py --preset toys_and_games
-python3 scripts/rpg.py --preset cds_and_vinyl
 ```
 
-Run a custom command from the repo root:
+SASRec:
 
 ```bash
-python3 scripts/rpg.py --category Sports_and_Outdoors --lr 0.003 --temperature 0.03
+python3 scripts/sasrec.py --preset beauty --dataset Beauty
 ```
 
-Add extra YAML overrides on top of the preset:
+## Reproduction Commands
+
+All commands below are paper-facing Snellius commands. Change datasets as needed.
+
+### 1. Reproduction
+
+Canonical SASRec full run:
 
 ```bash
-python3 scripts/rpg.py \
-  --preset beauty \
-  --config path/to/experiment.yaml \
-  --run_id beauty_debug
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec
+DATASET=beauty bash ./submit_all.sh
 ```
 
-## Performance Profiling
-
-The repo also includes a repo-owned profiling layer for reproducing the RPG side of the paper's inference-efficiency study without modifying `third_party/`.
-
-Validate the exact sparse graph on the original Sports pool:
+RPG train and eval:
 
 ```bash
-python3 scripts/rpg_perf.py \
-  validate-graph \
-  --checkpoint /abs/path/to/checkpoint.pth \
-  --config configs/rpg/perf/sports.yaml
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/beauty
+sbatch ./train.sh
+sbatch ./eval.sh
 ```
 
-Prebuild enlarged-pool adjacency caches and then run inference-only profiling:
+### 2. Accuracy And Fairness
+
+SASRec multi-seed evaluation:
 
 ```bash
-python3 scripts/rpg_perf.py \
-  profile \
-  --checkpoint /abs/path/to/checkpoint.pth \
-  --config configs/rpg/perf/sports.yaml \
-  --prepare-only
-
-python3 scripts/rpg_perf.py \
-  profile \
-  --checkpoint /abs/path/to/checkpoint.pth \
-  --config configs/rpg/perf/sports.yaml \
-  --profile-only
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/eval_seeds/released_readme
+sbatch ./run_sports_and_outdoors.sh
 ```
 
-More detailed usage, artifact layout, and Snellius job wrappers are documented in [docs/perf_profiling.md](docs/perf_profiling.md).
-
-## Graph Analysis Extension
-
-The repo also includes a graph-analysis extension for understanding why RPG's graph-constrained decoding saturates after a modest inference budget. The current working plan is in [docs/graph_analysis_extension_plan.md](docs/graph_analysis_extension_plan.md), and the combined analysis notebook is [notebooks/rpg_graph_static_analysis.ipynb](notebooks/rpg_graph_static_analysis.ipynb).
-
-### Static Graph Takeaways
-
-The constructed item graph looks structurally healthy rather than broken or random:
-
-- Graph neighbors are much more similar than random item pairs.
-- The graph becomes globally connected quickly, so fragmentation is unlikely to explain saturation alone.
-- The graph is locally clustered, suggesting redundant neighborhoods and repeated exploration of similar regions.
-- Hubness/popularity exists, but does not look like the only explanation.
-
-Static conclusion:
-
-```text
-The graph itself is coherent, connected, and locally redundant.
-Figure 6 saturation is unlikely to be caused mainly by bad graph construction or disconnected components.
-```
-
-### Dynamic Decoding Takeaways
-
-The dynamic analysis follows RPG's actual decoding process and is more directly tied to recommendation behavior:
-
-- Increasing graph width greatly improves target access.
-- Recommendation quality barely improves: reachability rises strongly, while Recall@10/NDCG@10 saturate quickly.
-- Later propagation steps add fewer new useful candidates, especially at high graph width.
-- Reachable targets are usually found early, often in the first 1-2 propagation steps.
-- Increasing RPG's coupled `num_beams` search budget makes targets more often considered and more often enter the beam, but Recall@10 barely changes. This is not a pure pruning test because `num_beams` also changes the initial random pool and frontier size.
-
-Dynamic conclusion:
-
-```text
-The main bottleneck seems to be candidate scoring/ranking after access, not graph reachability alone.
-```
-
-Overall interpretation:
-
-```text
-RPG's graph gives access to many relevant items, and the graph structure is mostly healthy.
-However, extra search budget produces many redundant/plausible candidates, and the decoder often fails to rank the true item into the final top-10.
-```
-
-Best next direction:
-
-```text
-Keep traversal cheaper or similar, then improve final candidate selection/reranking.
-```
-
-## Config Overrides
-
-The root wrapper loads configs in this order:
-
-1. `third_party/genrec/default.yaml`
-2. `third_party/genrec/datasets/.../config.yaml`
-3. `third_party/genrec/models/.../config.yaml`
-4. `configs/rpg/root.yaml`
-5. `configs/rpg/local.yaml` if present
-6. `configs/rpg/repro/*.yaml` when `--preset` is used
-7. Any extra `--config path/to/file.yaml`
-8. CLI overrides like `--lr 0.003` or `--lr=0.003`
-
-To keep machine-specific settings out of Git, create an untracked local override:
+RPG multi-seed evaluation:
 
 ```bash
-cp configs/rpg/local.example.yaml configs/rpg/local.yaml
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/eval_seeds/released_readme
+sbatch ./run_sports_and_outdoors.sh
 ```
 
-Then edit `configs/rpg/local.yaml` with your own settings, for example batch sizes, FAISS threading, or secrets such as `openai_api_key`.
-
-## Full Hyperparameter Sweep on a New Dataset
-
-The full sweep tunes three groups of hyperparameters: **semantic-ID length `m`**,
-**training** (learning rate, temperature), and **inference decoding** (beam size
-`b`, graph degree `k`, propagation steps `q`). Following the original paper, `m` is
-tuned **jointly** with lr/temperature (the paper's `3 lr × 3 temp × 5 m = 45`-cell
-grid), then the inference parameters are tuned by re-decoding the selected
-checkpoint. The four paper datasets are already done; this section is for adding a
-new Amazon category. All jobs run on Snellius.
-
-Throughout, `<ds>` is the snake_case preset name (e.g. `office_products`) and
-`<Category>` is the Title_Case cache name (e.g. `Office_Products`). 
-
-### Prerequisites
-
-1. Snellius access and the group project space; clone the repo there with
-   `git submodule update --init --recursive`.
-2. The conda env: `module load 2025 && module load Anaconda3/2025.06-1`, then use
-   `conda run -n rpg-uva …` (the job scripts do this).
-3. An OpenAI API key for `text-embedding-3-large`. Put it in an untracked
-   `configs/rpg/local.yaml` as `openai_api_key: sk-…`.
-4. The new category available to `genrec` as a dataset (raw Amazon Reviews 2014
-   data + dataset config) and a preset `configs/rpg/repro/<ds>.yaml` (copy an
-   existing preset and change the `dataset`/`category`). The four existing presets
-   under `configs/rpg/repro/` are the templates.
-
-### 1. Prepare semantic IDs (all `m`)
+SASRec cold-start analysis:
 
 ```bash
-for M in 4 8 16 32 64; do
-  conda run -n rpg-uva python scripts/rpg_prepare_semantic_ids.py --preset <ds> --n_codebook $M
-done
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/cold_start
+sbatch ./run_cold_start.sh
 ```
 
-The first run computes and caches the OpenAI embeddings; later `m` reuse the cache
-and only re-run OPQ tokenization.
-
-### 2. Joint training sweep (`m × lr × temperature`)
+RPG cold-start analysis:
 
 ```bash
-cd jobs/reproduction/rpg/grid
-mkdir -p ../../../../output/reproduction/rpg/grid/train
-DATASETS="<ds>" sbatch --array=0-44 -p gpu_h100 run_train_grid.sh   # 5 m × 3 lr × 3 temp
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/cold_start
+sbatch ./run_cold_start.sh
 ```
 
-`run_train_grid.sh` reads `DATASETS`, `MVALS`, `LRS`, `TEMPS`, `SEEDS` from the
-environment, so no per-dataset edits are needed. Recompute `--array` as
-`N_DS × N_M × N_LR × N_TEMP × N_SEED − 1` (one dataset at one seed = `0-44`; two
-datasets = `0-89`). Grid checkpoints are discarded; selection comes from the logs.
+### 3. Graph Structure And Dynamics
 
-### 3. Collect and pick the winner
+Static graph analysis:
 
 ```bash
-cd /projects/prjs2120/groups/group_16/code/RPG-uva
-python scripts/collect_grid_results.py
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/graph_analysis
+sbatch ./run_static_sports.sh
 ```
 
-`train_grid.csv` now has an `m` column. Per dataset, pick the `(m, lr, temperature)`
-row with the highest `val_ndcg10_mean` — call it `m*`, `lr*`, `t*`.
-
-### 4. Link the winning checkpoint
-
-The sweep kept every cell's checkpoint. Link the winner `(m*, lr*, t*)` to the name
-the inference sweeps glob (`rpg_sweep_m<m*>_<ds>-*.pth`):
+Dynamic graph analysis:
 
 ```bash
-cd artifacts/rpg/ckpt
-ln -s rpg_sweep_m<m*>_<ds>_lr<lr*>_t<t*>_s2024-*.pth rpg_sweep_m<m*>_<ds>-best.pth
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/graph_analysis
+sbatch ./run_dynamic_sports.sh
 ```
 
-The `m`-scaling curve (Claim 2) is the slice of `train_grid.csv` at `lr*`, `t*` — no
-re-decoding needed. To reclaim quota, delete the non-winning grid checkpoints once
-the winner is linked.
+### 4. Search Vs Scorer
 
-### 5. Decode-parameter grid (validation) then confirm (test)
-
-Append the new dataset to the hard-coded arrays in **`run_decode_grid.sh`**,
-**`run_decode_confirm.sh`**, and **`run_infer_grid.sh`** (lines ~28–32 in each):
-add `<ds>` to `DATASETS`, `<Category>` to `CATEGORIES`, and `m*` to `BEST_M`; for
-`run_infer_grid.sh` also append the per-dataset base to `BASE_B`/`BASE_K`/`BASE_Q`.
-Then bump each `#SBATCH --array` (decode grid = `N_DS × 6 − 1`; confirm/infer =
-`N_DS − 1`).
+RPG decode grid:
 
 ```bash
-sbatch -p gpu_h100 run_decode_grid.sh          # full b×k×q on validation, 3 seeds
-python ../../../../scripts/collect_grid_results.py   # writes results/decode_val_cluster.csv
-sbatch -p gpu_h100 run_decode_confirm.sh       # re-decode the val-selected cluster on test, 10 seeds
-python ../../../../scripts/collect_grid_results.py   # writes results/decode_test_selected.csv
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/grid
+sbatch ./run_decode_grid.sh
 ```
 
-### 6. Inference candidate budget (NDCG@50/@100)
+RPG decode confirmation:
 
 ```bash
-sbatch -p gpu_h100 run_infer_grid.sh
-python ../../../../scripts/collect_grid_results.py   # writes infer_grid.csv
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/grid
+sbatch ./run_decode_confirm.sh
 ```
 
-### 7. SASRec baseline (optional, for comparison)
+SASRec graph ablation:
 
-SASRec jobs are per-dataset directories under `jobs/reproduction/sasrec/<ds>/`
-(`prepare_data.sh`, `train.sh`, `eval.sh`). Copy an existing dataset directory,
-change the preset, and submit via that directory's scripts.
+```bash
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/ablation_size
+sbatch ./train_sports.sh
+```
 
-### 8. Analyze
+### 5. Efficiency
 
-`scp` `results/*.csv` and `results/figures/*` back to your machine;
-`notebooks/results_analysis.ipynb` reads them.
+RPG inference profiling:
 
-### Notes
+```bash
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/perf
+sbatch ./build_graphs.sh /abs/path/to/rpg_checkpoint.pth
+sbatch ./profile_inference.sh /abs/path/to/rpg_checkpoint.pth
+```
 
-- Selection is always on **validation**; reported scores are on **test** (the
-  authors' protocol).
-- `run_train_grid.sh` is fully env-driven, but `run_decode_grid.sh`,
-  `run_decode_confirm.sh`, and `run_infer_grid.sh` still use hard-coded dataset
-  arrays — extend those arrays as in step 5. `BEST_M` for the new dataset is only
-  known after step 3, so these arrays cannot be filled earlier.
-- Disk quota: the eval scripts can write large `per_user_metrics.*` dumps. Pass
-  `--no-per-user-output` (already set in `run_decode_confirm.sh`) or delete them
-  under `output/reproduction/rpg/grid/` if quota runs low; only `summary.json` is
-  consumed by the collector.
+SASRec inference profiling:
+
+```bash
+cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/perf
+sbatch ./profile_graph_inference.sh
+```
+
+## New-Dataset Extension
+
+The paper datasets live under `jobs/reproduction/`. Extra datasets such as `video_games` and `pet_supplies` live under `jobs/new_datasets/`.
+
+Use:
+
+```bash
+cd /gpfs/home6/$USER/RPG-uva/jobs/new_datasets
+```
+
+Then follow `jobs/new_datasets/README.md`.
+
+## Notes
+
+- `third_party/` stays in the public repository as the preserved original RPG source boundary.
+- The paper-facing job index lives in `jobs/01_reproduction/` through `jobs/05_efficiency/`.
+- The canonical SASRec artifacts now live under `artifacts/sasrec/` and `output/reproduction/sasrec/`.

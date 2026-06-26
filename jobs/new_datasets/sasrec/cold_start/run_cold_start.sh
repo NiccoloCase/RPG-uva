@@ -45,7 +45,7 @@ if [[ $# -ge 1 ]]; then
   shift_count=1
 fi
 
-BEST_INFO="$("${ENV_PREFIX}/bin/python" "${REPO_ROOT}/scripts/find_best_new_dataset_sasrec_grid.py" --dataset "${COLD_START_DATASET_SLUG}" --format shell)"
+BEST_INFO="$(${ENV_PREFIX}/bin/python ${REPO_ROOT}/scripts/find_best_new_dataset_sasrec_grid.py --dataset ${COLD_START_DATASET_SLUG} --format shell)"
 eval "${BEST_INFO}"
 
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
@@ -75,7 +75,7 @@ module load Anaconda3/2025.06-1
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run "${ENV_PREFIX}/bin/python" scripts/sasrec_cold_start.py \
+runtime_stats_run ${ENV_PREFIX}/bin/python scripts/sasrec_cold_start.py \
   run \
   --checkpoint "${CHECKPOINT_PATH}" \
   --model-family sasrec \

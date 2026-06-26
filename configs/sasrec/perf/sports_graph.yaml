@@ -6,7 +6,7 @@ inference_mode: graph
 num_beams: 10
 graph_topk: 100
 propagation_steps: 2
-graph_cache_dir: artifacts/sasrec_modernized/perf/graph/sports/graphs
+graph_cache_dir: artifacts/sasrec/perf/graph/sports/graphs
 graph_build_block_size: 2048
 
 graph_eval_num_beams: [5, 10, 20]
@@ -15,8 +15,8 @@ graph_eval_propagation_steps: [1, 2, 3]
 
 pool_sizes: [20000, 50000, 100000, 200000, 500000]
 dummy_pool_seed: 2024
-perf_output_dir: artifacts/sasrec_modernized/perf/graph/sports
-graph_eval_output_dir: artifacts/sasrec_modernized/grid/graph_eval/sports
+perf_output_dir: artifacts/sasrec/perf/graph/sports
+graph_eval_output_dir: artifacts/sasrec/grid/graph_eval/sports
 repeats: 3
 warmup_batches: 2
 measure_cuda_memory: true

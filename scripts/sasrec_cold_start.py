@@ -26,8 +26,6 @@ if str(REPO_ROOT) not in sys.path:
 
 from models.sasrec import SASRecDataset, SASRecModel  # noqa: E402
 from models.sasrec.utils import get_user_seqs as get_user_seqs_sasrec, set_seed as set_seed_sasrec  # noqa: E402
-from models.sasrec_modernized import SASRecModernizedDataset, SASRecModernizedModel  # noqa: E402
-from models.sasrec_modernized.utils import get_user_seqs as get_user_seqs_modernized, set_seed as set_seed_modernized  # noqa: E402
 from sasrec import (  # noqa: E402
     PRESET_CONFIGS as SASREC_PRESET_CONFIGS,
     build_config_files as build_sasrec_config_files,
@@ -35,19 +33,11 @@ from sasrec import (  # noqa: E402
     normalize_config as normalize_sasrec_config,
     parse_override_args as parse_sasrec_override_args,
 )
-from sasrec_modernized import (  # noqa: E402
-    PRESET_CONFIGS as MODERNIZED_PRESET_CONFIGS,
-    build_config_files as build_modernized_config_files,
-    load_config as load_modernized_config,
-    normalize_config as normalize_modernized_config,
-    parse_override_args as parse_modernized_override_args,
-)
 
 
 DEFAULT_BUCKETS = "0-5,6-10,11-15,16-20"
 METRIC_NAMES = ("recall@5", "ndcg@5", "recall@10", "ndcg@10")
-MODEL_FAMILY_CHOICES = ("auto", "sasrec", "sasrec_modernized")
-PRESET_CHOICES = sorted(set(SASREC_PRESET_CONFIGS) | set(MODERNIZED_PRESET_CONFIGS))
+PRESET_CHOICES = sorted(SASREC_PRESET_CONFIGS)
 
 
 @dataclass(frozen=True)
@@ -72,9 +62,9 @@ def build_parser() -> argparse.ArgumentParser:
         subparser.add_argument("--dataset", default=None, help="Dataset/category override.")
         subparser.add_argument(
             "--model-family",
-            choices=MODEL_FAMILY_CHOICES,
-            default="auto",
-            help="Which SASRec implementation to evaluate. Defaults to auto-detect from the checkpoint path.",
+            choices=("sasrec",),
+            default="sasrec",
+            help="Only the canonical SASRec implementation is kept in the public repo.",
         )
         subparser.add_argument("--config", action="append", default=[], help="Additional YAML config file.")
         subparser.add_argument("--no-root-config", action="store_true", help="Skip the default SASRec root config.")
@@ -277,28 +267,12 @@ def _plot_summary(summary_path: str | Path, output_path: str | Path, metric: str
     return output
 
 
-def _resolve_model_family(parsed_args: argparse.Namespace) -> str:
-    if parsed_args.model_family != "auto":
-        return parsed_args.model_family
-    checkpoint_name = Path(parsed_args.checkpoint).name.lower()
-    if "modernized" in checkpoint_name:
-        return "sasrec_modernized"
-    return "sasrec"
-
-
 def _load_args(parsed_args: argparse.Namespace, override_tokens: list[str]) -> tuple[SimpleNamespace, str]:
-    model_family = _resolve_model_family(parsed_args)
-    if model_family == "sasrec_modernized":
-        overrides = parse_modernized_override_args(override_tokens)
-        build_config_files = build_modernized_config_files
-        load_config = load_modernized_config
-        normalize_config = normalize_modernized_config
-    else:
-        overrides = parse_sasrec_override_args(override_tokens)
-        build_config_files = build_sasrec_config_files
-        load_config = load_sasrec_config
-        normalize_config = normalize_sasrec_config
-
+    model_family = "sasrec"
+    overrides = parse_sasrec_override_args(override_tokens)
+    build_config_files = build_sasrec_config_files
+    load_config = load_sasrec_config
+    normalize_config = normalize_sasrec_config
     if parsed_args.dataset is not None:
         overrides["dataset"] = parsed_args.dataset
 
@@ -315,14 +289,9 @@ def _evaluate_cold_start(
     buckets: list[ColdStartBucket],
 ):
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-    if model_family == "sasrec_modernized":
-        dataset_cls = SASRecModernizedDataset
-        model_cls = SASRecModernizedModel
-        n_visited_items = float(args.mask_id - 1)
-    else:
-        dataset_cls = SASRecDataset
-        model_cls = SASRecModel
-        n_visited_items = float(args.item_size - 2)
+    dataset_cls = SASRecDataset
+    model_cls = SASRecModel
+    n_visited_items = float(args.mask_id - 1)
 
     test_dataset = dataset_cls(args, user_seq, data_type="test")
     test_dataloader = DataLoader(
@@ -392,15 +361,10 @@ def _run_cold_start(parsed_args: argparse.Namespace, override_tokens: list[str])
     if not Path(args.checkpoint_path).is_file():
         raise FileNotFoundError(f"SASRec checkpoint not found: {args.checkpoint_path}")
 
-    if model_family == "sasrec_modernized":
-        set_seed_modernized(args.seed)
-        user_seq, max_item, _, test_rating_matrix = get_user_seqs_modernized(args.data_file)
-        args.item_size = max_item + 2
-        args.mask_id = max_item + 1
-    else:
-        set_seed_sasrec(args.seed)
-        user_seq, max_item, _, test_rating_matrix = get_user_seqs_sasrec(args.data_file)
-        args.item_size = max_item + 1
+    set_seed_sasrec(args.seed)
+    user_seq, max_item, _, test_rating_matrix = get_user_seqs_sasrec(args.data_file)
+    args.item_size = max_item + 2
+    args.mask_id = max_item + 1
     args.cuda_condition = torch.cuda.is_available() and not args.no_cuda
     args.train_matrix = test_rating_matrix
 
@@ -414,7 +378,7 @@ def _run_cold_start(parsed_args: argparse.Namespace, override_tokens: list[str])
         "checkpoint_path": str(Path(args.checkpoint_path).resolve()),
         "dataset": args.data_name,
         "category": getattr(args, "category", args.data_name),
-        "model": "SASRecModernized" if model_family == "sasrec_modernized" else "SASRec",
+        "model": "SASRec",
         "model_family": model_family,
         "plot_metric": parsed_args.plot_metric,
         "bucket_spec": parsed_args.buckets,

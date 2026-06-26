@@ -3,7 +3,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from .modules import Encoder, LayerNorm
+from .modules import SASRecEncoder
 
 
 class SASRecModel(nn.Module):
@@ -11,8 +11,8 @@ class SASRecModel(nn.Module):
         super().__init__()
         self.item_embeddings = nn.Embedding(args.item_size, args.hidden_size, padding_idx=0)
         self.position_embeddings = nn.Embedding(args.max_seq_length, args.hidden_size)
-        self.item_encoder = Encoder(args)
-        self.layer_norm = LayerNorm(args.hidden_size, eps=1e-12)
+        self.item_encoder = SASRecEncoder(args)
+        self.layer_norm = nn.LayerNorm(args.hidden_size, eps=1e-12)
         self.dropout = nn.Dropout(args.hidden_dropout_prob)
         self.args = args
         self.apply(self.init_weights)
@@ -28,7 +28,7 @@ class SASRecModel(nn.Module):
         sequence_emb = self.dropout(sequence_emb)
         return sequence_emb
 
-    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def _build_attention_mask(self, input_ids: torch.Tensor) -> torch.Tensor:
         attention_mask = (input_ids > 0).long()
         extended_attention_mask = attention_mask.unsqueeze(1).unsqueeze(2)
         max_len = attention_mask.size(-1)
@@ -40,9 +40,11 @@ class SASRecModel(nn.Module):
         subsequent_mask = (subsequent_mask == 0).unsqueeze(1).long()
 
         extended_attention_mask = extended_attention_mask * subsequent_mask
-        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)
-        extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
+        extended_attention_mask = extended_attention_mask.to(dtype=self.item_embeddings.weight.dtype)
+        return (1.0 - extended_attention_mask) * -10000.0
 
+    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+        extended_attention_mask = self._build_attention_mask(input_ids)
         sequence_emb = self.add_position_embedding(input_ids)
         encoded_layers = self.item_encoder(
             sequence_emb,
@@ -54,7 +56,7 @@ class SASRecModel(nn.Module):
     def init_weights(self, module) -> None:
         if isinstance(module, (nn.Linear, nn.Embedding)):
             module.weight.data.normal_(mean=0.0, std=self.args.initializer_range)
-        elif isinstance(module, LayerNorm):
+        elif isinstance(module, nn.LayerNorm):
             module.bias.data.zero_()
             module.weight.data.fill_(1.0)
         if isinstance(module, nn.Linear) and module.bias is not None:

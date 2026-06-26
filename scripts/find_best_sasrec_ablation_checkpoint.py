@@ -11,9 +11,17 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-ABLATION_OUTPUT_ROOT = REPO_ROOT / "output" / "reproduction" / "sasrec_modernized" / "ablation_size"
-DATASET_CHOICES = ("beauty", "cds_and_vinyl", "sports_and_outdoors", "toys_and_games")
-RUN_ID_RE = re.compile(r"^(sasrec_modernized_[A-Za-z0-9_]+)$")
+ABLATION_OUTPUT_ROOT = REPO_ROOT / "output" / "reproduction" / "sasrec" / "ablation_size"
+NEW_DATASETS_ABLATION_OUTPUT_ROOT = REPO_ROOT / "output" / "new_datasets" / "sasrec" / "ablation_size"
+DATASET_CHOICES = (
+    "beauty",
+    "cds_and_vinyl",
+    "sports_and_outdoors",
+    "toys_and_games",
+    "video_games",
+    "pet_supplies",
+)
+RUN_ID_RE = re.compile(r"^(sasrec_[A-Za-z0-9_]+)$")
 METRIC_RE = re.compile(
     r"OrderedDict\(\[\('Epoch', 0\), .*?\('NDCG@10', '([0-9.]+)'\).*?\('NDCG@20', '([0-9.]+)'\)\]\)"
 )
@@ -31,7 +39,7 @@ class AblationResult:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Resolve the best completed SASRec Modernized ablation checkpoint from finished sweep logs.",
+        description="Resolve the best completed SASRec ablation checkpoint from finished sweep logs.",
     )
     parser.add_argument("--dataset", choices=DATASET_CHOICES, required=True, help="Dataset slug to resolve.")
     parser.add_argument(
@@ -81,15 +89,19 @@ def _extract_result(path: Path) -> AblationResult | None:
 
 def find_best_result(dataset_slug: str) -> AblationResult:
     candidates: list[AblationResult] = []
-    for path in sorted(ABLATION_OUTPUT_ROOT.rglob("*.out")):
-        result = _extract_result(path)
-        if result is None or result.dataset_slug != dataset_slug:
-            continue
-        candidates.append(result)
+    
+    roots = [ABLATION_OUTPUT_ROOT, NEW_DATASETS_ABLATION_OUTPUT_ROOT]
+    
+    for root in roots:
+        for path in sorted(root.rglob("*.out")):
+            result = _extract_result(path)
+            if result is None or result.dataset_slug != dataset_slug:
+                continue
+            candidates.append(result)
 
     if not candidates:
         raise FileNotFoundError(
-            f"No completed SASRec Modernized ablation logs found for dataset '{dataset_slug}' under {ABLATION_OUTPUT_ROOT}."
+            f"No completed SASRec ablation logs found for dataset '{dataset_slug}' under {ABLATION_OUTPUT_ROOT} or {NEW_DATASETS_ABLATION_OUTPUT_ROOT}."
         )
 
     candidates.sort(

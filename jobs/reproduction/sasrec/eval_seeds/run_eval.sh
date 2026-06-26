@@ -46,8 +46,8 @@ SASREC_EVAL_DATASET="${SASREC_EVAL_DATASET:-Sports_and_Outdoors}"
 SASREC_EVAL_CONFIG_DEFAULT="${REPO_ROOT}/configs/sasrec/eval_seeds/released_readme/${SASREC_EVAL_DATASET_SLUG}.yaml"
 SASREC_EVAL_CONFIG="${SASREC_EVAL_CONFIG:-${SASREC_EVAL_CONFIG_DEFAULT}}"
 SASREC_EVAL_OUTPUT_DIR="${SASREC_EVAL_OUTPUT_DIR:-${REPO_ROOT}/artifacts/sasrec/eval_seeds/released_readme/${SASREC_EVAL_DATASET_SLUG}}"
-LOCAL_CHECKPOINT_DIR="${REPO_ROOT}/artifacts/sasrec_modernized/ckpt"
-SHARED_CHECKPOINT_DIR="/projects/prjs2120/groups/group_16/artifacts/sasrec_modernized/ckpt"
+LOCAL_CHECKPOINT_DIR="${REPO_ROOT}/artifacts/sasrec/ckpt"
+SHARED_CHECKPOINT_DIR="/projects/prjs2120/groups/group_16/artifacts/sasrec/ckpt"
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
@@ -55,7 +55,7 @@ if [[ $# -ge 1 ]]; then
   shift_count=1
 fi
 
-DEFAULT_CHECKPOINT_BASENAME="sasrec_modernized_${SASREC_EVAL_DATASET_SLUG}.pt"
+DEFAULT_CHECKPOINT_BASENAME="sasrec_${SASREC_EVAL_DATASET_SLUG}.pt"
 if [[ -z "${CHECKPOINT_DIR}" ]]; then
   if [[ -f "${LOCAL_CHECKPOINT_DIR}/${DEFAULT_CHECKPOINT_BASENAME}" ]]; then
     CHECKPOINT_DIR="${LOCAL_CHECKPOINT_DIR}"

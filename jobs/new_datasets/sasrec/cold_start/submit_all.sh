@@ -16,4 +16,4 @@ done
 
 echo "After the retrain jobs finish, submit cold-start evaluation with:"
 echo "  cd ${SCRIPT_DIR}"
-echo "  for dataset in video_games pet_supplies; do sbatch --export=ALL,COLD_START_DATASET_SLUG=\"\${dataset}\" ./run_cold_start.sh; done"
+echo "  for dataset in video_games pet_supplies; do sbatch --export=ALL,COLD_START_DATASET_SLUG=\${dataset} ./run_cold_start.sh; done"

@@ -46,7 +46,7 @@ SASREC_EVAL_DATASET="${SASREC_EVAL_DATASET:-Video_Games}"
 SASREC_EVAL_CONFIG_DEFAULT="${REPO_ROOT}/configs/sasrec/eval_seeds/new_datasets/${SASREC_EVAL_DATASET_SLUG}.yaml"
 SASREC_EVAL_CONFIG="${SASREC_EVAL_CONFIG:-${SASREC_EVAL_CONFIG_DEFAULT}}"
 SASREC_EVAL_OUTPUT_DIR="${SASREC_EVAL_OUTPUT_DIR:-${REPO_ROOT}/artifacts/sasrec/eval_seeds/new_datasets/${SASREC_EVAL_DATASET_SLUG}}"
-CHECKPOINT_DIR="${CHECKPOINT_DIR:-${REPO_ROOT}/artifacts/sasrec_modernized/ckpt}"
+CHECKPOINT_DIR="${CHECKPOINT_DIR:-${REPO_ROOT}/artifacts/sasrec/ckpt}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
 if [[ $# -ge 1 ]]; then
@@ -54,13 +54,13 @@ if [[ $# -ge 1 ]]; then
 fi
 
 if [[ -z "${CHECKPOINT_PATH}" ]]; then
-  CHECKPOINT_PATH="${CHECKPOINT_DIR}/sasrec_modernized_${SASREC_EVAL_DATASET_SLUG}.pt"
+  CHECKPOINT_PATH="${CHECKPOINT_DIR}/sasrec_${SASREC_EVAL_DATASET_SLUG}.pt"
 fi
 
 if [[ "${CHECKPOINT_PATH}" == *"<"* || "${CHECKPOINT_PATH}" == *">"* ]]; then
   echo "ERROR: checkpoint path contains angle-bracket placeholders: ${CHECKPOINT_PATH}" >&2
   echo "Use a real path under ${REPO_ROOT}, for example:" >&2
-  echo "  ${CHECKPOINT_DIR}/sasrec_modernized_${SASREC_EVAL_DATASET_SLUG}.pt" >&2
+  echo "  ${CHECKPOINT_DIR}/sasrec_${SASREC_EVAL_DATASET_SLUG}.pt" >&2
   exit 3
 fi
 

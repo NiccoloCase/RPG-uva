@@ -18,8 +18,12 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from models.sasrec import SASRecDataset, SASRecModel, SASRecTrainer
-from models.sasrec.utils import EarlyStopping, check_path, get_user_seqs, set_seed
+from models.sasrec import (  # noqa: E402
+    SASRecDataset,
+    SASRecModel,
+    SASRecTrainer,
+)
+from models.sasrec.utils import EarlyStopping, check_path, get_user_seqs, set_seed  # noqa: E402
 
 MODEL_CONFIG = REPO_ROOT / "models" / "sasrec" / "config.yaml"
 ROOT_CONFIG = REPO_ROOT / "configs" / "sasrec" / "root.yaml"
@@ -36,10 +40,11 @@ PRESET_CONFIGS = {
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(
-        description="Run the standalone SASRec reproduction path migrated from CIKM2020-S3Rec.",
+        description="Run the canonical SASRec reproduction path from the repository root.",
         epilog=(
             "Config precedence: CLI overrides > --config files > --preset file > "
-            "configs/sasrec/local.yaml > configs/sasrec/root.yaml > models/sasrec/config.yaml."
+            "configs/sasrec/local.yaml > configs/sasrec/root.yaml > "
+            "models/sasrec/config.yaml."
         ),
     )
     parser.add_argument("--dataset", default=None, help="Dataset/category override, for example Beauty.")

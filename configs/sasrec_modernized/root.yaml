@@ -1,6 +1,0 @@
-run_id: sasrec_modernized_repro
-data_dir: artifacts/sasrec/data
-log_dir: artifacts/sasrec_modernized/logs
-tensorboard_log_dir: artifacts/sasrec_modernized/tensorboard
-ckpt_dir: artifacts/sasrec_modernized/ckpt
-output_dir: output/reproduction/sasrec_modernized

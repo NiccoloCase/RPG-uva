@@ -8,14 +8,22 @@ import numpy as np
 import scipy.sparse as sp
 import torch
 
+try:
+    from accelerate.utils import set_seed as accelerate_set_seed
+except ImportError:  # pragma: no cover - accelerate is present in the target env.
+    accelerate_set_seed = None
 
-def set_seed(seed: int) -> None:
+
+def set_seed(seed: int, reproducibility: bool = True) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
+    if accelerate_set_seed is not None:
+        accelerate_set_seed(seed)
+    torch.backends.cudnn.deterministic = reproducibility
+    torch.backends.cudnn.benchmark = not reproducibility
 
 
 def check_path(path: str) -> None:

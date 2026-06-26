@@ -39,6 +39,9 @@ module purge
 module load 2025
 module load Anaconda3/2025.06-1
 
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate "${ENV_PREFIX}"
+
 cd "${REPO_ROOT}"
 
-runtime_stats_run conda run -n rpg-uva python3 scripts/sasrec_prepare_data.py --categories Sports_and_Outdoors
+runtime_stats_run python3 scripts/sasrec_prepare_data.py --categories Sports_and_Outdoors

@@ -39,7 +39,7 @@ OUTPUT_DIR="${REPO_ROOT}/output/new_datasets/sasrec/cold_start"
 ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
 COLD_START_DATASET_SLUG="${COLD_START_DATASET_SLUG:-video_games}"
 
-BEST_INFO="$("${ENV_PREFIX}/bin/python" "${REPO_ROOT}/scripts/find_best_new_dataset_sasrec_grid.py" --dataset "${COLD_START_DATASET_SLUG}" --format shell)"
+BEST_INFO="$(${ENV_PREFIX}/bin/python ${REPO_ROOT}/scripts/find_best_new_dataset_sasrec_grid.py --dataset ${COLD_START_DATASET_SLUG} --format shell)"
 eval "${BEST_INFO}"
 
 DATA_FILE="${REPO_ROOT}/artifacts/sasrec/data/${DATASET_CATEGORY}/${DATASET_CATEGORY}.txt"
@@ -61,7 +61,7 @@ module load Anaconda3/2025.06-1
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run "${ENV_PREFIX}/bin/python" scripts/sasrec.py \
+runtime_stats_run ${ENV_PREFIX}/bin/python scripts/sasrec.py \
   --preset "${DATASET_SLUG}" \
   --dataset "${DATASET_CATEGORY}" \
   --run_id "${RUN_ID}" \

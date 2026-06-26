@@ -27,8 +27,8 @@ SASREC_SCRIPT_DIR = REPO_ROOT / "scripts"
 if str(SASREC_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SASREC_SCRIPT_DIR))
 
-from models.sasrec_modernized import SASRecModernizedDataset, SASRecModernizedModel  # noqa: E402
-from models.sasrec_modernized.utils import get_user_seqs, set_seed  # noqa: E402
+from models.sasrec import SASRecDataset, SASRecModel  # noqa: E402
+from models.sasrec.utils import get_user_seqs, set_seed  # noqa: E402
 from popularity_metrics import (  # noqa: E402
     ItemPopularity,
     assign_popularity_groups,
@@ -40,7 +40,7 @@ from popularity_metrics import (  # noqa: E402
     popularity_metric_names,
     recommendation_popularity,
 )
-from sasrec_modernized import (  # noqa: E402
+from sasrec import (  # noqa: E402
     PRESET_CONFIGS,
     build_config_files,
     load_config,
@@ -95,12 +95,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-root-config",
         action="store_true",
-        help="Skip configs/sasrec_modernized/root.yaml.",
+        help="Skip configs/sasrec/root.yaml.",
     )
     parser.add_argument(
         "--no-local-config",
         action="store_true",
-        help="Skip configs/sasrec_modernized/local.yaml even if it exists.",
+        help="Skip configs/sasrec/local.yaml even if it exists.",
     )
     parser.add_argument(
         "--output-dir",
@@ -293,8 +293,8 @@ def _single_target_metrics(
     return metrics
 
 
-def _build_model(args: SimpleNamespace, device: torch.device) -> SASRecModernizedModel:
-    model = SASRecModernizedModel(args).to(device)
+def _build_model(args: SimpleNamespace, device: torch.device) -> SASRecModel:
+    model = SASRecModel(args).to(device)
     state_dict = torch.load(args.checkpoint_path, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
@@ -302,7 +302,7 @@ def _build_model(args: SimpleNamespace, device: torch.device) -> SASRecModernize
 
 
 def _collect_seed_rows(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     dataloader: DataLoader,
     args: SimpleNamespace,
     user_ids: list[str],
@@ -476,7 +476,7 @@ def main(argv: list[str] | None = None) -> int:
     eval_seeds = _eval_seeds_for_mode(parsed_args, args)
     set_seed(eval_seeds[0])
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
-    test_dataset = SASRecModernizedDataset(args, user_seq, data_type="test")
+    test_dataset = SASRecDataset(args, user_seq, data_type="test")
     dataloader = DataLoader(
         test_dataset,
         sampler=SequentialSampler(test_dataset),

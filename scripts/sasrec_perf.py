@@ -25,10 +25,10 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from models.sasrec_modernized import SASRecModernizedDataset, SASRecModernizedModel  # noqa: E402
-from models.sasrec_modernized.utils import get_user_seqs, set_seed  # noqa: E402
-from perf.sasrec_modernized_graph import build_or_load_adjacency, graph_propagation  # noqa: E402
-from sasrec_modernized import (  # noqa: E402
+from models.sasrec import SASRecDataset, SASRecModel  # noqa: E402
+from models.sasrec.utils import get_user_seqs, set_seed  # noqa: E402
+from perf.sasrec_graph import build_or_load_adjacency, graph_propagation  # noqa: E402
+from sasrec import (  # noqa: E402
     PRESET_CONFIGS,
     build_config_files,
     load_config,
@@ -51,7 +51,7 @@ class PoolExpansionResult:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Profile SASRecModernized inference over enlarged candidate pools.",
+        description="Profile SASRec inference over enlarged candidate pools.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -66,7 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     profile_parser = subparsers.add_parser(
         "profile",
-        help="Profile SASRecModernized inference over enlarged candidate pools.",
+        help="Profile SASRec inference over enlarged candidate pools.",
     )
     add_common_profile_args(profile_parser)
     profile_parser.add_argument("--pool-sizes", default=None, help="Comma-separated pool sizes.")
@@ -204,8 +204,8 @@ def _load_args(parsed_args: argparse.Namespace, override_tokens: list[str]) -> S
     return normalize_config(merged_config, parsed_args.checkpoint)
 
 
-def _build_base_model(args: SimpleNamespace, checkpoint_path: str, device: torch.device) -> SASRecModernizedModel:
-    model = SASRecModernizedModel(args).to(device)
+def _build_base_model(args: SimpleNamespace, checkpoint_path: str, device: torch.device) -> SASRecModel:
+    model = SASRecModel(args).to(device)
     state_dict = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(state_dict)
     model.eval()
@@ -213,7 +213,7 @@ def _build_base_model(args: SimpleNamespace, checkpoint_path: str, device: torch
 
 
 def _expand_item_embeddings(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     target_item_size: int,
     original_candidate_count: int,
     seed: int,
@@ -247,7 +247,7 @@ def _expand_item_embeddings(
 
 
 def _build_test_dataloader(args: SimpleNamespace, user_seq: list[list[int]]) -> DataLoader:
-    test_dataset = SASRecModernizedDataset(args, user_seq, data_type="test")
+    test_dataset = SASRecDataset(args, user_seq, data_type="test")
     return DataLoader(
         test_dataset,
         sampler=SequentialSampler(test_dataset),
@@ -295,7 +295,7 @@ def _build_prediction_array(predictions: torch.Tensor, topk_max: int) -> np.ndar
 
 
 def _graph_eval_batch(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     batch,
     args: SimpleNamespace,
     adjacency: torch.Tensor,
@@ -321,7 +321,7 @@ def _graph_eval_batch(
 
 
 def _evaluate_epoch_full_sort(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     dataloader: DataLoader,
     args: SimpleNamespace,
     device: torch.device,
@@ -354,7 +354,7 @@ def _evaluate_epoch_full_sort(
 
 
 def _evaluate_epoch_graph(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     dataloader: DataLoader,
     args: SimpleNamespace,
     device: torch.device,
@@ -384,7 +384,7 @@ def _evaluate_epoch_graph(
 
 
 def _warmup(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     dataloader: DataLoader,
     args: SimpleNamespace,
     device: torch.device,
@@ -427,7 +427,7 @@ def _warmup(
 
 
 def _profile_epoch(
-    model: SASRecModernizedModel,
+    model: SASRecModel,
     dataloader: DataLoader,
     args: SimpleNamespace,
     device: torch.device,

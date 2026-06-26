@@ -156,8 +156,6 @@ This is one of the most important research contributions of the repo.
 The narrative sources are:
 
 - `README.md`
-- `docs/graph_analysis_extension_plan.md`
-- `docs/ta_feedback_next_steps.md`
 - `notebooks/graph_analysis/sports_and_outdoors.ipynb`
 - `notebooks/graph_analysis/cds_and_vinyl.ipynb`
 - `notebooks/graph_analysis/cross_dataset_comparison.ipynb`
@@ -228,7 +226,7 @@ The practical reading is:
 
 ### 4.5 TA-driven interpretation and next-step refinement
 
-`docs/ta_feedback_next_steps.md` is important because it tightened the research framing:
+TA/supervisor feedback tightened the research framing:
 
 - the repo should compare graph decoding against brute-force all-item RPG scoring
 - reachability and ranking should be separated
@@ -567,9 +565,6 @@ If you only keep a few results from this repo for a report, presentation, or con
 
 - `README.md` graph-analysis takeaways
   The most compact statement of the main scientific conclusion.
-
-- `docs/ta_feedback_next_steps.md`
-  The best roadmap for turning the current graph results into a stronger final story.
 
 ## 12. Bottom Line
 

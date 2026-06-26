@@ -14,3 +14,10 @@ This section groups the robustness and group-oriented evaluation jobs:
   `jobs/new_datasets/`
 
 Use these jobs after the corresponding reproduction checkpoints exist.
+
+Convenience wrapper:
+
+```bash
+cd jobs/02_accuracy_and_fairness
+DATASET=sports_and_outdoors MODEL=both bash ./submit_dataset.sh
+```

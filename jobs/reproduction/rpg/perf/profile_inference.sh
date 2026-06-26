@@ -28,7 +28,9 @@ else
 fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
-OUTPUT_DIR="${REPO_ROOT}/output/reproduction/perf"
+OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/perf"
+ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+CHECKPOINT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/perf/sports.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0

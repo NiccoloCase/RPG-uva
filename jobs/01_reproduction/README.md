@@ -16,3 +16,10 @@ Paper datasets:
 - `toys_and_games`
 
 Submit each job from its own directory.
+
+Convenience wrapper:
+
+```bash
+cd jobs/01_reproduction
+DATASET=beauty MODEL=both bash ./submit_dataset.sh
+```

@@ -11,3 +11,10 @@ This section isolates whether RPG is limited by graph search or by the scorer:
 The SASRec comparison for this section is the size-matched baseline under:
 
 - `jobs/reproduction/sasrec/ablation_size/`
+
+Convenience wrapper:
+
+```bash
+cd jobs/04_search_vs_scorer
+JOB=decode_grid bash ./submit.sh
+```

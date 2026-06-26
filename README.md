@@ -17,7 +17,6 @@ The public baseline name is `SASRec`. The older duplicate SASRec trees were remo
 - `artifacts/`: checkpoints, caches, and runtime outputs.
 - `output/`: scheduler stdout/stderr logs.
 - `results/`: collected tables and summaries.
-- `docs/`: paper, notes, and Snellius guidance.
 
 ## Setup
 
@@ -59,23 +58,37 @@ python3 scripts/sasrec.py --preset beauty --dataset Beauty
 
 ## Reproduction Commands
 
-All commands below are paper-facing Snellius commands. Change datasets as needed.
+All commands below call the repo entrypoints directly from the repo root. On Snellius, equivalent checked-in Slurm jobs still live under `jobs/`. Change datasets as needed.
 
 ### 1. Reproduction
 
 Canonical SASRec full run:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec
-DATASET=beauty bash ./submit_all.sh
+cd /gpfs/home6/$USER/RPG-uva
+python3 scripts/sasrec_prepare_data.py --categories Beauty
+python3 scripts/sasrec.py --preset beauty --dataset Beauty
+python3 scripts/sasrec.py \
+  --preset beauty \
+  --dataset Beauty \
+  --eval-only \
+  --checkpoint artifacts/sasrec/ckpt/sasrec_beauty.pt
 ```
 
 RPG train and eval:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/beauty
-sbatch ./train.sh
-sbatch ./eval.sh
+cd /gpfs/home6/$USER/RPG-uva
+python3 scripts/rpg.py --preset beauty
+
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_beauty-*.pth' | sort | tail -n 1)"
+python3 scripts/rpg_eval.py \
+  --preset beauty \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --eval-seed 2024 \
+  --num_beams 20 \
+  --n_edges 200 \
+  --propagation_steps 3
 ```
 
 ### 2. Accuracy And Fairness
@@ -83,29 +96,54 @@ sbatch ./eval.sh
 SASRec multi-seed evaluation:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/eval_seeds/released_readme
-sbatch ./run_sports_and_outdoors.sh
+cd /gpfs/home6/$USER/RPG-uva
+python3 scripts/sasrec_eval.py \
+  --checkpoint artifacts/sasrec/ckpt/sasrec_sports_and_outdoors.pt \
+  --eval-mode eval_seeds \
+  --eval-seed 2024 \
+  --eval-seeds 2024,2025,2026,2027,2028,2029,2030,2031,2032,2033 \
+  --preset sports_and_outdoors \
+  --dataset Sports_and_Outdoors \
+  --config configs/sasrec/eval_seeds/released_readme/sports_and_outdoors.yaml \
+  --output-dir artifacts/sasrec/eval_seeds/released_readme/sports_and_outdoors
 ```
 
 RPG multi-seed evaluation:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/eval_seeds/released_readme
-sbatch ./run_sports_and_outdoors.sh
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+python3 scripts/rpg_eval_seeds.py \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/eval_seeds/released_readme/sports_and_outdoors.yaml \
+  --eval-seeds 2024,2025,2026,2027,2028,2029,2030,2031,2032,2033 \
+  --output-dir artifacts/rpg/eval_seeds/released_readme/sports_and_outdoors \
+  --cache_dir artifacts/rpg/cache
 ```
 
 SASRec cold-start analysis:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/cold_start
-sbatch ./run_cold_start.sh
+cd /gpfs/home6/$USER/RPG-uva
+python3 scripts/sasrec_cold_start.py \
+  run \
+  --checkpoint artifacts/sasrec/ckpt/sasrec_sports_and_outdoors.pt \
+  --preset sports_and_outdoors \
+  --dataset Sports_and_Outdoors \
+  --output-dir artifacts/sasrec/cold_start
 ```
 
 RPG cold-start analysis:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/cold_start
-sbatch ./run_cold_start.sh
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+python3 scripts/rpg_cold_start.py \
+  run \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/repro/sports_and_outdoors.yaml \
+  --output-dir artifacts/rpg/cold_start \
+  --cache_dir artifacts/rpg/cache
 ```
 
 ### 3. Graph Structure And Dynamics
@@ -113,15 +151,33 @@ sbatch ./run_cold_start.sh
 Static graph analysis:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/graph_analysis
-sbatch ./run_static_sports.sh
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+SESSION_DIR="artifacts/rpg/graph_analysis/sports/manual_static"
+python3 scripts/rpg_graph_analysis.py \
+  prepare-graph \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/graph_analysis/sports.yaml \
+  --session-dir "${SESSION_DIR}"
+python3 scripts/rpg_graph_analysis.py \
+  static \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/graph_analysis/sports.yaml \
+  --session-dir "${SESSION_DIR}"
 ```
 
 Dynamic graph analysis:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/graph_analysis
-sbatch ./run_dynamic_sports.sh
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+SESSION_DIR="artifacts/rpg/graph_analysis/sports/manual_static"
+python3 scripts/rpg_graph_analysis.py \
+  dynamic \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/graph_analysis/sports.yaml \
+  --config configs/rpg/graph_analysis/sports_dynamic.yaml \
+  --session-dir "${SESSION_DIR}"
 ```
 
 ### 4. Search Vs Scorer
@@ -129,32 +185,102 @@ sbatch ./run_dynamic_sports.sh
 RPG decode grid:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/grid
-sbatch ./run_decode_grid.sh
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_sweep_m16_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+python3 scripts/rpg_eval_seeds.py \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/repro/sports_and_outdoors.yaml \
+  --split val \
+  --eval-seeds 2024,2025,2026 \
+  --output-dir output/reproduction/rpg/grid/decode_val/sports_and_outdoors/b20_k200_q3 \
+  --n_codebook 16 \
+  --num_beams 20 \
+  --n_edges 200 \
+  --propagation_steps 3 \
+  --topk "[5,10]"
 ```
 
 RPG decode confirmation:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/grid
-sbatch ./run_decode_confirm.sh
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_sweep_m16_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+python3 scripts/rpg_eval_seeds.py \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/repro/sports_and_outdoors.yaml \
+  --split test \
+  --eval-seeds 2024,2025,2026,2027,2028,2029,2030,2031,2032,2033 \
+  --output-dir output/reproduction/rpg/grid/decode_test_confirm/sports_and_outdoors/b20_k200_q3 \
+  --n_codebook 16 \
+  --num_beams 20 \
+  --n_edges 200 \
+  --propagation_steps 3 \
+  --topk "[5,10]" \
+  --no-per-user-output
 ```
 
 SASRec size ablation:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/sasrec/ablation_size
-sbatch ./train_sports.sh
+cd /gpfs/home6/$USER/RPG-uva
+python3 scripts/sasrec.py \
+  --preset sports_and_outdoors \
+  --dataset Sports_and_Outdoors \
+  --hidden_size 326 \
+  --ckpt_dir artifacts/sasrec/ckpt/ablation_size \
+  --run_id sasrec_sports_and_outdoors_size_match
 ```
+
+SASRec parameter ablation:
+
+```bash
+cd /gpfs/home6/$USER/RPG-uva
+
+for lr in 0.001 0.0005 0.0003; do
+  python3 scripts/sasrec.py \
+    --preset sports_and_outdoors \
+    --dataset Sports_and_Outdoors \
+    --epochs 300 \
+    --lr "${lr}" \
+    --hidden_size 326 \
+    --ckpt_dir artifacts/sasrec/ckpt/ablation_size/lr_grid \
+    --run_id "sasrec_sports_and_outdoors_size_match_e300_lr${lr//./p}"
+done
+
+for lr in 0.001 0.0005 0.0003; do
+  for layers in 1 2 3; do
+    python3 scripts/sasrec.py \
+      --preset sports_and_outdoors \
+      --dataset Sports_and_Outdoors \
+      --epochs 300 \
+      --lr "${lr}" \
+      --num_hidden_layers "${layers}" \
+      --hidden_size 326 \
+      --ckpt_dir artifacts/sasrec/ckpt/ablation_size/lr_depth_grid \
+      --run_id "sasrec_sports_and_outdoors_size_match_e300_lr${lr//./p}_L${layers}"
+  done
+done
+```
+
+This reproduces the size-matched SASRec sweeps used for the Search vs Scorer comparison without Slurm: the first loop is the 3-point learning-rate sweep, and the second loop is the 3x3 learning-rate-by-depth sweep (`num_hidden_layers` in `{1,2,3}`). For the other paper datasets, keep the same pattern and switch to the matching preset/dataset/hidden size: `beauty`/`Beauty`/`540`, `toys_and_games`/`Toys_and_Games`/`396`, or `cds_and_vinyl`/`CDs_and_Vinyl`/`328`. Checkpoints are written under `artifacts/sasrec/ckpt/ablation_size/`.
 
 ### 5. Efficiency
 
 RPG inference profiling:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/perf
-sbatch ./build_graphs.sh /abs/path/to/rpg_checkpoint.pth
-sbatch ./profile_inference.sh /abs/path/to/rpg_checkpoint.pth
+cd /gpfs/home6/$USER/RPG-uva
+CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
+python3 scripts/rpg_perf.py \
+  profile \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/perf/sports.yaml \
+  --prepare-only
+python3 scripts/rpg_perf.py \
+  profile \
+  --checkpoint "${CHECKPOINT_PATH}" \
+  --config configs/rpg/perf/sports.yaml \
+  --profile-only
 ```
 
 ## New-Dataset Extension

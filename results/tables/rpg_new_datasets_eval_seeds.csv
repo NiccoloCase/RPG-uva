@@ -1,0 +1,13 @@
+dataset,metric,n_eval_seeds,final_user_avg,ci_low,ci_high,seed_std,source
+Pet Supplies,ndcg@5,10,0.029249,0.027203,0.031287,0.000184,artifacts/rpg/eval_seeds/new_datasets/pet_supplies/20260614T152731874167Z_job23821371/summary.json
+Pet Supplies,ndcg@10,10,0.035975,0.033871,0.038096,0.000179,artifacts/rpg/eval_seeds/new_datasets/pet_supplies/20260614T152731874167Z_job23821371/summary.json
+Pet Supplies,recall@5,10,0.042713,0.039857,0.045518,0.000280,artifacts/rpg/eval_seeds/new_datasets/pet_supplies/20260614T152731874167Z_job23821371/summary.json
+Pet Supplies,recall@10,10,0.063623,0.060233,0.066992,0.000336,artifacts/rpg/eval_seeds/new_datasets/pet_supplies/20260614T152731874167Z_job23821371/summary.json
+Pet Supplies,arp@10,10,55.257875,54.719666,55.777413,0.042817,artifacts/rpg/eval_seeds/new_datasets/pet_supplies/20260614T152731874167Z_job23821371/summary.json
+Pet Supplies,aplt@10,10,0.399745,0.396348,0.403158,0.000307,artifacts/rpg/eval_seeds/new_datasets/pet_supplies/20260614T152731874167Z_job23821371/summary.json
+Video Games,ndcg@5,10,0.023382,0.021812,0.024945,0.000304,artifacts/rpg/eval_seeds/new_datasets/video_games/20260614T153104653239Z_job23821378/summary.json
+Video Games,ndcg@10,10,0.029120,0.027504,0.030751,0.000353,artifacts/rpg/eval_seeds/new_datasets/video_games/20260614T153104653239Z_job23821378/summary.json
+Video Games,recall@5,10,0.034806,0.032630,0.037020,0.000351,artifacts/rpg/eval_seeds/new_datasets/video_games/20260614T153104653239Z_job23821378/summary.json
+Video Games,recall@10,10,0.052664,0.049944,0.055393,0.000518,artifacts/rpg/eval_seeds/new_datasets/video_games/20260614T153104653239Z_job23821378/summary.json
+Video Games,arp@10,10,55.975767,55.620760,56.331113,0.043741,artifacts/rpg/eval_seeds/new_datasets/video_games/20260614T153104653239Z_job23821378/summary.json
+Video Games,aplt@10,10,0.375828,0.373143,0.378608,0.000332,artifacts/rpg/eval_seeds/new_datasets/video_games/20260614T153104653239Z_job23821378/summary.json

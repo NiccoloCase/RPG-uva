@@ -2,7 +2,7 @@
 
 ## Scope
 
-This branch, `refactor_publish`, prepares the repository for publication around the paper in `docs/RPG_NEW_report (1).pdf`.
+This branch, `refactor_publish`, prepares the repository for publication around the accompanying report.
 
 The refactor goal is not to redesign the research code from scratch. The goal is to make the repository understandable, reproducible, and honest about which code is canonical, which code is preserved for provenance, and how the job tree maps to the paper.
 

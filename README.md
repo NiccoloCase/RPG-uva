@@ -3,7 +3,7 @@
 This repository packages two things for publication:
 
 - the original RPG implementation, preserved as a read-only dependency in `third_party/`
-- the repo-owned reproduction, analysis, and baseline code used for the paper in `docs/RPG_NEW_report (1).pdf`
+- the repo-owned reproduction, analysis, and baseline code used to produce the accompanying report
 
 The public baseline name is `SASRec`. The older duplicate SASRec trees were removed so the repo exposes one baseline surface only.
 
@@ -35,6 +35,13 @@ conda activate "$(pwd)/artifacts/conda/rpg-uva"
 ```
 
 On Snellius, prefer the checked-in Slurm jobs. Submit every job from its own job directory.
+
+RPG's semantic-ID tokenizer needs item-content embeddings. If a dataset's embeddings are not already cached under `artifacts/rpg/cache/.../processed/`, the tokenizer regenerates them, which by default calls OpenAI's `text-embedding-3-large`. Before running an RPG job for a new dataset, either:
+
+- copy `configs/rpg/local.example.yaml` to `configs/rpg/local.yaml` and set `openai_api_key`, or
+- override `sent_emb_model` to a local `sentence-transformers` encoder instead.
+
+`configs/rpg/local.yaml` is gitignored, so this file is machine-specific and is not checked in.
 
 ## Canonical Entry Points
 

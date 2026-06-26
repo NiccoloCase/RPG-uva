@@ -1,21 +1,21 @@
 # RPG Reproduction Notes
 
-This note explains why the current Sports and Outdoors reproduction logs do not exactly match the numbers in `docs/pdf/2506.05781v1.md`.
+This note explains why the current Sports and Outdoors reproduction logs do not exactly match the numbers in `docs/original_paper/2506.05781v1.md`.
 
 ## Observed Sports Run
 
 The Sports reproduction jobs are in:
 
-- `jobs/reproduction/sports_and_outdoors/`
-- `output/reproduction/sports_and_outdoors/`
+- `jobs/reproduction/rpg/sports_and_outdoors/`
+- `output/reproduction/rpg/sports_and_outdoors/`
 
 The completed training job is:
 
-- `output/reproduction/sports_and_outdoors/rpg_sports_and_outdoors-23470485.*`
+- `output/reproduction/rpg/sports_and_outdoors/rpg_sports_and_outdoors-23470485.*`
 
 The eval-only job is:
 
-- `output/reproduction/sports_and_outdoors/rpg_sports_eval-23472130.*`
+- `output/reproduction/rpg/sports_and_outdoors/rpg_sports_eval-23472130.*`
 
 The train job used the paper-facing Sports hyperparameters from `configs/rpg/repro/sports_and_outdoors.yaml`:
 

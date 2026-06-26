@@ -39,6 +39,11 @@ submitted from that directory (relative output paths depend on it):
    (`jobs/new_datasets/sasrec/<dataset>/eval.sh` runs a single-seed eval of
    the same SASRec checkpoint instead, if needed.)
 
+Optional cold-start follow-up jobs:
+
+- RPG: `jobs/new_datasets/rpg/cold_start/run_cold_start_<dataset>.sh`
+- SASRec: `jobs/new_datasets/sasrec/cold_start/run_cold_start_<dataset>.sh`
+
 Example, running stage 3 for `video_games`:
 
 ```bash

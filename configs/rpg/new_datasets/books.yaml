@@ -1,0 +1,11 @@
+# Amazon Reviews 2014 Books (5-core). Not in the original paper, so these values
+# have no paper anchor: they reuse the CDs_and_Vinyl settings, the largest
+# dataset the paper tuned. Revisit after the first run.
+run_id: rpg_repro_books
+category: Books
+lr: 0.001
+temperature: 0.03
+n_codebook: 64
+num_beams: 20
+n_edges: 500
+propagation_steps: 5

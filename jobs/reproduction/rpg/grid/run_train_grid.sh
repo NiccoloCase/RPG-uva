@@ -70,12 +70,12 @@ RUN_ID="rpg_sweep_m${M}_${DS}_lr${LR}_t${TEMP}_s${SEED}"
 
 echo "TRAIN_GRID_START dataset=${DS} m=${M} lr=${LR} temperature=${TEMP} seed=${SEED} run_id=${RUN_ID}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
+
 cd "${REPO_ROOT}"
 
-conda run -n rpg-uva python scripts/rpg.py \
+python scripts/rpg.py \
   --preset "${DS}" \
   --n_codebook "${M}" \
   --lr "${LR}" \

@@ -17,7 +17,7 @@ Dataset jobs currently present:
 Submit from the job directory itself, for example:
 
 ```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/reproduction/rpg/beauty
+cd jobs/reproduction/rpg/beauty
 sbatch ./train.sh
 sbatch ./eval.sh
 ```

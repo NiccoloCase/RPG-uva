@@ -24,14 +24,15 @@ else
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
     echo "Run:" >&2
     echo "  cd ${SCRIPT_DIR}" >&2
-    echo "  bash ./profile_bruteforce_chunk_sweep.sh /gpfs/home6/\$USER/RPG/artifacts/rpg/ckpt/model.pth" >&2
+    echo "  bash ./profile_bruteforce_chunk_sweep.sh <repo>/artifacts/rpg/ckpt/model.pth" >&2
     exit 2
   fi
 fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/perf"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 CHECKPOINT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/perf/sports.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
@@ -73,10 +74,6 @@ fi
 
 mkdir -p "${OUTPUT_DIR}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
 cd "${REPO_ROOT}"
 
 extra_args=()
@@ -86,7 +83,7 @@ fi
 
 for item_chunk_size in ${CHUNK_SIZES}; do
   echo "Running RPG brute-force chunk sweep: pool_sizes=${POOL_SIZES}, item_chunk_size=${item_chunk_size}"
-  conda run -p "${ENV_PREFIX}" python scripts/rpg_perf.py \
+  python scripts/rpg_perf.py \
     profile-bruteforce \
     --checkpoint "${CHECKPOINT_PATH}" \
     --config "${PERF_CONFIG}" \

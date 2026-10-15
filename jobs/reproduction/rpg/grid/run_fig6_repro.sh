@@ -55,9 +55,9 @@ mkdir -p "${OUT_ROOT}"
 
 echo "FIG6_START dataset=${CAT} preset=${DS} m=${M} base(b/k/q)=${b0}/${k0}/${q0} topk='${TOPK}' seeds=${EVAL_SEEDS}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
+
 cd "${REPO_ROOT}"
 
 newest_checkpoint() {
@@ -111,7 +111,7 @@ for cell in "${CELLS[@]}"; do
   fi
 
   echo "  CELL b=${b} k=${k} q=${q} topk=${TOPK} -> ${OUT_DIR}"
-  conda run -n rpg-uva python scripts/rpg_eval_seeds.py \
+  python scripts/rpg_eval_seeds.py \
     --checkpoint "${CKPT}" \
     --config "${CFG}" \
     --eval-seeds "${EVAL_SEEDS}" \

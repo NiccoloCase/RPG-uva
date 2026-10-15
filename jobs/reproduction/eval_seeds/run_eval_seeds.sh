@@ -30,7 +30,7 @@ else
 fi
 
 REPO_ROOT="$(cd "${RUNNER_DIR}/../../.." && pwd)"
-GROUP_ARTIFACTS_ROOT="${GROUP_ARTIFACTS_ROOT:-/projects/prjs2120/groups/group_16/artifacts}"
+GROUP_ARTIFACTS_ROOT="${GROUP_ARTIFACTS_ROOT:-${REPO_ROOT}/artifacts}"
 RPG_ARTIFACTS_ROOT="${RPG_ARTIFACTS_ROOT:-${GROUP_ARTIFACTS_ROOT}/rpg}"
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-${RPG_ARTIFACTS_ROOT}/ckpt}"
 CACHE_DIR="${CACHE_DIR:-${RPG_ARTIFACTS_ROOT}/cache}"
@@ -86,14 +86,13 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 mkdir -p "${EVAL_OUTPUT_DIR}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 
 cd "${REPO_ROOT}"
 
 cmd=(
-  conda run -n rpg-uva python scripts/rpg_eval_seeds.py
+  python scripts/rpg_eval_seeds.py
   --checkpoint "${CHECKPOINT_PATH}"
   --config "${EVAL_CONFIG}"
   --eval-seeds "${EVAL_SEEDS}"

@@ -31,7 +31,6 @@ runtime_stats_init() {
   runtime_stats_log "job_id=${SLURM_JOB_ID:-local}"
   runtime_stats_log "submit_dir=${SLURM_SUBMIT_DIR:-local}"
   runtime_stats_log "host=$(hostname)"
-  runtime_stats_log "user=${USER:-unknown}"
   runtime_stats_log "pwd=$(pwd -P)"
   runtime_stats_log "slurm_partition=${SLURM_JOB_PARTITION:-none}"
   runtime_stats_log "slurm_cpus_per_task=${SLURM_CPUS_PER_TASK:-none}"
@@ -142,15 +141,6 @@ runtime_stats_finish() {
     } >> "${RUNTIME_STATS_SUMMARY}" 2>&1
   fi
 
-  if [[ -n "${SLURM_JOB_ID:-}" ]] && command -v eacct >/dev/null 2>&1; then
-    {
-      echo "===== Snellius EAR eacct snapshot near script exit ====="
-      eacct -j "${SLURM_JOB_ID}" || eacct "${SLURM_JOB_ID}" || true
-    } >> "${RUNTIME_STATS_SUMMARY}" 2>&1
-  fi
-
   runtime_stats_log "post_job_stats_hint=sacct -j ${SLURM_JOB_ID:-<jobid>} --format=JobID,JobName,Elapsed,State,ExitCode,MaxRSS,AveRSS,ConsumedEnergyRaw,AllocTRES"
   runtime_stats_log "post_job_efficiency_hint=seff ${SLURM_JOB_ID:-<jobid>}"
-  runtime_stats_log "post_job_energy_hint=eacct -j ${SLURM_JOB_ID:-<jobid>}"
-  runtime_stats_log "snellius_budget_hint=budget-overview"
 }

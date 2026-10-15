@@ -54,9 +54,9 @@ mkdir -p "${OUT_ROOT}"
 echo "DECODE_CONFIRM_START dataset=${CAT} preset=${DS} m=${M} split=test seeds=${EVAL_SEEDS}"
 echo "  cluster CSV=${CLUSTER_CSV}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
+
 cd "${REPO_ROOT}"
 
 newest_checkpoint() {
@@ -104,7 +104,7 @@ for cell in "${CELLS[@]}"; do
   fi
 
   echo "  CELL b=${b} k=${k} q=${q} split=test topk=${TOPK} -> ${OUT_DIR}"
-  conda run -n rpg-uva python scripts/rpg_eval_seeds.py \
+  python scripts/rpg_eval_seeds.py \
     --checkpoint "${CKPT}" \
     --config "${CFG}" \
     --split test \

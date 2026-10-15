@@ -33,7 +33,8 @@ OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/beauty"
 DATA_DIR="${REPO_ROOT}/artifacts/rpg/cache/AmazonReviews2014/Beauty"
 PROCESSED_DIR="${DATA_DIR}/processed"
 SENT_EMB_PATH="${PROCESSED_DIR}/text-embedding-3-large.sent_emb"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 RESET_SEM_IDS="${RESET_SEM_IDS:-1}"
 
 mkdir -p "${OUTPUT_DIR}"
@@ -61,13 +62,6 @@ if [[ "${RESET_SEM_IDS}" == "1" ]]; then
 else
   runtime_stats_log "reset_semantic_ids=disabled"
 fi
-
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
 
 cd "${REPO_ROOT}"
 

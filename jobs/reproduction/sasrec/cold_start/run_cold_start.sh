@@ -36,13 +36,14 @@ fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/sasrec/cold_start"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 COLD_START_DATASET_SLUG="${COLD_START_DATASET_SLUG:-sports_and_outdoors}"
 COLD_START_PRESET="${COLD_START_PRESET:-${COLD_START_DATASET_SLUG}}"
 COLD_START_DATASET="${COLD_START_DATASET:-Sports_and_Outdoors}"
 COLD_START_OUTPUT_DIR="${COLD_START_OUTPUT_DIR:-${REPO_ROOT}/artifacts/sasrec/cold_start}"
 LOCAL_CHECKPOINT_DIR="${REPO_ROOT}/artifacts/sasrec/ckpt"
-SHARED_CHECKPOINT_DIR="/projects/prjs2120/groups/group_16/artifacts/sasrec/ckpt"
+SHARED_CHECKPOINT_DIR="${SHARED_CHECKPOINT_DIR:-}"  # optional second place to look for checkpoints
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
@@ -89,13 +90,9 @@ runtime_stats_init "${OUTPUT_DIR}" "sasrec_cold_start_${COLD_START_DATASET_SLUG}
 runtime_stats_start_gpu_monitor
 trap runtime_stats_finish EXIT
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
 cd "${REPO_ROOT}"
 
-runtime_stats_run conda run -p "${ENV_PREFIX}" python scripts/sasrec_cold_start.py \
+runtime_stats_run python scripts/sasrec_cold_start.py \
   run \
   --checkpoint "${CHECKPOINT_PATH}" \
   --preset "${COLD_START_PRESET}" \

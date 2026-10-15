@@ -24,15 +24,12 @@ fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/sasrec/cold_start"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 COLD_START_DATASET_SLUG="toys_and_games"
 COLD_START_OUTPUT_DIR="${REPO_ROOT}/artifacts/sasrec/cold_start/reproduction/${COLD_START_DATASET_SLUG}_param_matched"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
-BEST_INFO="$("${ENV_PREFIX}/bin/python" "${REPO_ROOT}/scripts/find_best_sasrec_ablation_checkpoint.py" --dataset "${COLD_START_DATASET_SLUG}" --format shell)"
+BEST_INFO="$("${PYTHON_BIN}" "${REPO_ROOT}/scripts/find_best_sasrec_ablation_checkpoint.py" --dataset "${COLD_START_DATASET_SLUG}" --format shell)"
 eval "${BEST_INFO}"
 
 if [[ ! -f "${CHECKPOINT_PATH}" ]]; then
@@ -42,7 +39,7 @@ fi
 
 # Resolve num_hidden_layers from checkpoint metadata if not set by BEST_INFO
 if [[ -z "${NUM_HIDDEN_LAYERS:-}" ]]; then
-  NUM_HIDDEN_LAYERS="$("${ENV_PREFIX}/bin/python" - <<EOF
+  NUM_HIDDEN_LAYERS="$("${PYTHON_BIN}" - <<EOF
 import torch, sys
 ckpt = torch.load("${CHECKPOINT_PATH}", map_location="cpu")
 sd = ckpt.get("model_state_dict", ckpt)
@@ -60,7 +57,7 @@ mkdir -p "${COLD_START_OUTPUT_DIR}"
 
 cd "${REPO_ROOT}"
 
-"${ENV_PREFIX}/bin/python" scripts/sasrec_cold_start.py \
+"${PYTHON_BIN}" scripts/sasrec_cold_start.py \
   run \
   --checkpoint "${CHECKPOINT_PATH}" \
   --model-family sasrec \

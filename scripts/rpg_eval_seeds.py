@@ -69,6 +69,28 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated eval seeds, for example '2024,2025,2026'.",
     )
     parser.add_argument(
+        "--decoding",
+        choices=("graph", "exhaustive"),
+        default="graph",
+        help=(
+            "graph: graph-constrained decoding as in the paper (default). "
+            "exhaustive: score every item in chunks and take the exact top-k. "
+            "Exhaustive decoding is deterministic, so one eval seed is enough."
+        ),
+    )
+    parser.add_argument(
+        "--graph-backend",
+        choices=("dense", "exact_gpu", "flat", "hnsw"),
+        default="dense",
+        help=(
+            "How to build the decoding graph. dense: upstream n x n similarity "
+            "matrix on the GPU (default). exact_gpu: the same similarity and "
+            "neighbours, computed in row blocks on the GPU so the full matrix "
+            "is never stored; use this for large catalogues. flat: exact FAISS "
+            "search on CPU. hnsw: approximate FAISS search on CPU."
+        ),
+    )
+    parser.add_argument(
         "--split",
         choices=("test", "val"),
         default="test",
@@ -99,6 +121,16 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.95,
         help="Two-sided bootstrap confidence level for metric summaries.",
+    )
+    parser.add_argument(
+        "--max-users",
+        type=int,
+        default=None,
+        help=(
+            "Evaluate a fixed random subset of this many users instead of the "
+            "whole split (seeded by --bootstrap-seed). For sweeps on large "
+            "datasets where the full split is too slow."
+        ),
     )
     parser.add_argument(
         "--no-per-user-output",
@@ -274,12 +306,49 @@ def _bootstrap_ci(
     return float(low), float(high)
 
 
-def _build_graph_once(harness: EvaluationHarness) -> None:
-    """Initialize the upstream decoding graph once and reuse it across eval seeds."""
+def _build_graph_once(harness: EvaluationHarness, graph_backend: str = "dense") -> None:
+    """Initialize the decoding graph once and reuse it across eval seeds.
+
+    ``dense`` calls the upstream builder. ``flat`` and ``hnsw`` build the same
+    top-``n_edges`` adjacency with FAISS (perf/graph.py) and hand it to the
+    model, so the upstream builder is never triggered.
+    """
     harness.model.generate_w_decoding_graph = True
-    if not harness.model.init_flag:
+    if harness.model.init_flag:
+        return
+
+    if graph_backend == "dense":
         harness.model.init_graph()
-        harness.model.init_flag = True
+    else:
+        from perf.graph import build_sparse_adjacency
+
+        adjacency = build_sparse_adjacency(
+            model=harness.model,
+            backend=graph_backend,
+            topk=int(harness.config["n_edges"]),
+            config=harness.config,
+        )
+        harness.model.adjacency = adjacency.to(harness.accelerator.device)
+    harness.model.init_flag = True
+
+
+def _exhaustive_predictions(
+    harness: EvaluationHarness,
+    batch: dict[str, torch.Tensor],
+    topk: int,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Exact top-k over the whole catalogue, in the tuple format of graph decoding."""
+    from perf.bruteforce import _chunked_topk_predictions, _resolve_item_chunk_size
+
+    item_ids = _chunked_topk_predictions(
+        harness=harness,
+        batch=batch,
+        topk=topk,
+        item_chunk_size=_resolve_item_chunk_size(harness.config),
+    )
+    n_scored_items = float(harness.dataset.n_items - 1)
+    visited_counts = torch.full((item_ids.shape[0], 1), n_scored_items)
+    return item_ids.unsqueeze(-1), visited_counts
 
 
 def _collect_seed_rows(
@@ -292,12 +361,14 @@ def _collect_seed_rows(
     item_popularity: ItemPopularity,
     long_tail_items: set[int],
     user_groups: dict[int, str],
+    decoding: str = "graph",
 ) -> list[dict[str, Any]]:
     from genrec.utils import init_seed
 
     init_seed(eval_seed, harness.config["reproducibility"])
-    harness.model.generate_w_decoding_graph = True
-    harness.model.init_flag = True
+    if decoding == "graph":
+        harness.model.generate_w_decoding_graph = True
+        harness.model.init_flag = True
     harness.model.eval()
 
     rows: list[dict[str, Any]] = []
@@ -312,7 +383,10 @@ def _collect_seed_rows(
     with torch.no_grad():
         for batch in progress:
             batch = {key: value.to(harness.accelerator.device) for key, value in batch.items()}
-            preds = harness.model.generate(batch, n_return_sequences=maxk)
+            if decoding == "graph":
+                preds = harness.model.generate(batch, n_return_sequences=maxk)
+            else:
+                preds = _exhaustive_predictions(harness, batch, maxk)
             results = harness.trainer.evaluator.calculate_metrics(preds, batch["labels"])
 
             batch_size = int(batch["labels"].shape[0])
@@ -323,8 +397,8 @@ def _collect_seed_rows(
             }
             visited_values = results["n_visited_items"].detach().cpu().view(-1).tolist()
 
-            # The graph-constrained decoder returns recommended item IDs
-            # directly (no semantic-ID decoding step needed).
+            # Both decoders return recommended item IDs directly
+            # (no semantic-ID decoding step needed).
             recommended_item_ids = preds[0].detach().cpu().view(batch_size, maxk).tolist()
 
             for batch_index in range(batch_size):
@@ -471,6 +545,18 @@ def main(argv: list[str] | None = None) -> int:
             f"{args.split} rows ({len(dataloader.dataset)})."
         )
 
+    if args.max_users is not None and args.max_users < len(user_ids):
+        from torch.utils.data import DataLoader
+
+        subset = np.sort(np.random.default_rng(args.bootstrap_seed).choice(len(user_ids), args.max_users, replace=False))
+        user_ids = [user_ids[index] for index in subset]
+        dataloader = DataLoader(
+            dataloader.dataset.select(subset.tolist()),
+            batch_size=dataloader.batch_size,
+            shuffle=False,
+            collate_fn=dataloader.collate_fn,
+        )
+
     item_popularity, long_tail_items, user_groups = _build_popularity_context(
         harness=harness,
         user_ids=user_ids,
@@ -479,7 +565,8 @@ def main(argv: list[str] | None = None) -> int:
         popularity_high_quantile=args.popularity_high_quantile,
     )
 
-    _build_graph_once(harness)
+    if args.decoding == "graph":
+        _build_graph_once(harness, args.graph_backend)
 
     all_rows: list[dict[str, Any]] = []
     for eval_seed in eval_seeds:
@@ -494,6 +581,7 @@ def main(argv: list[str] | None = None) -> int:
                 item_popularity=item_popularity,
                 long_tail_items=long_tail_items,
                 user_groups=user_groups,
+                decoding=args.decoding,
             )
         )
 
@@ -541,6 +629,9 @@ def main(argv: list[str] | None = None) -> int:
         "category": harness.config.get("category"),
         "model": harness.config["model"],
         "split": args.split,
+        "max_users": args.max_users,
+        "decoding": args.decoding,
+        "graph_backend": args.graph_backend if args.decoding == "graph" else None,
         "eval_seeds": eval_seeds,
         "metrics": all_metric_names,
         "bootstrap_samples": args.bootstrap_samples,

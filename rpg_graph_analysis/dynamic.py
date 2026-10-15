@@ -21,15 +21,14 @@ from perf.config import checkpoint_signature
 from .dynamic_trace import BatchTrace, traced_generate
 from .runtime import build_harness_from_args, random_seeds_from_config
 from .sessions import SessionPaths, append_or_update_manifest, latest_session, write_csv
-from .static import load_prepared_graph
+from .prepare import load_prepared_graph
 
 
 def dynamic_output_paths(paths: SessionPaths) -> dict[str, Path]:
     """Return output paths for dynamic graph analysis.
 
     Dynamic outputs live below the same graph-analysis session as the prepared
-    graph and static metrics. This makes B results explicitly tied to the graph
-    cache used to produce them.
+    graph. This ties the results explicitly to the graph cache used to produce them.
     """
 
     summaries = paths.dynamic / "summaries"
@@ -70,7 +69,7 @@ def dynamic_eval_seeds_from_config(config: dict[str, Any]) -> list[int]:
 
     ``graph_analysis_eval_seeds`` is preferred for B because these are
     evaluation-time seeds controlling random initial beams. If absent, the
-    static-analysis random seeds are reused as a convenience.
+    ``graph_analysis_random_seeds`` are reused as a convenience.
     """
 
     if "graph_analysis_eval_seeds" in config:

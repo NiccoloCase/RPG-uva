@@ -10,7 +10,7 @@ import torch
 from tqdm import tqdm
 
 from rpg_graph_analysis.dynamic_trace import compute_decoding_context
-from rpg_graph_analysis.reranking.scorers import rpg_candidate_scores
+from rpg_graph_analysis.candidates import rpg_candidate_scores
 
 from .config import checkpoint_signature
 from .harness import EvaluationHarness

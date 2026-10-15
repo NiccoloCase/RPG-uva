@@ -1,8 +1,0 @@
-run_id: rpg_repro_video_games
-category: Video_Games
-lr: 0.001
-temperature: 0.03
-n_codebook: 64
-num_beams: 200
-n_edges: 500
-propagation_steps: 5

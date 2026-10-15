@@ -7,13 +7,8 @@ import argparse
 from .dynamic import run_dynamic
 from .frontier_memory import run_frontier_memory
 from .inference_perf import run_inference_perf
-from .novelty import run_novelty
-from .pool_reranking import run_pool_reranking
 from .prepare import prepare_graph
-from .pruning import run_pruning
-from .reranking.eval import run_reranking
 from .scoring import run_scoring
-from .static import run_static
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -41,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
             default=None,
             help=(
                 "Optional graph-analysis session directory. prepare-graph creates it; "
-                "static and dynamic read/write it. If omitted, prepare-graph creates a "
+                "the analysis commands read it. If omitted, prepare-graph creates a "
                 "timestamped session and analysis commands use the latest session with "
                 "graph metadata."
             ),
@@ -63,47 +58,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(prepare_parser)
 
-    static_parser = subparsers.add_parser(
-        "static",
-        help="Compute static graph-analysis CSV/JSON outputs from a prepared graph.",
-    )
-    add_common_inputs(static_parser)
-
     dynamic_parser = subparsers.add_parser(
         "dynamic",
         help="Run dynamic/query-conditioned graph analysis from a prepared graph.",
     )
     add_common_inputs(dynamic_parser)
 
-    pruning_parser = subparsers.add_parser(
-        "pruning",
-        help="Run a lightweight beam-budget diagnostic from a prepared graph.",
-    )
-    add_common_inputs(pruning_parser)
-
-    novelty_parser = subparsers.add_parser(
-        "novelty",
-        help="Run B8 novelty-aware graph traversal analysis from a prepared graph.",
-    )
-    add_common_inputs(novelty_parser)
-
-    pool_parser = subparsers.add_parser(
-        "pool-rerank",
-        help="Run B9 visited-pool reranking from standard RPG graph traversal.",
-    )
-    add_common_inputs(pool_parser)
-
     frontier_memory_parser = subparsers.add_parser(
         "frontier-memory",
         help="Run a prefer-unvisited plus explicit candidate-memory diagnostic.",
     )
     add_common_inputs(frontier_memory_parser)
-
-    rerank_parser = subparsers.add_parser(
-        "rerank",
-        help="Run a lightweight candidate-reranking intervention from a prepared graph.",
-    )
-    add_common_inputs(rerank_parser)
 
     scoring_parser = subparsers.add_parser(
         "scoring",
@@ -129,20 +94,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "prepare-graph":
         return prepare_graph(args)
-    if args.command == "static":
-        return run_static(args)
     if args.command == "dynamic":
         return run_dynamic(args)
-    if args.command == "pruning":
-        return run_pruning(args)
-    if args.command == "novelty":
-        return run_novelty(args)
-    if args.command == "pool-rerank":
-        return run_pool_reranking(args)
     if args.command == "frontier-memory":
         return run_frontier_memory(args)
-    if args.command == "rerank":
-        return run_reranking(args)
     if args.command == "scoring":
         return run_scoring(args)
     if args.command == "perf-inference":

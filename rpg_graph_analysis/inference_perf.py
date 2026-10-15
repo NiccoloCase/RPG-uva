@@ -22,11 +22,11 @@ from perf.config import checkpoint_signature
 
 from .dynamic import _configure_dynamic_budget, _metric_names, dynamic_eval_seeds_from_config
 from .dynamic_trace import compute_decoding_context
-from .reranking.scorers import rpg_candidate_scores
+from .candidates import rpg_candidate_scores
 from .runtime import build_harness_from_args
 from .scoring import scoring_n_edges_from_config
 from .sessions import SessionPaths, append_or_update_manifest, latest_session, write_csv, write_json
-from .static import load_prepared_graph
+from .prepare import load_prepared_graph
 
 
 def inference_perf_output_paths(paths: SessionPaths) -> dict[str, Path]:

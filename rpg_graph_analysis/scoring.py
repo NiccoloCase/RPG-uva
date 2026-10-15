@@ -27,10 +27,10 @@ from .dynamic import (
     dynamic_eval_seeds_from_config,
 )
 from .dynamic_trace import compute_decoding_context, traced_graph_propagation
-from .reranking.scorers import rpg_candidate_scores
+from .candidates import rpg_candidate_scores
 from .runtime import build_harness_from_args
 from .sessions import SessionPaths, append_or_update_manifest, latest_session, write_csv, write_json
-from .static import load_prepared_graph
+from .prepare import load_prepared_graph
 
 
 def scoring_output_paths(paths: SessionPaths) -> dict[str, Path]:

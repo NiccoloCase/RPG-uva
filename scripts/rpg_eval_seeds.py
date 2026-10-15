@@ -22,17 +22,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from perf.config import build_repo_config_files, ensure_submodule_available, parse_override_args
-from popularity_metrics import (
-    ItemPopularity,
-    assign_popularity_groups,
-    compute_item_popularity,
-    compute_long_tail_items,
-    compute_profile_popularity,
-    group_metric_summary,
-    percentage_long_tail,
-    popularity_metric_names,
-    recommendation_popularity,
-)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -142,24 +131,6 @@ def build_parser() -> argparse.ArgumentParser:
             "consumed, to avoid exhausting disk quota."
         ),
     )
-    parser.add_argument(
-        "--short-head-fraction",
-        type=float,
-        default=0.2,
-        help="Fraction of items (by training-set popularity) treated as the short head for APLT.",
-    )
-    parser.add_argument(
-        "--popularity-low-quantile",
-        type=float,
-        default=0.2,
-        help="Users below this quantile of profile popularity are grouped as 'niche'.",
-    )
-    parser.add_argument(
-        "--popularity-high-quantile",
-        type=float,
-        default=0.8,
-        help="Users above this quantile of profile popularity are grouped as 'blockbuster_focused'.",
-    )
     return parser
 
 
@@ -178,41 +149,6 @@ def _metric_names(config: dict[str, Any]) -> list[str]:
     ]
 
 
-def _build_popularity_context(
-    harness: EvaluationHarness,
-    user_ids: list[str],
-    short_head_fraction: float,
-    popularity_low_quantile: float,
-    popularity_high_quantile: float,
-) -> tuple[ItemPopularity, set[int], dict[int, str]]:
-    """Derive item popularity, the long-tail item set, and per-user popularity groups.
-
-    Item popularity is computed from the training split (mapped through the
-    dataset's item2id), and each test user's profile popularity is computed
-    from their full history minus the held-out test item.
-    """
-    item2id = harness.dataset.item2id
-    train_item_seq = harness.dataset.split()["train"]["item_seq"]
-    train_sequences = (
-        [item2id[asin] for asin in seq if asin in item2id] for seq in train_item_seq
-    )
-    item_popularity = compute_item_popularity(train_sequences)
-    long_tail_items = compute_long_tail_items(item_popularity, short_head_fraction=short_head_fraction)
-
-    all_item_seqs = harness.dataset.all_item_seqs
-    profile_popularity: dict[int, float] = {}
-    for user_index, user in enumerate(user_ids):
-        profile_seq = [item2id[asin] for asin in all_item_seqs[user][:-1] if asin in item2id]
-        profile_popularity[user_index] = compute_profile_popularity(profile_seq, item_popularity)
-
-    user_groups = assign_popularity_groups(
-        profile_popularity,
-        low_quantile=popularity_low_quantile,
-        high_quantile=popularity_high_quantile,
-    )
-    return item_popularity, long_tail_items, user_groups
-
-
 def _reject_analysis_args(tokens: list[str]) -> None:
     disallowed_prefixes = (
         "--paper-",
@@ -224,7 +160,7 @@ def _reject_analysis_args(tokens: list[str]) -> None:
         if token.startswith(disallowed_prefixes):
             raise ValueError(
                 f"{token} is a reporting/analysis option. Run eval first, then "
-                "set paper targets and equivalence margins in notebooks/eval_seed_tables.ipynb."
+                "compare against the paper with the collect_*.py scripts."
             )
 
 
@@ -235,6 +171,7 @@ def _session_root(output_root: str | Path) -> Path:
     timestamp = datetime.utcnow().strftime("%Y%m%dT%H%M%S%fZ")
     slurm_job_id = os.environ.get("SLURM_JOB_ID")
     session_name = timestamp if not slurm_job_id else f"{timestamp}_job{slurm_job_id}"
+
     session_root = path.resolve() / session_name
     suffix = 1
     while session_root.exists():
@@ -357,10 +294,6 @@ def _collect_seed_rows(
     eval_seed: int,
     user_ids: list[str],
     metric_names: list[str],
-    topk_values: list[int],
-    item_popularity: ItemPopularity,
-    long_tail_items: set[int],
-    user_groups: dict[int, str],
     decoding: str = "graph",
 ) -> list[dict[str, Any]]:
     from genrec.utils import init_seed
@@ -409,14 +342,9 @@ def _collect_seed_rows(
                     "eval_seed": eval_seed,
                     "label_item_id": int(labels[batch_index]),
                     "n_visited_items": float(visited_values[batch_index]),
-                    "pop_group": user_groups[user_index],
                 }
                 for metric in metric_names:
                     row[metric] = float(metric_values[metric][batch_index])
-                topk_items = recommended_item_ids[batch_index]
-                for k in topk_values:
-                    row[f"arp@{k}"] = recommendation_popularity(topk_items[:k], item_popularity)
-                    row[f"aplt@{k}"] = percentage_long_tail(topk_items[:k], long_tail_items)
                 rows.append(row)
 
             user_offset += batch_size
@@ -524,8 +452,6 @@ def main(argv: list[str] | None = None) -> int:
         raise RuntimeError("scripts/rpg_eval_seeds.py only supports single-process evaluation.")
 
     metric_names = _metric_names(harness.config)
-    topk_values = sorted(int(k) for k in harness.config["topk"])
-    all_metric_names = metric_names + popularity_metric_names(topk_values)
 
     if args.split == "val":
         dataloader = harness.val_dataloader
@@ -557,14 +483,6 @@ def main(argv: list[str] | None = None) -> int:
             collate_fn=dataloader.collate_fn,
         )
 
-    item_popularity, long_tail_items, user_groups = _build_popularity_context(
-        harness=harness,
-        user_ids=user_ids,
-        short_head_fraction=args.short_head_fraction,
-        popularity_low_quantile=args.popularity_low_quantile,
-        popularity_high_quantile=args.popularity_high_quantile,
-    )
-
     if args.decoding == "graph":
         _build_graph_once(harness, args.graph_backend)
 
@@ -577,33 +495,17 @@ def main(argv: list[str] | None = None) -> int:
                 eval_seed=eval_seed,
                 user_ids=user_ids,
                 metric_names=metric_names,
-                topk_values=topk_values,
-                item_popularity=item_popularity,
-                long_tail_items=long_tail_items,
-                user_groups=user_groups,
                 decoding=args.decoding,
             )
         )
 
-    per_seed_rows = _per_seed_summary(all_rows, all_metric_names)
+    per_seed_rows = _per_seed_summary(all_rows, metric_names)
     metric_rows = _metric_summary(
         rows=all_rows,
         per_seed_rows=per_seed_rows,
-        metric_names=all_metric_names,
+        metric_names=metric_names,
         bootstrap_samples=args.bootstrap_samples,
         bootstrap_seed=args.bootstrap_seed,
-        ci_level=args.ci_level,
-    )
-    group_rows = group_metric_summary(
-        rows=all_rows,
-        user_groups=user_groups,
-        metric_names=all_metric_names,
-        bootstrap_ci=lambda values: _bootstrap_ci(
-            values=values,
-            n_samples=args.bootstrap_samples,
-            seed=args.bootstrap_seed,
-            ci_level=args.ci_level,
-        ),
         ci_level=args.ci_level,
     )
 
@@ -612,7 +514,6 @@ def main(argv: list[str] | None = None) -> int:
     per_user_jsonl = session_root / "per_user_metrics.jsonl"
     per_seed_csv = session_root / "per_seed_summary.csv"
     metric_summary_csv = session_root / "summary.csv"
-    group_summary_csv = session_root / "group_summary.csv"
     summary_json = session_root / "summary.json"
     manifest_path = session_root / "manifest.json"
 
@@ -621,7 +522,6 @@ def main(argv: list[str] | None = None) -> int:
         _write_jsonl(per_user_jsonl, all_rows)
     _write_csv(per_seed_csv, per_seed_rows)
     _write_csv(metric_summary_csv, metric_rows)
-    _write_csv(group_summary_csv, group_rows)
 
     summary_payload = {
         "checkpoint_path": str(harness.checkpoint_path),
@@ -633,24 +533,12 @@ def main(argv: list[str] | None = None) -> int:
         "decoding": args.decoding,
         "graph_backend": args.graph_backend if args.decoding == "graph" else None,
         "eval_seeds": eval_seeds,
-        "metrics": all_metric_names,
+        "metrics": metric_names,
         "bootstrap_samples": args.bootstrap_samples,
         "bootstrap_seed": args.bootstrap_seed,
         "ci_level": args.ci_level,
-        "popularity": {
-            "short_head_fraction": args.short_head_fraction,
-            "n_items_with_train_interactions": len(item_popularity),
-            "n_long_tail_items": len(long_tail_items),
-            "popularity_low_quantile": args.popularity_low_quantile,
-            "popularity_high_quantile": args.popularity_high_quantile,
-            "group_sizes": {
-                group: sum(1 for value in user_groups.values() if value == group)
-                for group in sorted(set(user_groups.values()))
-            },
-        },
         "per_seed_summary": per_seed_rows,
         "metric_summary": metric_rows,
-        "group_metric_summary": group_rows,
     }
     summary_json.write_text(json.dumps(summary_payload, indent=2))
 
@@ -660,7 +548,6 @@ def main(argv: list[str] | None = None) -> int:
         "per_user_jsonl": None if args.no_per_user_output else str(per_user_jsonl),
         "per_seed_csv": str(per_seed_csv),
         "summary_csv": str(metric_summary_csv),
-        "group_summary_csv": str(group_summary_csv),
         "summary_json": str(summary_json),
     }
     manifest_path.write_text(json.dumps(manifest, indent=2))

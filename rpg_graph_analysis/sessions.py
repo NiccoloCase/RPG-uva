@@ -5,16 +5,13 @@ Every run writes into a single session directory:
 ```
 artifacts/rpg/graph_analysis/sports/<session>/
   graphs/
-  static/
   dynamic/
-  rerank/
   scoring/
   manifest.json
 ```
 
-Keeping graph caches and static outputs under the same session makes it easy to
-inspect, rerun, and later attach dynamic/query-conditioned outputs without
-mixing unrelated runs.
+Keeping the graph cache and the analysis outputs under the same session makes
+it easy to inspect and rerun them without mixing unrelated runs.
 """
 
 from __future__ import annotations
@@ -37,9 +34,7 @@ class SessionPaths:
 
     root: Path
     graphs: Path
-    static: Path
     dynamic: Path
-    rerank: Path
     scoring: Path
     manifest: Path
 
@@ -82,16 +77,12 @@ def make_session_paths(root: Path) -> SessionPaths:
     paths = SessionPaths(
         root=root,
         graphs=root / "graphs",
-        static=root / "static",
         dynamic=root / "dynamic",
-        rerank=root / "rerank",
         scoring=root / "scoring",
         manifest=root / "manifest.json",
     )
     paths.graphs.mkdir(parents=True, exist_ok=True)
-    paths.static.mkdir(parents=True, exist_ok=True)
     paths.dynamic.mkdir(parents=True, exist_ok=True)
-    paths.rerank.mkdir(parents=True, exist_ok=True)
     paths.scoring.mkdir(parents=True, exist_ok=True)
     return paths
 
@@ -113,7 +104,7 @@ def create_session(config: dict[str, Any], raw_session_dir: str | None) -> Sessi
 
 
 def latest_session(config: dict[str, Any], raw_session_dir: str | None) -> SessionPaths:
-    """Resolve the session that should be used by the static command.
+    """Resolve the session that an analysis command should read.
 
     If ``raw_session_dir`` is provided, that exact session must already contain
     graph metadata. Otherwise, the newest session under the configured output

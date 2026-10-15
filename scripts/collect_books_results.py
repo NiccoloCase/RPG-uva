@@ -11,7 +11,7 @@ and the decoding time per eval seed from the matching logs in
 output/new_datasets/rpg/books/ (the tqdm elapsed time of "Eval seed <s>").
 
 Writes results/books_scaling.csv with one row per (run, decoding, budget,
-session): ndcg/recall at 5 and 10, aplt@10, visited items per user, graph
+session): ndcg/recall at 5 and 10, visited items per user, graph
 backend, number of eval seeds, and seconds per user where a log was found.
 
 stdlib only.
@@ -28,7 +28,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RESULT_ROOT = REPO_ROOT / "artifacts/rpg/eval_seeds/new_datasets"
 LOG_ROOT = REPO_ROOT / "output/new_datasets/rpg/books"
-METRICS = ("ndcg@5", "ndcg@10", "recall@5", "recall@10", "aplt@10")
+METRICS = ("ndcg@5", "ndcg@10", "recall@5", "recall@10")
 SEED_LINE = re.compile(r"Eval seed (\d+): 100%\|[^|]*\| (\d+)/(\d+) \[(\d+):(\d+)(?::(\d+))?<")
 
 
@@ -110,10 +110,10 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
     print(f"wrote {len(rows)} rows to {out}\n")
-    print(f"{'run':12s} {'decoding':10s} {'budget':14s} {'backend':9s} {'seeds':>5s} {'visited':>8s} {'ndcg@10':>8s} {'recall@10':>9s} {'aplt@10':>8s} {'ms/user':>8s}")
+    print(f"{'run':12s} {'decoding':10s} {'budget':14s} {'backend':9s} {'seeds':>5s} {'visited':>8s} {'ndcg@10':>8s} {'recall@10':>9s} {'ms/user':>8s}")
     for r in rows:
         ms = f"{1000*r['seconds_per_user']:.2f}" if r["seconds_per_user"] != "" else "-"
-        print(f"{r['run']:12s} {r['decoding']:10s} {r['budget'] or '-':14s} {r['graph_backend'] or '-':9s} {r['n_eval_seeds']:5d} {r['visited_items_per_user']:8d} {r['ndcg@10']:8.4f} {r['recall@10']:9.4f} {r['aplt@10']:8.4f} {ms:>8s}")
+        print(f"{r['run']:12s} {r['decoding']:10s} {r['budget'] or '-':14s} {r['graph_backend'] or '-':9s} {r['n_eval_seeds']:5d} {r['visited_items_per_user']:8d} {r['ndcg@10']:8.4f} {r['recall@10']:9.4f} {ms:>8s}")
     return 0
 
 

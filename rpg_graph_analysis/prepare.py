@@ -2,12 +2,13 @@
 
 ``prepare-graph`` reconstructs the RPG model from a checkpoint, builds one exact
 flat item-item graph with ``graph_topk`` neighbors per item, and saves it in a
-graph-analysis session. Static experiments then slice this saved graph to
-smaller effective ``k`` values without rebuilding it.
+graph-analysis session. The analysis commands then slice this saved graph to
+smaller decoding widths ``n_edges`` without rebuilding it.
 """
 
 from __future__ import annotations
 
+import json
 import time
 from typing import Any
 
@@ -15,9 +16,11 @@ import torch
 
 from perf.config import checkpoint_signature
 from perf.graph import build_sparse_adjacency
+from perf.harness import EvaluationHarness
 
 from .runtime import build_harness_from_args, topk_from_config
 from .sessions import (
+    SessionPaths,
     adjacency_path,
     append_or_update_manifest,
     create_session,
@@ -27,7 +30,7 @@ from .sessions import (
 
 
 def prepare_graph(args: Any) -> int:
-    """Build and save a fresh exact flat graph for later static analysis.
+    """Build and save a fresh exact graph for the decoding analyses.
 
     Args:
         args: Parsed CLI namespace. Must include checkpoint/config/session fields.
@@ -86,3 +89,36 @@ def prepare_graph(args: Any) -> int:
     print(paths.root)
     return 0
 
+
+def load_prepared_graph(
+    paths: SessionPaths,
+    harness: EvaluationHarness,
+) -> tuple[torch.Tensor, dict[str, Any]]:
+    """Load and validate a graph prepared for the same checkpoint/category.
+
+    The check uses the cheap checkpoint signature from ``perf.config``. This is
+    enough to prevent accidentally analyzing a graph generated from a different
+    checkpoint or dataset category.
+    """
+
+    metadata_path = graph_metadata_path(paths)
+    metadata = json.loads(metadata_path.read_text())
+
+    expected_signature = checkpoint_signature(harness.checkpoint_path)
+    if metadata.get("checkpoint_signature") != expected_signature:
+        raise ValueError(
+            "Prepared graph checkpoint signature mismatch: "
+            f"expected {expected_signature}, found {metadata.get('checkpoint_signature')}"
+        )
+    if metadata.get("category") != harness.config.get("category"):
+        raise ValueError(
+            f"Prepared graph category mismatch: expected {harness.config.get('category')}, "
+            f"found {metadata.get('category')}"
+        )
+
+    topk = int(metadata["topk"])
+    adjacency = torch.load(adjacency_path(paths, topk), map_location="cpu")
+    expected_shape = (harness.dataset.n_items, topk)
+    if tuple(adjacency.shape) != expected_shape:
+        raise ValueError(f"Expected adjacency shape {expected_shape}, found {tuple(adjacency.shape)}")
+    return adjacency, metadata

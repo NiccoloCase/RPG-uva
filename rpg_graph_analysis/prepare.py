@@ -1,7 +1,7 @@
 """Graph preparation command.
 
 ``prepare-graph`` reconstructs the RPG model from a checkpoint, builds one exact
-flat item-item graph with ``graph_topk`` neighbors per item, and saves it in a
+item-item graph with ``graph_topk`` neighbors per item, and saves it in a
 graph-analysis session. The analysis commands then slice this saved graph to
 smaller decoding widths ``n_edges`` without rebuilding it.
 """
@@ -41,16 +41,16 @@ def prepare_graph(args: Any) -> int:
 
     harness = build_harness_from_args(args)
     topk = topk_from_config(harness.config)
-    backend = str(harness.config.get("graph_backend", "flat")).lower()
-    if backend != "flat":
-        raise ValueError("Graph analysis v1 requires graph_backend: flat.")
+    backend = str(harness.config.get("graph_backend", "exact_gpu")).lower()
+    if backend not in ("exact_gpu", "dense"):
+        raise ValueError("Graph analysis requires an exact graph: graph_backend exact_gpu or dense.")
 
     paths = create_session(harness.config, args.session_dir)
 
     start = time.perf_counter()
     adjacency = build_sparse_adjacency(
         model=harness.model,
-        backend="flat",
+        backend=backend,
         topk=topk,
         config=harness.config,
     )
@@ -66,13 +66,12 @@ def prepare_graph(args: Any) -> int:
         "model": harness.config["model"],
         "checkpoint_path": str(harness.checkpoint_path),
         "checkpoint_signature": checkpoint_signature(harness.checkpoint_path),
-        "backend": "flat",
+        "backend": backend,
         "topk": topk,
         "n_items": int(harness.dataset.n_items),
         "n_real_items": int(harness.dataset.n_items - 1),
         "n_digit": int(harness.tokenizer.n_digit),
         "codebook_size": int(harness.tokenizer.codebook_size),
-        "graph_vector_batch_size": int(harness.config.get("graph_vector_batch_size", 1024)),
         "build_seconds": build_seconds,
         "adjacency_path": str(adjacency_file),
     }

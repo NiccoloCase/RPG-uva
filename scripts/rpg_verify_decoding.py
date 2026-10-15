@@ -6,8 +6,8 @@ Checks, on a trained checkpoint:
   A  graph:       the row-blocked GPU graph (perf.graph.build_chunked_exact_adjacency)
                   equals the upstream graph. Catalogues up to 70k items: upstream
                   build_ii_sim_mat + topk on every row. Larger catalogues, where the
-                  upstream dense matrix does not fit: an independent item-vector
-                  computation for --sample-rows sampled rows.
+                  upstream dense matrix does not fit: an independent per-digit
+                  computation of the similarity for --sample-rows sampled rows.
   B  exhaustive:  chunked exhaustive top-10 equals upstream RPG.generate without the
                   graph (same scores; ids may differ only between tied items).
   C  decoder:     upstream RPG.generate with the graph equals the traced decoder used
@@ -38,7 +38,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 from perf.bruteforce import _chunked_topk_from_logits
 from perf.config import build_repo_config_files, parse_override_args
-from perf.graph import _build_token_embedding_table, _iter_graph_vectors, build_chunked_exact_adjacency
+from perf.graph import build_chunked_exact_adjacency
 from perf.harness import EvaluationHarness
 from rpg_graph_analysis.dynamic_trace import compute_decoding_context, traced_generate
 from torch.utils.data import DataLoader
@@ -96,15 +96,20 @@ with torch.no_grad():
     else:
         rng = np.random.default_rng(0)
         sample = np.sort(rng.choice(np.arange(1, n_items), cli.sample_rows, replace=False))
-        table = _build_token_embedding_table(model)
-        tokens = model.item_id2tokens.cpu().numpy()
-        n_digit = model.tokenizer.n_digit
-        offsets = np.arange(n_digit) * model.tokenizer.codebook_size + 1
-        sample_vec = table[np.arange(n_digit)[None, :], tokens[sample] - offsets].reshape(len(sample), -1) / np.sqrt(n_digit)
-        sample_vec = torch.from_numpy(sample_vec.astype(np.float32)).to(dev)
-        rows = torch.empty((len(sample), n_items - 1), device=dev)
-        for ids, vec in _iter_graph_vectors(model, table, batch_size=4096):
-            rows[:, ids - 1] = 0.5 * (sample_vec @ torch.from_numpy(vec).to(dev).T + 1.0)
+        # Independent computation of the upstream similarity for the sampled rows:
+        # per digit, the cosine between the sampled items' token embeddings and
+        # every item's token embedding, mapped to [0, 1] and averaged over digits.
+        n_digit, codebook_size = model.tokenizer.n_digit, model.tokenizer.codebook_size
+        tok = torch.nn.functional.normalize(model.gpt2.wte.weight[1:-1].detach().float(), dim=-1).view(n_digit, codebook_size, -1)
+        offsets = torch.arange(n_digit, device=dev) * codebook_size + 1
+        codes = model.item_id2tokens[1:] - offsets                 # (n_real, n_digit)
+        sample_t = torch.from_numpy(sample).to(dev)
+        rows = torch.zeros((len(sample), n_items - 1), device=dev)
+        for digit in range(n_digit):
+            all_vec = tok[digit][codes[:, digit]]                  # (n_real, d)
+            sample_vec = tok[digit][codes[sample_t - 1, digit]]    # (sample, d)
+            rows += 0.5 * (sample_vec @ all_vec.T + 1.0)
+        rows /= n_digit
         best = rows.topk(k_edges, dim=-1)
         ours = adjacency[torch.from_numpy(sample)].to(dev) - 1
         ours_sum = rows.gather(1, ours).sum(-1)

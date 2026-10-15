@@ -54,7 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     prepare_parser = subparsers.add_parser(
         "prepare-graph",
-        help="Build a fresh exact flat graph into graph-analysis artifacts.",
+        help="Build the exact decoding graph into graph-analysis artifacts.",
     )
     add_common_inputs(prepare_parser)
 

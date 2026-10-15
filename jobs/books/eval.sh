@@ -11,7 +11,7 @@
 #
 # Optional env vars:
 #   CHECKPOINT_PATH  default: newest artifacts/rpg/ckpt/rpg_repro_books[_TAG]-*.pth
-#   GRAPH_BACKEND    exact_gpu (default), hnsw or flat
+#   GRAPH_BACKEND    exact_gpu (default) or hnsw
 #   EVAL_SEEDS       default 2024,2025,2026
 #   RUN_TAG          must match the tag used for training
 # Extra arguments are forwarded as config overrides to both evaluations,

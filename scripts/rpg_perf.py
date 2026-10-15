@@ -71,7 +71,7 @@ def build_parser() -> argparse.ArgumentParser:
     profile_parser.add_argument(
         "--graph-backend",
         default=None,
-        choices=["flat", "hnsw"],
+        choices=["exact_gpu", "hnsw"],
         help="Optional graph backend override.",
     )
     profile_parser.add_argument(

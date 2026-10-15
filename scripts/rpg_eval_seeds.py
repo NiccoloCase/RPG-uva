@@ -69,14 +69,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--graph-backend",
-        choices=("dense", "exact_gpu", "flat", "hnsw"),
+        choices=("dense", "exact_gpu", "hnsw"),
         default="dense",
         help=(
             "How to build the decoding graph. dense: upstream n x n similarity "
             "matrix on the GPU (default). exact_gpu: the same similarity and "
             "neighbours, computed in row blocks on the GPU so the full matrix "
-            "is never stored; use this for large catalogues. flat: exact FAISS "
-            "search on CPU. hnsw: approximate FAISS search on CPU."
+            "is never stored; use this for large catalogues. hnsw: approximate "
+            "FAISS HNSW graph over mean token embeddings, built on CPU."
         ),
     )
     parser.add_argument(
@@ -246,9 +246,9 @@ def _bootstrap_ci(
 def _build_graph_once(harness: EvaluationHarness, graph_backend: str = "dense") -> None:
     """Initialize the decoding graph once and reuse it across eval seeds.
 
-    ``dense`` calls the upstream builder. ``flat`` and ``hnsw`` build the same
-    top-``n_edges`` adjacency with FAISS (perf/graph.py) and hand it to the
-    model, so the upstream builder is never triggered.
+    ``dense`` calls the upstream builder. ``exact_gpu`` and ``hnsw`` build the
+    top-``n_edges`` adjacency with perf/graph.py and hand it to the model, so
+    the upstream builder is never triggered.
     """
     harness.model.generate_w_decoding_graph = True
     if harness.model.init_flag:

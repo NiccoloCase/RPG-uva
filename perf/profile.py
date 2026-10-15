@@ -15,6 +15,7 @@ import torch
 
 from .config import checkpoint_signature
 from .graph import (
+    _hnsw_params,
     build_dense_reference_adjacency,
     build_or_load_adjacency,
     build_sparse_adjacency,
@@ -186,7 +187,7 @@ def _resolve_pool_sizes(config: dict[str, Any], pool_sizes_override: list[int] |
 
 def _resolve_graph_backend(config: dict[str, Any], override: str | None) -> str:
     """Resolve the graph backend name, preferring the CLI override."""
-    return (override or config.get("graph_backend") or "hnsw").lower()
+    return (override or config.get("graph_backend") or "exact_gpu").lower()
 
 
 def _resolve_measure_cuda_memory(config: dict[str, Any]) -> bool:
@@ -203,9 +204,9 @@ def run_validate_graph_command(
     """Validate sparse graph builders against the original dense reference.
 
     This command builds three graph variants on the original candidate pool:
-    the released dense reference implementation, an exact FAISS flat graph, and
-    an approximate HNSW graph. It then writes a JSON report describing exact and
-    approximate overlap between these variants.
+    the released dense reference implementation, the exact row-blocked graph
+    (``exact_gpu``) and the approximate HNSW graph. It then writes a JSON report
+    describing exact and approximate overlap between these variants.
 
     Args:
         checkpoint_path: RPG checkpoint to evaluate.
@@ -226,19 +227,19 @@ def run_validate_graph_command(
     topk = int(harness.config.get("graph_topk", harness.config["n_edges"]))
 
     graph_records: list[dict[str, Any]] = []
-    flat_start = time.perf_counter()
+    exact_start = time.perf_counter()
     exact_adjacency = build_sparse_adjacency(
         model=harness.model,
-        backend="flat",
+        backend="exact_gpu",
         topk=topk,
-        config={**harness.config, "graph_backend": "flat"},
+        config={**harness.config, "graph_backend": "exact_gpu"},
     )
     graph_records.append(
         {
-            "backend": "flat",
+            "backend": "exact_gpu",
             "pool_size": harness.dataset.n_items - 1,
             "topk": topk,
-            "build_seconds": time.perf_counter() - flat_start,
+            "build_seconds": time.perf_counter() - exact_start,
             "cached": False,
         }
     )
@@ -257,30 +258,23 @@ def run_validate_graph_command(
             "topk": topk,
             "build_seconds": time.perf_counter() - hnsw_start,
             "cached": False,
-            "graph_hnsw_m": int(harness.config.get("graph_hnsw_m", 32)),
-            "graph_hnsw_ef_construction": int(
-                harness.config.get("graph_hnsw_ef_construction", 200)
-            ),
-            "graph_hnsw_ef_search": int(
-                harness.config.get("graph_hnsw_ef_search", max(256, topk * 2))
-            ),
+            **dict(zip(("graph_hnsw_m", "graph_hnsw_ef_construction", "graph_hnsw_ef_search"), _hnsw_params(harness.config, topk))),
         }
     )
 
     reference_adjacency = build_dense_reference_adjacency(harness.model, topk=topk)
-    dense_vs_flat = compare_adjacency_sets(reference_adjacency, exact_adjacency)
+    dense_vs_exact = compare_adjacency_sets(reference_adjacency, exact_adjacency)
     comparisons = {
-        "dense_vs_flat": {
+        "dense_vs_exact_gpu": {
             "purpose": (
-                "Checks whether the FAISS exact-vector formulation reproduces "
+                "Checks that the row-blocked exact builder reproduces "
                 "the released dense graph on the original item pool."
             ),
             **compare_adjacency_overlap(reference_adjacency, exact_adjacency),
         },
-        "flat_vs_hnsw": {
+        "exact_gpu_vs_hnsw": {
             "purpose": (
-                "Checks the scalable HNSW backend used for enlarged-pool "
-                "profiling against the exact FAISS flat backend."
+                "Checks the approximate HNSW graph against the exact graph."
             ),
             **compare_adjacency_overlap(exact_adjacency, hnsw_adjacency),
         },
@@ -300,7 +294,7 @@ def run_validate_graph_command(
         "checkpoint_signature": checkpoint_signature(harness.checkpoint_path),
         "graph_records": graph_records,
         "comparisons": comparisons,
-        "legacy_dense_vs_flat_exact": dense_vs_flat,
+        "legacy_dense_vs_exact_exact": dense_vs_exact,
     }
     report_path = session_root / "graphs" / "validate_graph_report.json"
     report_path.write_text(json.dumps(payload, indent=2))
@@ -337,7 +331,7 @@ def run_profile_command(
         prepare_only: If `True`, build/cache graphs only and skip evaluation.
         profile_only: If `True`, require all graph caches to exist already and
             fail instead of rebuilding them.
-        graph_backend_override: Optional backend override such as `"flat"` or
+        graph_backend_override: Optional backend override such as `"exact_gpu"` or
             `"hnsw"`.
         force_rebuild: If `True`, rebuild graph caches even when matching cache
             files already exist.

@@ -7,9 +7,8 @@ n_codebook: 64
 
 # Graph cache for the decoding analyses: one exact top-graph_topk graph per
 # checkpoint, sliced to the decoding widths n_edges used by each command.
-graph_backend: flat
+graph_backend: exact_gpu
 graph_topk: 500
-graph_vector_batch_size: 512
 graph_analysis_output_dir: artifacts/rpg/graph_analysis/cds_and_vinyl
 graph_analysis_random_seeds: [2024, 2025, 2026]
 

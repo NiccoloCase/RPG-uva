@@ -18,7 +18,7 @@
 #   GPU_MAX_USED_MIB idle threshold (500)
 # Items whose checkpoint already exists are skipped. Test metrics are written at
 # the end of artifacts/sasrec/logs/<run_id>.log; collect them with
-# scripts/collect_sasrec_audit.py.
+# scripts/results/collect_sasrec_audit.py.
 
 set -uo pipefail
 
@@ -81,7 +81,7 @@ for item in ${QUEUE}; do
     for kv in "${override_list[@]}"; do override_args+=("--${kv}"); done
   fi
   log "train ${item} run_id=${run_id}"
-  "${PYTHON_BIN}" scripts/sasrec.py \
+  "${PYTHON_BIN}" scripts/sasrec/train.py \
     --preset "${dataset}" \
     --loss_type "${loss}" \
     --hidden_size "${hidden}" \

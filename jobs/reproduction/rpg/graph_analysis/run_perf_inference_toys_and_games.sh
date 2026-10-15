@@ -25,14 +25,15 @@ else
     echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
     echo "Run:" >&2
     echo "  cd ${SCRIPT_DIR}" >&2
-    echo "  bash ./run_perf_inference_toys_and_games.sh /gpfs/home6/\$USER/RPG/artifacts/rpg/ckpt/model.pth" >&2
+    echo "  bash ./run_perf_inference_toys_and_games.sh <repo>/artifacts/rpg/ckpt/model.pth" >&2
     exit 2
   fi
 fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/graph_analysis"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 GRAPH_CONFIG="${GRAPH_CONFIG:-${REPO_ROOT}/configs/rpg/graph_analysis/toys_and_games.yaml}"
 PERF_CONFIG="${PERF_CONFIG:-${REPO_ROOT}/configs/rpg/graph_analysis/toys_and_games_perf_inference.yaml}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
@@ -73,16 +74,12 @@ runtime_stats_init "${OUTPUT_DIR}" "rpg_graph_perf_toys"
 runtime_stats_start_gpu_monitor
 trap runtime_stats_finish EXIT
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
 export MPLCONFIGDIR="${TMPDIR:-/tmp}/rpg-matplotlib-${USER:-user}"
 mkdir -p "${MPLCONFIGDIR}"
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run conda run -p "${ENV_PREFIX}" python scripts/rpg_graph_analysis.py \
+runtime_stats_run python scripts/rpg/graph_analysis.py \
   perf-inference \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${GRAPH_CONFIG}" \

@@ -29,7 +29,8 @@ fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/perf"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 CHECKPOINT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
 PERF_CONFIG_DEFAULT="${REPO_ROOT}/configs/rpg/perf/sports.yaml"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
@@ -69,13 +70,9 @@ fi
 
 mkdir -p "${OUTPUT_DIR}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
 cd "${REPO_ROOT}"
 
-conda run -p "${ENV_PREFIX}" python scripts/rpg_perf.py \
+python scripts/rpg/perf.py \
   profile \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${PERF_CONFIG}" \

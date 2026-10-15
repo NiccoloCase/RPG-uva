@@ -3,7 +3,7 @@
 # Joint RPG training sweep over semantic-ID length m x learning rate x temperature.
 # Mirrors the original paper's tuning (lr x temp x #digit = 3 x 3 x 5 = 45 cells) and
 # runs the whole grid in one job array, like the decode/inference sweeps. Each cell
-# logs val + test metrics (parsed by scripts/collect_grid_results.py) and keeps its
+# logs val + test metrics (parsed by scripts/results/collect_grid.py) and keeps its
 # checkpoint, so the inference sweeps can re-decode the selected one.
 #
 # Sweep a new dataset (5 m x 3 lr x 3 temp x 1 seed = 45 cells):
@@ -70,12 +70,12 @@ RUN_ID="rpg_sweep_m${M}_${DS}_lr${LR}_t${TEMP}_s${SEED}"
 
 echo "TRAIN_GRID_START dataset=${DS} m=${M} lr=${LR} temperature=${TEMP} seed=${SEED} run_id=${RUN_ID}"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
+
 cd "${REPO_ROOT}"
 
-conda run -n rpg-uva python scripts/rpg.py \
+python scripts/rpg/train.py \
   --preset "${DS}" \
   --n_codebook "${M}" \
   --lr "${LR}" \

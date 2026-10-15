@@ -42,9 +42,9 @@ declare -A CONFIG_FILE=(
 
 echo "REDECODE_START dataset=${CAT} preset=${DS} seeds=${EVAL_SEEDS} m='${M_LIST[*]}'"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
+
 cd "${REPO_ROOT}"
 
 newest_checkpoint() {
@@ -65,7 +65,7 @@ for M in "${M_LIST[@]}"; do
     continue
   fi
   if [[ ! -f "${SEMIDS}" ]]; then
-    echo "  SKIP m=${M}: missing sem_ids cache ${SEMIDS} (run scripts/rpg_prepare_semantic_ids.py first)" >&2
+    echo "  SKIP m=${M}: missing sem_ids cache ${SEMIDS} (run scripts/rpg/prepare_semantic_ids.py first)" >&2
     continue
   fi
   echo "  m=${M} checkpoint=$(basename "${CKPT}")"
@@ -83,7 +83,7 @@ for M in "${M_LIST[@]}"; do
     fi
 
     echo "    [${TAG}] config=${CFG} -> ${OUT_DIR}"
-    conda run -n rpg-uva python scripts/rpg_eval_seeds.py \
+    python scripts/rpg/eval_seeds.py \
       --checkpoint "${CKPT}" \
       --config "${CFG}" \
       --eval-seeds "${EVAL_SEEDS}" \

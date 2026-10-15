@@ -30,7 +30,8 @@ fi
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/sasrec/sports_and_outdoors"
 DATA_FILE="${REPO_ROOT}/artifacts/sasrec/data/Sports_and_Outdoors/Sports_and_Outdoors.txt"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 CHECKPOINT_PATH="${CHECKPOINT_PATH:-${REPO_ROOT}/artifacts/sasrec/ckpt/sasrec_sports_and_outdoors.pt}"
 
 mkdir -p "${OUTPUT_DIR}"
@@ -49,13 +50,6 @@ if [[ ! -f "${CHECKPOINT_PATH}" ]]; then
   exit 4
 fi
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
-
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py --preset sports_and_outdoors --dataset Sports_and_Outdoors --eval-only --checkpoint "${CHECKPOINT_PATH}"
+runtime_stats_run python3 scripts/sasrec/train.py --preset sports_and_outdoors --dataset Sports_and_Outdoors --eval-only --checkpoint "${CHECKPOINT_PATH}"

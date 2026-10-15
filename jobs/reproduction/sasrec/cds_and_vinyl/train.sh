@@ -30,7 +30,8 @@ fi
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/sasrec/cds_and_vinyl"
 DATA_FILE="${REPO_ROOT}/artifacts/sasrec/data/CDs_and_Vinyl/CDs_and_Vinyl.txt"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 
 mkdir -p "${OUTPUT_DIR}"
 source "${REPO_ROOT}/jobs/lib/runtime_stats.sh"
@@ -43,13 +44,6 @@ if [[ ! -f "${DATA_FILE}" ]]; then
   exit 3
 fi
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
-
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py --preset cds_and_vinyl --dataset CDs_and_Vinyl
+runtime_stats_run python3 scripts/sasrec/train.py --preset cds_and_vinyl --dataset CDs_and_Vinyl

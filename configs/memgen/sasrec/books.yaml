@@ -1,0 +1,7 @@
+# MemGen-GR SASRec on Amazon Books (367,982 items).
+# The model scores every item at every position, so the logits of one batch are
+# batch x 50 x 367,982 floats: 18.8 GB at the default batch size of 256.
+# Batch sizes are reduced to fit a 24 GB GPU; everything else is the default.
+category: Books
+train_batch_size: 64
+eval_batch_size: 32

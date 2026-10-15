@@ -1,302 +1,172 @@
-# RPG-uva
+# Reproducibility and Efficiency Study of RPG
 
-This repository packages two things for publication:
+Code for the paper. It reproduces RPG (Recommendation with Parallel semantic ID
+Generation, Hou et al., KDD 2025), compares it with TIGER and SASRec under
+controlled model capacity and training objective, analyses its graph-constrained
+decoding, and tests the method on Amazon Books, a catalogue of 368k items.
 
-- the original RPG implementation, preserved as a read-only dependency in `third_party/`
-- the repo-owned reproduction, analysis, and baseline code used to produce the accompanying report
+The two upstream code bases are pinned, read-only submodules and are never
+edited. Everything else in this repository is ours.
 
-The public baseline name is `SASRec`. The older duplicate SASRec trees were removed so the repo exposes one baseline surface only.
-
-## Repository Structure
-
-- `third_party/`: pinned upstream RPG dependency. Do not edit it here.
-- `scripts/`: canonical repo entrypoints. Use `scripts/rpg.py` and `scripts/sasrec.py`.
-- `configs/`: repo-owned experiment presets. Use `configs/rpg/` and `configs/sasrec/`.
-- `jobs/`: Snellius Slurm jobs. Start with the paper index folders:
-  `jobs/01_reproduction/`, `jobs/02_accuracy_and_fairness/`, `jobs/03_graph_structure_and_dynamics/`, `jobs/04_search_vs_scorer/`, `jobs/05_efficiency/`.
-- `artifacts/`: checkpoints, caches, and runtime outputs.
-- `output/`: scheduler stdout/stderr logs.
-- `results/`: collected tables and summaries.
+```
+third_party/RPG_KDD2025/   RPG, as released by its authors (GPT-2 backbone, OPQ semantic IDs, graph decoding)
+third_party/MemGen-GR/     Ding et al.'s framework, used for the SASRec (softmax loss) and TIGER baselines
+decoding/                  decoding graph builders (exact, HNSW), exhaustive scoring, evaluation harness, pool scaling
+graph_analysis/            analyses of graph decoding: reachability, frontier memory, scoring parity, traced decoder
+models/sasrec/             SASRec with the S3-Rec recipe (binary cross-entropy, one negative), the parameter-matched baseline
+scripts/rpg/               RPG: train, eval, multi-seed eval, semantic IDs, cold start, decoding analyses, latency
+scripts/sasrec/            SASRec (S3-Rec recipe): prepare data, train, eval, cold start, latency
+scripts/memgen/            SASRec with softmax loss and TIGER through MemGen-GR: train, latency
+scripts/results/           collectors and plots that turn artifacts/ into results/
+configs/                   experiment settings: configs/rpg, configs/sasrec, configs/memgen
+jobs/                      shell scripts that run the experiments (Slurm headers kept, run fine without Slurm)
+results/                   the tables and figures behind the paper
+artifacts/, output/        data caches, checkpoints, logs (not in git)
+```
 
 ## Setup
 
-Initialize the submodule:
-
 ```bash
-git submodule update --init --recursive
+git clone <repository> && cd <repository>
+git submodule update --init
+python3.11 -m venv artifacts/venv            # or: uv venv --python 3.11 artifacts/venv
+artifacts/venv/bin/pip install -r requirements.txt
 ```
 
-Create the environment from the repo root:
+`requirements.txt` pins the versions we used (PyTorch 2.11 with CUDA 12.8). Every
+job script activates `artifacts/venv`; set `PYTHON_BIN` to use another interpreter.
+One GPU with 24 GB is enough for every experiment; most run on a single A5500 or
+A100. CPU is enough for the decoding analyses on the four paper datasets.
 
-```bash
-conda env create -p "$(pwd)/artifacts/conda/rpg-uva" -f environment.yml
-conda activate "$(pwd)/artifacts/conda/rpg-uva"
-```
+**Data.** The Amazon Reviews 2014 categories are downloaded and processed
+automatically by the upstream code on first use into
+`artifacts/rpg/cache/AmazonReviews2014/<Category>/`. RPG's semantic IDs need an
+embedding of every item's text with OpenAI's `text-embedding-3-large`. Either use
+the embeddings released by the RPG authors (place `<model>.sent_emb` under
+`.../processed/`), or set `openai_api_key` in `configs/rpg/local.yaml` (copy
+`configs/rpg/local.example.yaml`; the file is ignored by git). For Books,
+`scripts/rpg/embed_items.py` embeds the 368k items in resumable batches
+(about 63M tokens).
 
-On Snellius, prefer the checked-in Slurm jobs. Submit every job from its own job directory.
+**Checkpoints and caches** that we trained are available from the link in the
+paper. Place them under `artifacts/` with the layout used below.
 
-RPG's semantic-ID tokenizer needs item-content embeddings. If a dataset's embeddings are not already cached under `artifacts/rpg/cache/.../processed/`, the tokenizer regenerates them, which by default calls OpenAI's `text-embedding-3-large`. Before running an RPG job for a new dataset, either:
+## Experiments
 
-- copy `configs/rpg/local.example.yaml` to `configs/rpg/local.yaml` and set `openai_api_key`, or
-- override `sent_emb_model` to a local `sentence-transformers` encoder instead.
+Run each job from its own folder (`cd jobs/...; bash ./x.sh`, or `sbatch ./x.sh`
+on a cluster). Jobs that run on a shared GPU server take `GPU=<index>` and refuse
+a GPU that is already in use. Scripts print `--help`. Outputs go to `artifacts/`
+and `output/`; the collectors in the last table turn them into `results/`.
 
-`configs/rpg/local.yaml` is gitignored, so this file is machine-specific and is not checked in.
+### RQ1: reproducibility of RPG
 
-## Canonical Entry Points
+| What | Job | Script |
+| --- | --- | --- |
+| Train and test RPG with the released hyperparameters | `jobs/reproduction/rpg/<dataset>/train.sh`, `eval.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval.py` |
+| Test with 10 evaluation seeds and bootstrap confidence intervals, released-code and paper-appendix decoding settings | `jobs/reproduction/eval_seeds/{released_readme,paper_appendix}/run_<dataset>.sh` | `scripts/rpg/eval_seeds.py` |
+| Semantic ID length sweep (m = 4 to 64) and re-decoding | `jobs/reproduction/train/sweep_m/<dataset>.sh`, `redecode_configs.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval_seeds.py` |
+| Training and decoding hyperparameter grids | `jobs/reproduction/rpg/grid/run_train_grid.sh`, `run_decode_grid.sh`, `run_decode_confirm.sh`, `run_infer_grid.sh`, `run_fig6_repro.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval_seeds.py` |
+| Cold start: test items bucketed by training frequency | `jobs/reproduction/rpg/cold_start/`, `jobs/reproduction/cold_start/released_readme/` | `scripts/rpg/cold_start.py` |
 
-RPG:
+Datasets: `sports_and_outdoors`, `beauty`, `toys_and_games`, `cds_and_vinyl`.
+The RPG settings are in `configs/rpg/repro/<dataset>.yaml` (released code) and
+`configs/rpg/eval_seeds/paper_appendix/` (paper appendix).
 
-```bash
-python3 scripts/rpg.py --preset beauty
-```
+### RQ2: comparison with baselines
 
-SASRec:
+| What | Job | Script |
+| --- | --- | --- |
+| SASRec, S3-Rec recipe (BCE), original width 64 | `jobs/reproduction/sasrec/<dataset>/prepare_data.sh`, `train.sh`, `eval.sh` | `scripts/sasrec/prepare_data.py`, `scripts/sasrec/train.py` |
+| SASRec, parameter-matched to RPG (hidden size 326/540/396/328) with learning-rate and depth grids | `jobs/reproduction/sasrec/ablation_size/` | `scripts/sasrec/train.py`, `scripts/sasrec/find_best_ablation_checkpoint.py` |
+| SASRec multi-seed test and cold start | `jobs/reproduction/sasrec/eval_seeds/`, `jobs/reproduction/sasrec/cold_start/` | `scripts/sasrec/eval.py`, `scripts/sasrec/cold_start.py` |
+| SASRec with full-softmax loss and TIGER (MemGen-GR implementations) | `jobs/baselines/memgen/run_queue.sh` with `QUEUE="SASRec:sports TIGER:sports ..."` | `scripts/memgen/train.py` |
+| Parameter counts of RPG and the SASRec variants | | `scripts/results/count_model_params.py` |
+| RPG with and without the user's past items in the ranking (the SASRec protocol removes them) | | `scripts/rpg/history_masking.py` |
 
-```bash
-python3 scripts/sasrec.py --preset beauty --dataset Beauty
-```
+`scripts/memgen/train.py` runs the MemGen-GR code unchanged except that its
+per-prediction memorisation statistics are replaced by a plain evaluation loop
+(same metrics); `--fine-grained-eval` restores the original loop. The MemGen-GR
+settings per dataset are in `configs/memgen/<model>/<dataset>.yaml`.
 
-## Reproduction Commands
+### RQ3: analysis of graph-constrained decoding
 
-All commands below call the repo entrypoints directly from the repo root. On Snellius, equivalent checked-in Slurm jobs still live under `jobs/`. Change datasets as needed.
+| What | Job | Script |
+| --- | --- | --- |
+| Build the exact decoding graph for a checkpoint | `jobs/reproduction/rpg/graph_analysis/` (`prepare-graph`) | `scripts/rpg/graph_analysis.py prepare-graph` |
+| Reachability: which top-ranked items the search visits and keeps, per step | `run_dynamic_<dataset>.sh` | `scripts/rpg/graph_analysis.py dynamic` |
+| Graph decoding vs exhaustive scoring of all items, same model | `run_scoring_<dataset>.sh` | `scripts/rpg/graph_analysis.py scoring` |
+| Frontier memory: re-entry of visited items and explicit candidate memory | `run_frontier_memory_sports.sh` | `scripts/rpg/graph_analysis.py frontier-memory` |
+| Exact graph vs approximate HNSW graph vs exhaustive, same checkpoints and seeds | `jobs/reproduction/rpg/decoding_variants/run_decoding_variants.sh` | `scripts/rpg/eval_seeds.py --graph-backend {exact_gpu,hnsw}` |
+| Checks against the upstream code (graph, exhaustive scores, traced decoder) | | `scripts/rpg/verify_decoding.py` |
 
-### 1. Reproduction
+Graph backends (`decoding/graph.py`): `dense` is the upstream builder (full n x n
+similarity matrix on the GPU); `exact_gpu` computes the same similarity and the
+same neighbours in row blocks, so the full matrix is never stored; `hnsw` builds
+an approximate graph with FAISS over the normalised mean of each item's token
+embeddings (a different similarity from upstream, without self-loops).
 
-Canonical SASRec full run:
+### RQ4: large catalogue and inference efficiency
 
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-python3 scripts/sasrec_prepare_data.py --categories Beauty
-python3 scripts/sasrec.py --preset beauty --dataset Beauty
-python3 scripts/sasrec.py \
-  --preset beauty \
-  --dataset Beauty \
-  --eval-only \
-  --checkpoint artifacts/sasrec/ckpt/sasrec_beauty.pt
-```
+| What | Job | Script |
+| --- | --- | --- |
+| Amazon Books: embeddings, semantic IDs, training, graph and exhaustive evaluation | `jobs/books/prepare_semantic_ids.sh`, `train.sh`, `eval.sh` | `scripts/rpg/embed_items.py`, `scripts/rpg/prepare_semantic_ids.py`, `scripts/rpg/train.py --train-only`, `scripts/rpg/eval_seeds.py` |
+| Books at larger decoding budgets (beams, edges, steps) | `jobs/books/budget_sweep.sh` | `scripts/rpg/eval_seeds.py` |
+| Per-query latency, graph decoding vs exhaustive, GPU and CPU, batch 1/16/128 | `jobs/latency/run_latency.sh` | `scripts/rpg/latency.py`, `scripts/sasrec/latency.py`, `scripts/memgen/latency.py` |
+| Graph construction time and memory, dense vs row-blocked | | `scripts/rpg/graph_build_timing.py` |
+| Inference time and memory with the item pool enlarged by dummy items (the original paper's experiment) | `jobs/reproduction/rpg/perf/` | `scripts/rpg/perf.py` |
+| SASRec on Books (BCE and sampled softmax, width 64) | `jobs/sasrec_audit/run_queue.sh` | `scripts/sasrec/train.py --loss_type {bce,sampled_ce}` |
 
-RPG train and eval:
+Books settings: `configs/rpg/books.yaml` (the CDs settings, untuned),
+`configs/sasrec/books.yaml`, `configs/memgen/sasrec/books.yaml` (batch sizes
+reduced to fit 24 GB). Training uses `--train-only` because the upstream
+end-of-training test builds the dense graph, which would need 504 GB on Books,
+and early-stops on a fixed 20,000-user validation subset.
 
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-python3 scripts/rpg.py --preset beauty
+## Results
 
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_beauty-*.pth' | sort | tail -n 1)"
-python3 scripts/rpg_eval.py \
-  --preset beauty \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --eval-seed 2024 \
-  --num_beams 20 \
-  --n_edges 200 \
-  --propagation_steps 3
-```
+| File | Produced by | Paper |
+| --- | --- | --- |
+| `results/train_grid.csv`, `infer_grid.csv`, `decode_val_grid.csv`, `decode_val_selected.csv`, `decode_val_cluster.csv`, `decode_test_selected.csv`, `decode_test_confirm.csv`, `fig6_grid.csv` | `scripts/results/collect_grid.py` | RQ1 grids |
+| `results/redecode_compare.csv` | `scripts/results/collect_redecode.py` | RQ1 semantic ID length |
+| `results/sasrec_train_grid.csv` | `scripts/results/collect_grid.py` | RQ2 |
+| `results/sasrec_audit.csv` | `scripts/results/collect_sasrec_audit.py` | RQ2, RQ4 (Books) |
+| `results/decoding_variants_logs.csv` | `scripts/results/collect_memgen_rpg_logs.py` | RQ3 (HNSW runs of the second code base) |
+| `results/books_scaling.csv` | `scripts/results/collect_books.py` | RQ4 |
+| `results/figures/*.pdf` | `scripts/results/plot_books_scaling.py` | RQ3 reachability, RQ4 budget and latency figures |
+| `results/tables/*.csv` | summaries of the multi-seed evaluation outputs (`artifacts/*/eval_seeds/*/summary.json`) and of the grids above | RQ1, RQ2 headline tables |
 
-### 2. Accuracy And Fairness
+`scripts/results/collect_sweep_m.py` prints the semantic ID length sweep from the
+training logs.
 
-SASRec multi-seed evaluation:
+## Differences from the original code bases
 
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-python3 scripts/sasrec_eval.py \
-  --checkpoint artifacts/sasrec/ckpt/sasrec_sports_and_outdoors.pt \
-  --eval-mode eval_seeds \
-  --eval-seed 2024 \
-  --eval-seeds 2024,2025,2026,2027,2028,2029,2030,2031,2032,2033 \
-  --preset sports_and_outdoors \
-  --dataset Sports_and_Outdoors \
-  --config configs/sasrec/eval_seeds/released_readme/sports_and_outdoors.yaml \
-  --output-dir artifacts/sasrec/eval_seeds/released_readme/sports_and_outdoors
-```
+- RPG is run unmodified. Our scripts load the upstream model and only replace
+  the decoding graph (`exact_gpu`, `hnsw`) or score all items (exhaustive
+  scoring). `scripts/rpg/verify_decoding.py` checks that the exact graph, the
+  exhaustive scores and the traced decoder equal the upstream code.
+- Hyperparameters come from the released code (`configs/rpg/repro/`), which
+  differ from the paper appendix in beam size, graph width and steps; both are
+  evaluated.
+- Evaluation protocol: RPG ranks the full catalogue including the user's past
+  items; the S3-Rec SASRec code removes them. `models/sasrec` keeps that
+  behaviour by default (`mask_history`), and `scripts/rpg/history_masking.py`
+  reports RPG both ways.
+- Two SASRec recipes are compared: the S3-Rec recipe (BCE, one sampled
+  negative) in `models/sasrec`, at the original width and parameter-matched to
+  RPG, and MemGen-GR's SASRec (GPT-2 blocks, full softmax over all items). On
+  Books the full softmax does not fit at the default batch size, so MemGen-GR's
+  SASRec uses batch 64 and `models/sasrec` offers a sampled softmax
+  (4,096 uniform negatives, logQ correction).
+- MemGen-GR's evaluation loop computes memorisation statistics per prediction in
+  Python; `scripts/memgen/train.py` swaps in a plain loop with identical metrics.
+- The HNSW graph follows the second code base: FAISS `IndexHNSWFlat(d, 32)`,
+  efConstruction 200, efSearch max(k+1, 50), item vectors are the normalised
+  mean of the token embeddings, the item itself is dropped from its neighbours.
+- Books uses the CDs hyperparameters without tuning, and the early-stopping
+  validation is a fixed 20,000-user subset.
 
-RPG multi-seed evaluation:
+## Licences
 
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-python3 scripts/rpg_eval_seeds.py \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/eval_seeds/released_readme/sports_and_outdoors.yaml \
-  --eval-seeds 2024,2025,2026,2027,2028,2029,2030,2031,2032,2033 \
-  --output-dir artifacts/rpg/eval_seeds/released_readme/sports_and_outdoors \
-  --cache_dir artifacts/rpg/cache
-```
-
-SASRec cold-start analysis:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-python3 scripts/sasrec_cold_start.py \
-  run \
-  --checkpoint artifacts/sasrec/ckpt/sasrec_sports_and_outdoors.pt \
-  --preset sports_and_outdoors \
-  --dataset Sports_and_Outdoors \
-  --output-dir artifacts/sasrec/cold_start
-```
-
-RPG cold-start analysis:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-python3 scripts/rpg_cold_start.py \
-  run \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/repro/sports_and_outdoors.yaml \
-  --output-dir artifacts/rpg/cold_start \
-  --cache_dir artifacts/rpg/cache
-```
-
-### 3. Graph Structure And Dynamics
-
-Static graph analysis:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-SESSION_DIR="artifacts/rpg/graph_analysis/sports/manual_static"
-python3 scripts/rpg_graph_analysis.py \
-  prepare-graph \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/graph_analysis/sports.yaml \
-  --session-dir "${SESSION_DIR}"
-python3 scripts/rpg_graph_analysis.py \
-  static \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/graph_analysis/sports.yaml \
-  --session-dir "${SESSION_DIR}"
-```
-
-Dynamic graph analysis:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-SESSION_DIR="artifacts/rpg/graph_analysis/sports/manual_static"
-python3 scripts/rpg_graph_analysis.py \
-  dynamic \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/graph_analysis/sports.yaml \
-  --config configs/rpg/graph_analysis/sports_dynamic.yaml \
-  --session-dir "${SESSION_DIR}"
-```
-
-### 4. Search Vs Scorer
-
-RPG decode grid:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_sweep_m16_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-python3 scripts/rpg_eval_seeds.py \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/repro/sports_and_outdoors.yaml \
-  --split val \
-  --eval-seeds 2024,2025,2026 \
-  --output-dir output/reproduction/rpg/grid/decode_val/sports_and_outdoors/b20_k200_q3 \
-  --n_codebook 16 \
-  --num_beams 20 \
-  --n_edges 200 \
-  --propagation_steps 3 \
-  --topk "[5,10]"
-```
-
-RPG decode confirmation:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_sweep_m16_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-python3 scripts/rpg_eval_seeds.py \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/repro/sports_and_outdoors.yaml \
-  --split test \
-  --eval-seeds 2024,2025,2026,2027,2028,2029,2030,2031,2032,2033 \
-  --output-dir output/reproduction/rpg/grid/decode_test_confirm/sports_and_outdoors/b20_k200_q3 \
-  --n_codebook 16 \
-  --num_beams 20 \
-  --n_edges 200 \
-  --propagation_steps 3 \
-  --topk "[5,10]" \
-  --no-per-user-output
-```
-
-SASRec size ablation:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-python3 scripts/sasrec.py \
-  --preset sports_and_outdoors \
-  --dataset Sports_and_Outdoors \
-  --hidden_size 326 \
-  --ckpt_dir artifacts/sasrec/ckpt/ablation_size \
-  --run_id sasrec_sports_and_outdoors_size_match
-```
-
-SASRec parameter ablation:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-
-for lr in 0.001 0.0005 0.0003; do
-  python3 scripts/sasrec.py \
-    --preset sports_and_outdoors \
-    --dataset Sports_and_Outdoors \
-    --epochs 300 \
-    --lr "${lr}" \
-    --hidden_size 326 \
-    --ckpt_dir artifacts/sasrec/ckpt/ablation_size/lr_grid \
-    --run_id "sasrec_sports_and_outdoors_size_match_e300_lr${lr//./p}"
-done
-
-for lr in 0.001 0.0005 0.0003; do
-  for layers in 1 2 3; do
-    python3 scripts/sasrec.py \
-      --preset sports_and_outdoors \
-      --dataset Sports_and_Outdoors \
-      --epochs 300 \
-      --lr "${lr}" \
-      --num_hidden_layers "${layers}" \
-      --hidden_size 326 \
-      --ckpt_dir artifacts/sasrec/ckpt/ablation_size/lr_depth_grid \
-      --run_id "sasrec_sports_and_outdoors_size_match_e300_lr${lr//./p}_L${layers}"
-  done
-done
-```
-
-This reproduces the size-matched SASRec sweeps used for the Search vs Scorer comparison without Slurm: the first loop is the 3-point learning-rate sweep, and the second loop is the 3x3 learning-rate-by-depth sweep (`num_hidden_layers` in `{1,2,3}`). For the other paper datasets, keep the same pattern and switch to the matching preset/dataset/hidden size: `beauty`/`Beauty`/`540`, `toys_and_games`/`Toys_and_Games`/`396`, or `cds_and_vinyl`/`CDs_and_Vinyl`/`328`. Checkpoints are written under `artifacts/sasrec/ckpt/ablation_size/`.
-
-### 5. Efficiency
-
-RPG inference profiling:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva
-CHECKPOINT_PATH="$(find artifacts/rpg/ckpt -maxdepth 1 -type f -name 'rpg_repro_sports_and_outdoors-*.pth' | sort | tail -n 1)"
-python3 scripts/rpg_perf.py \
-  profile \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/perf/sports.yaml \
-  --prepare-only
-python3 scripts/rpg_perf.py \
-  profile \
-  --checkpoint "${CHECKPOINT_PATH}" \
-  --config configs/rpg/perf/sports.yaml \
-  --profile-only
-```
-
-## New-Dataset Extension
-
-The paper datasets live under `jobs/reproduction/`. Extra datasets such as `video_games` and `pet_supplies` live under `jobs/new_datasets/`.
-
-Use:
-
-```bash
-cd /gpfs/home6/$USER/RPG-uva/jobs/new_datasets
-```
-
-Then follow `jobs/new_datasets/README.md`.
-
-## Notes
-
-- `third_party/` stays in the public repository as the preserved original RPG source boundary.
-- The paper-facing job index lives in `jobs/01_reproduction/` through `jobs/05_efficiency/`.
-- The canonical SASRec artifacts now live under `artifacts/sasrec/` and `output/reproduction/sasrec/`.
+Our code is released under the licence in `LICENSE`. The RPG code
+(`third_party/RPG_KDD2025`) is CC BY-NC 4.0 and MemGen-GR (`third_party/MemGen-GR`)
+carries its own licence; both are included unchanged as submodules.

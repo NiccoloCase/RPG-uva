@@ -58,11 +58,11 @@ for dataset in ${DATASETS}; do
       budgets="20:500:5"; max_users=2000 ;;
     books_m32)
       checkpoint="$(newest 'rpg_repro_books_m32-*.pth')"
-      config="configs/rpg/new_datasets/books.yaml"
+      config="configs/rpg/books.yaml"
       budgets="20:500:5,200:2000:5"; max_users=1000; extra=(--n_codebook 32) ;;
     books_m64)
       checkpoint="$(newest 'rpg_repro_books-*.pth')"
-      config="configs/rpg/new_datasets/books.yaml"
+      config="configs/rpg/books.yaml"
       budgets="20:500:5,200:2000:5"; max_users=1000 ;;
     *) echo "unknown dataset ${dataset}"; continue ;;
   esac
@@ -71,7 +71,7 @@ for dataset in ${DATASETS}; do
     continue
   fi
   echo "LATENCY_START ${dataset} $(date -Is) checkpoint=${checkpoint}"
-  "${PYTHON_BIN}" scripts/rpg_latency.py \
+  "${PYTHON_BIN}" scripts/rpg/latency.py \
     --checkpoint "${checkpoint}" \
     --config "${config}" \
     --devices cuda,cpu \

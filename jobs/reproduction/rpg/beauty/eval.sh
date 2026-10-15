@@ -36,7 +36,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/beauty"
 DATA_DIR="${REPO_ROOT}/artifacts/rpg/cache/AmazonReviews2014/Beauty"
 CKPT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 CHECKPOINT_PATH="${CHECKPOINT_PATH:-}"
 EVAL_SEED="${EVAL_SEED:-2024}"
 
@@ -65,13 +66,6 @@ if [[ -z "${CHECKPOINT_PATH}" || ! -f "${CHECKPOINT_PATH}" ]]; then
   exit 4
 fi
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
-
 cd "${REPO_ROOT}"
 
 echo "Evaluating checkpoint: ${CHECKPOINT_PATH}"
@@ -79,7 +73,7 @@ echo "Using cache: ${DATA_DIR}"
 echo "Eval seed: ${EVAL_SEED}"
 echo "README decode params: num_beams=20 n_edges=200 propagation_steps=3"
 
-runtime_stats_run python3 scripts/rpg_eval.py \
+runtime_stats_run python3 scripts/rpg/eval.py \
   --preset beauty \
   --checkpoint "${CHECKPOINT_PATH}" \
   --eval-seed "${EVAL_SEED}" \

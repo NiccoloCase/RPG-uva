@@ -28,7 +28,8 @@ fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/cold_start"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 SUMMARY_PATH="${1:-${SUMMARY_PATH:-}}"
 PLOT_OUTPUT_PATH="${2:-${PLOT_OUTPUT_PATH:-}}"
 shift_count=0
@@ -62,13 +63,9 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 mkdir -p "$(dirname "${PLOT_OUTPUT_PATH}")"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
 cd "${REPO_ROOT}"
 
-conda run -p "${ENV_PREFIX}" python scripts/rpg_cold_start.py \
+python scripts/rpg/cold_start.py \
   plot \
   --input "${SUMMARY_PATH}" \
   --output "${PLOT_OUTPUT_PATH}" \

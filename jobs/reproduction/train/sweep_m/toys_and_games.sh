@@ -34,13 +34,12 @@ echo "SWEEP_START dataset=Toys_and_Games n_codebook=${M} run_id=${RUN_ID}"
 
 mkdir -p "${REPO_ROOT}/output/reproduction/train/sweep_m"
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 
 cd "${REPO_ROOT}"
 
-conda run -n rpg-uva python scripts/rpg.py \
+python scripts/rpg/train.py \
   --preset toys_and_games \
   --n_codebook "${M}" \
   --run_id "${RUN_ID}"

@@ -36,7 +36,8 @@ fi
 
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/sasrec/eval_seeds"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 SASREC_EVAL_MODE="${SASREC_EVAL_MODE:-eval_seeds}"
 SASREC_EVAL_SEEDS="${SASREC_EVAL_SEEDS:-2024,2025,2026,2027,2028,2029,2030,2031,2032,2033}"
 SASREC_EVAL_SEED="${SASREC_EVAL_SEED:-2024}"
@@ -47,7 +48,7 @@ SASREC_EVAL_CONFIG_DEFAULT="${REPO_ROOT}/configs/sasrec/eval_seeds/released_read
 SASREC_EVAL_CONFIG="${SASREC_EVAL_CONFIG:-${SASREC_EVAL_CONFIG_DEFAULT}}"
 SASREC_EVAL_OUTPUT_DIR="${SASREC_EVAL_OUTPUT_DIR:-${REPO_ROOT}/artifacts/sasrec/eval_seeds/released_readme/${SASREC_EVAL_DATASET_SLUG}}"
 LOCAL_CHECKPOINT_DIR="${REPO_ROOT}/artifacts/sasrec/ckpt"
-SHARED_CHECKPOINT_DIR="/projects/prjs2120/groups/group_16/artifacts/sasrec/ckpt"
+SHARED_CHECKPOINT_DIR="${SHARED_CHECKPOINT_DIR:-}"  # optional second place to look for checkpoints
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-}"
 CHECKPOINT_PATH="${1:-${CHECKPOINT_PATH:-}}"
 shift_count=0
@@ -99,13 +100,9 @@ runtime_stats_init "${OUTPUT_DIR}" "sasrec_eval_${SASREC_EVAL_DATASET_SLUG}_${SA
 runtime_stats_start_gpu_monitor
 trap runtime_stats_finish EXIT
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
 cd "${REPO_ROOT}"
 
-runtime_stats_run conda run -p "${ENV_PREFIX}" python scripts/sasrec_eval.py \
+runtime_stats_run python scripts/sasrec/eval.py \
   --checkpoint "${CHECKPOINT_PATH}" \
   --eval-mode "${SASREC_EVAL_MODE}" \
   --eval-seed "${SASREC_EVAL_SEED}" \

@@ -31,7 +31,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
 OUTPUT_DIR="${REPO_ROOT}/output/reproduction/rpg/sports_and_outdoors"
 DATA_DIR="${REPO_ROOT}/artifacts/rpg/cache/AmazonReviews2014/Sports_and_Outdoors"
 CKPT_DIR="${REPO_ROOT}/artifacts/rpg/ckpt"
-ENV_PREFIX="${REPO_ROOT}/artifacts/conda/rpg-uva"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
 CHECKPOINT_PATH="${CHECKPOINT_PATH:-}"
 EVAL_SEED="${EVAL_SEED:-2024}"
 
@@ -60,18 +61,11 @@ if [[ -z "${CHECKPOINT_PATH}" || ! -f "${CHECKPOINT_PATH}" ]]; then
   exit 4
 fi
 
-module purge
-module load 2025
-module load Anaconda3/2025.06-1
-
-source "$(conda info --base)/etc/profile.d/conda.sh"
-conda activate "${ENV_PREFIX}"
-
 cd "${REPO_ROOT}"
 
 echo "Evaluating checkpoint: ${CHECKPOINT_PATH}"
 echo "Eval seed: ${EVAL_SEED}"
-runtime_stats_run python3 scripts/rpg_eval.py \
+runtime_stats_run python3 scripts/rpg/eval.py \
   --preset sports_and_outdoors \
   --checkpoint "${CHECKPOINT_PATH}" \
   --eval-seed "${EVAL_SEED}"

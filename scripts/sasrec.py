@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 import yaml
-from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
+from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, Subset
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
@@ -35,6 +35,7 @@ PRESET_CONFIGS = {
     "toys_and_games": REPO_ROOT / "configs" / "sasrec" / "toys_and_games.yaml",
     "video_games": REPO_ROOT / "configs" / "sasrec" / "video_games.yaml",
     "pet_supplies": REPO_ROOT / "configs" / "sasrec" / "pet_supplies.yaml",
+    "books": REPO_ROOT / "configs" / "sasrec" / "books.yaml",
 }
 
 
@@ -152,6 +153,13 @@ def normalize_config(config: dict[str, object], checkpoint_override: str | None)
     normalized["full_sort"] = bool(normalized.get("full_sort", True))
     normalized["no_cuda"] = bool(normalized.get("no_cuda", False))
     normalized["val_metric"] = str(normalized.get("val_metric", "ndcg@20")).lower()
+    normalized["mask_history"] = bool(normalized.get("mask_history", True))
+    normalized["loss_type"] = str(normalized.get("loss_type", "bce")).lower()
+    if normalized["loss_type"] not in {"bce", "ce", "sampled_ce"}:
+        raise ValueError(f"loss_type must be 'bce', 'ce' or 'sampled_ce', got {normalized['loss_type']!r}.")
+    normalized["n_negatives"] = int(normalized.get("n_negatives", 4096))
+    val_max_users = normalized.get("val_max_users")
+    normalized["val_max_users"] = None if val_max_users in (None, "") else int(val_max_users)
 
     normalized["data_dir"] = str(resolve_repo_path(normalized.get("data_dir", "artifacts/sasrec/data")))
     normalized["log_dir"] = str(resolve_repo_path(normalized.get("log_dir", "artifacts/sasrec/logs")))
@@ -179,6 +187,15 @@ def build_dataloaders(args: SimpleNamespace, user_seq: list[list[int]]):
     train_dataset = SASRecDataset(args, user_seq, data_type="train")
     valid_dataset = SASRecDataset(args, user_seq, data_type="valid")
     test_dataset = SASRecDataset(args, user_seq, data_type="test")
+
+    if args.val_max_users is not None and args.val_max_users < len(valid_dataset):
+        # Early stopping on a fixed random subset of users. Validation ranks the
+        # whole catalogue for every user, which is slow for large catalogues.
+        subset = np.sort(
+            np.random.default_rng(args.seed).choice(len(valid_dataset), args.val_max_users, replace=False)
+        )
+        valid_dataset = Subset(valid_dataset, subset.tolist())
+        print(f"Validating on a fixed subset of {args.val_max_users} users.")
 
     train_sampler = RandomSampler(train_dataset)
     valid_sampler = SequentialSampler(valid_dataset)

@@ -199,6 +199,53 @@ def _candidate_search_k(valid_pool_size: int, topk: int, backend: str) -> int:
     return min(valid_pool_size, max(topk * 4, topk + 1))
 
 
+def build_chunked_exact_adjacency(
+    model: Any,
+    topk: int,
+    row_chunk_size: int = 512,
+) -> torch.Tensor:
+    """Build the exact upstream decoding graph without the dense n x n matrix.
+
+    Same arithmetic as the upstream ``build_ii_sim_mat`` + ``torch.topk``:
+    the similarity of two items is the mean over digits of the cosine between
+    their digit tokens, mapped to [0, 1]. The difference is only the memory
+    schedule: rows are scored one block at a time on the model's device and
+    only each row's top-``topk`` neighbours are kept, so memory is
+    O(row_chunk_size * n_items) instead of O(n_items^2). Neighbour sets match
+    the dense builder exactly, up to ties.
+
+    Returns:
+        A CPU ``torch.LongTensor`` of shape ``(n_items, topk)``; row 0 (padding)
+        is zero and every other row starts with the item itself.
+    """
+    device = model.gpt2.device
+    n_items = int(model.dataset.n_items)
+    n_digit = int(model.tokenizer.n_digit)
+    codebook_size = int(model.tokenizer.codebook_size)
+    if topk > n_items - 1:
+        raise ValueError(f"topk={topk} exceeds the number of real items ({n_items - 1}).")
+
+    with torch.no_grad():
+        token_embs = model.gpt2.wte.weight[1:-1].view(n_digit, codebook_size, -1)
+        token_embs = torch.nn.functional.normalize(token_embs, dim=-1)
+        token_sims = 0.5 * (torch.bmm(token_embs, token_embs.transpose(1, 2)) + 1.0)
+        offsets = torch.arange(n_digit, device=device) * codebook_size + 1
+        codes = (model.item_id2tokens.to(device)[1:] - offsets).contiguous()  # (n_real, n_digit)
+
+        adjacency = torch.zeros((n_items, topk), dtype=torch.long)
+        for start in range(0, n_items - 1, row_chunk_size):
+            end = min(start + row_chunk_size, n_items - 1)
+            similarity = torch.zeros((end - start, n_items - 1), device=device)
+            for digit in range(n_digit):
+                digit_rows = token_sims[digit].index_select(0, codes[start:end, digit])
+                similarity += digit_rows.index_select(1, codes[:, digit])
+            similarity /= n_digit
+            neighbours = torch.topk(similarity, k=topk, dim=-1).indices + 1
+            adjacency[start + 1 : end + 1] = neighbours.cpu()
+            del similarity
+    return adjacency
+
+
 def build_sparse_adjacency(
     model: Any,
     backend: str,
@@ -215,7 +262,9 @@ def build_sparse_adjacency(
 
     Args:
         model: Loaded RPG model.
-        backend: FAISS backend to use, typically `"flat"` or `"hnsw"`.
+        backend: `"flat"` or `"hnsw"` (FAISS search over item vectors), or
+            `"exact_gpu"` (the upstream similarity, computed in row blocks on
+            the model's device; see `build_chunked_exact_adjacency`).
         topk: Number of neighbors to keep per item.
         config: Profiling config dictionary containing vectorization and backend
             parameters.
@@ -224,6 +273,11 @@ def build_sparse_adjacency(
         A CPU `torch.LongTensor` of shape `(n_items, topk)` where row `0` is
         zeroed for padding and every other row contains item IDs.
     """
+    if backend == "exact_gpu":
+        return build_chunked_exact_adjacency(
+            model, topk=topk, row_chunk_size=int(config.get("graph_row_chunk_size", 512))
+        )
+
     token_table = _build_token_embedding_table(model)
     dim = model.tokenizer.n_digit * token_table.shape[-1]
     index = _build_index(dim=dim, backend=backend, topk=topk, config=config)

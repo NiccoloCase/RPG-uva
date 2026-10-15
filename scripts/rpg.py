@@ -22,6 +22,7 @@ PRESET_CONFIGS = {
     "cds_and_vinyl": REPO_ROOT / "configs" / "rpg" / "repro" / "cds_and_vinyl.yaml",
     "video_games": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "video_games.yaml",
     "pet_supplies": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "pet_supplies.yaml",
+    "books": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "books.yaml",
 }
 
 
@@ -57,6 +58,26 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
         "--no-local-config",
         action="store_true",
         help="Skip configs/rpg/local.yaml even if it exists.",
+    )
+    parser.add_argument(
+        "--train-only",
+        action="store_true",
+        help=(
+            "Train and save the best checkpoint, then stop. Skips the final "
+            "graph-decoded test, whose dense item-item matrix does not fit in "
+            "memory for large catalogues. Evaluate afterwards with "
+            "scripts/rpg_eval_seeds.py."
+        ),
+    )
+    parser.add_argument(
+        "--val-max-users",
+        type=int,
+        default=None,
+        help=(
+            "With --train-only: validate on a fixed random subset of this many "
+            "users instead of all of them. Validation scores every item for "
+            "every user, so this bounds its cost on large datasets."
+        ),
     )
     return parser.parse_known_args()
 
@@ -131,14 +152,76 @@ def build_config_files(args: argparse.Namespace) -> list[str]:
 
     return [str(path) for path in config_files]
 
+
+def run_train_only(pipeline, val_max_users: int | None) -> None:
+    """Run the training half of ``Pipeline.run`` and stop before the test.
+
+    The dataloaders are built exactly as in ``Pipeline.run``. The only optional
+    difference is the validation subset used for early stopping.
+    """
+
+    from torch.utils.data import DataLoader
+
+    config = pipeline.config
+    val_dataset = pipeline.tokenized_datasets["val"]
+    if val_max_users is not None and val_max_users < len(val_dataset):
+        val_dataset = val_dataset.shuffle(seed=config["rand_seed"]).select(range(val_max_users))
+        pipeline.log(f"Validating on a fixed subset of {val_max_users} users.")
+
+    train_dataloader = DataLoader(
+        pipeline.tokenized_datasets["train"],
+        batch_size=config["train_batch_size"],
+        shuffle=True,
+        collate_fn=pipeline.tokenizer.collate_fn["train"],
+    )
+    val_dataloader = DataLoader(
+        val_dataset,
+        batch_size=config["eval_batch_size"],
+        shuffle=False,
+        collate_fn=pipeline.tokenizer.collate_fn["val"],
+    )
+
+    best_epoch, best_val_score = pipeline.trainer.fit(train_dataloader, val_dataloader)
+    pipeline.log(
+        f"Train-only run finished. best_epoch={best_epoch} "
+        f"best_val_score={best_val_score} "
+        f"checkpoint={pipeline.trainer.saved_model_ckpt}"
+    )
+    pipeline.trainer.end()
+
+
+MAX_FILE_NAME_LENGTH = 255
+
+
+def shorten_argv_for_file_names(overrides: dict) -> None:
+    """Keep GenRec's checkpoint and log file names under the filesystem limit.
+
+    GenRec names both files ``<run_id>-<full command line>-<time>-<md5>``.
+    Long preset names plus a few overrides push that past 255 characters, and
+    the run then fails at its first checkpoint save. When that would happen,
+    the command line part is reduced to the run id; the md5 of the full config
+    still identifies the settings.
+    """
+
+    run_id = str(overrides.get("run_id", ""))
+    command_line = "_".join(sys.argv).replace("/", "|")
+    projected = len(run_id) + len(command_line) + len("-Mon-00-0000_00-00-abcdef.pth") + 2
+    if projected > MAX_FILE_NAME_LENGTH:
+        sys.argv = [sys.argv[0], "--run_id", run_id]
+
+
 def main() -> int:
     args, override_tokens = parse_args()
+    if args.val_max_users is not None and not args.train_only:
+        raise SystemExit("--val-max-users requires --train-only.")
     prepare_genrec_runtime(args.model)
 
     config_files = build_config_files(args)
     overrides = parse_override_args(override_tokens)
 
     from genrec.pipeline import Pipeline
+
+    shorten_argv_for_file_names(overrides)
 
     pipeline = Pipeline(
         model_name=args.model,
@@ -147,7 +230,10 @@ def main() -> int:
         config_file=config_files or None,
         config_dict=overrides or None,
     )
-    pipeline.run()
+    if args.train_only:
+        run_train_only(pipeline, args.val_max_users)
+    else:
+        pipeline.run()
     return 0
 
 

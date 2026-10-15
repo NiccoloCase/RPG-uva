@@ -7,10 +7,11 @@ import json
 import sys
 
 from rpg import (
+    THIRD_PARTY_ROOT,
     build_config_files,
+    ensure_submodule_available,
     parse_override_args,
 )
-from genrec_repo_support import THIRD_PARTY_ROOT, prepare_genrec_runtime
 
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
@@ -21,8 +22,8 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
             "accept both '--key=value' and '--key value'."
         ),
     )
-    parser.add_argument("--model", default="RPG", help="Model name exposed by the vendored or repo-owned GenRec registry.")
-    parser.add_argument("--dataset", default="AmazonReviews2014", help="Dataset name exposed by third_party/genrec.")
+    parser.add_argument("--model", default="RPG", help="Model name exposed by the upstream RPG code (genrec).")
+    parser.add_argument("--dataset", default="AmazonReviews2014", help="Dataset name exposed by the upstream RPG code (genrec).")
     parser.add_argument("--checkpoint", required=True, help="Checkpoint path to evaluate.")
     parser.add_argument(
         "--preset",
@@ -52,9 +53,9 @@ def parse_args() -> tuple[argparse.Namespace, list[str]]:
 
 def main() -> int:
     args, override_tokens = parse_args()
-    prepare_genrec_runtime(args.model)
-
-    sys.path.insert(0, str(THIRD_PARTY_ROOT))
+    ensure_submodule_available()
+    if str(THIRD_PARTY_ROOT) not in sys.path:
+        sys.path.insert(0, str(THIRD_PARTY_ROOT))
 
     from genrec.pipeline import Pipeline
     from genrec.utils import init_seed

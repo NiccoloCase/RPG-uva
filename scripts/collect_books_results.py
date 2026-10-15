@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Collect the Books (large-catalogue) RPG results into one table.
 
-Reads what jobs/new_datasets/rpg/books/eval.sh and budget_sweep.sh write:
+Reads what jobs/books/eval.sh and budget_sweep.sh write:
 
   artifacts/rpg/eval_seeds/new_datasets/books[_TAG]/graph/<session>/summary.json
   artifacts/rpg/eval_seeds/new_datasets/books[_TAG]/exhaustive/<session>/summary.json

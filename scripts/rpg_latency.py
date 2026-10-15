@@ -21,7 +21,7 @@ Recall@10 and NDCG@10 on the timed users are reported as a sanity check.
 Usage:
   python scripts/rpg_latency.py \\
       --checkpoint artifacts/rpg/ckpt/<run>.pth \\
-      --config configs/rpg/new_datasets/books.yaml \\
+      --config configs/rpg/books.yaml \\
       --devices cuda,cpu --batch-sizes 1,16,128 --max-users 2000 \\
       --budgets 20:500:5,200:2000:5 --n_codebook 32
 """

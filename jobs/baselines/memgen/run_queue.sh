@@ -4,7 +4,7 @@
 # of (model, dataset) pairs on one GPU of a shared server (no Slurm). Run from
 # this folder:
 #
-#   cd jobs/rq2_baselines/memgen
+#   cd jobs/baselines/memgen
 #   GPU=5 QUEUE="SASRec:sports SASRec:books" bash ./run_queue.sh
 #
 # QUEUE items are "model:preset[:key=value,key=value]":

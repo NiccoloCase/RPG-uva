@@ -51,9 +51,7 @@ local_gpu_resolve_dataset() {
     beauty)              DATASET_CATEGORY="Beauty";              DATASET_CONFIG="${repo_root}/configs/rpg/repro/${dataset_slug}.yaml" ;;
     toys_and_games)      DATASET_CATEGORY="Toys_and_Games";      DATASET_CONFIG="${repo_root}/configs/rpg/repro/${dataset_slug}.yaml" ;;
     cds_and_vinyl)       DATASET_CATEGORY="CDs_and_Vinyl";       DATASET_CONFIG="${repo_root}/configs/rpg/repro/${dataset_slug}.yaml" ;;
-    video_games)         DATASET_CATEGORY="Video_Games";         DATASET_CONFIG="${repo_root}/configs/rpg/new_datasets/${dataset_slug}.yaml" ;;
-    pet_supplies)        DATASET_CATEGORY="Pet_Supplies";        DATASET_CONFIG="${repo_root}/configs/rpg/new_datasets/${dataset_slug}.yaml" ;;
-    books)               DATASET_CATEGORY="Books";               DATASET_CONFIG="${repo_root}/configs/rpg/new_datasets/${dataset_slug}.yaml" ;;
+    books)               DATASET_CATEGORY="Books";               DATASET_CONFIG="${repo_root}/configs/rpg/${dataset_slug}.yaml" ;;
     *)
       echo "ERROR: unknown DATASET '${dataset_slug}'." >&2
       return 1

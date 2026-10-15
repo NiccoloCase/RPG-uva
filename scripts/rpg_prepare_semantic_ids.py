@@ -11,7 +11,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
+THIRD_PARTY_ROOT = REPO_ROOT / "third_party" / "RPG_KDD2025"
 
 from accelerate import Accelerator
 from perf.config import build_repo_config_files, ensure_submodule_available, parse_override_args
@@ -21,9 +21,7 @@ PRESET_CONFIGS = {
     "beauty": REPO_ROOT / "configs" / "rpg" / "repro" / "beauty.yaml",
     "toys_and_games": REPO_ROOT / "configs" / "rpg" / "repro" / "toys_and_games.yaml",
     "cds_and_vinyl": REPO_ROOT / "configs" / "rpg" / "repro" / "cds_and_vinyl.yaml",
-    "video_games": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "video_games.yaml",
-    "pet_supplies": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "pet_supplies.yaml",
-    "books": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "books.yaml",
+    "books": REPO_ROOT / "configs" / "rpg" / "books.yaml",
 }
 
 
@@ -31,11 +29,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Prepare RPG semantic-ID caches without training or profiling.",
     )
-    parser.add_argument("--model", default="RPG", help="Model name exposed by third_party/genrec.")
+    parser.add_argument("--model", default="RPG", help="Model name exposed by the upstream RPG code (genrec).")
     parser.add_argument(
         "--dataset",
         default="AmazonReviews2014",
-        help="Dataset name exposed by third_party/genrec.",
+        help="Dataset name exposed by the upstream RPG code (genrec).",
     )
     parser.add_argument(
         "--preset",

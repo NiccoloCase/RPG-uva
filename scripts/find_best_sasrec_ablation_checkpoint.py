@@ -12,14 +12,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 ABLATION_OUTPUT_ROOT = REPO_ROOT / "output" / "reproduction" / "sasrec" / "ablation_size"
-NEW_DATASETS_ABLATION_OUTPUT_ROOT = REPO_ROOT / "output" / "new_datasets" / "sasrec" / "ablation_size"
 DATASET_CHOICES = (
     "beauty",
     "cds_and_vinyl",
     "sports_and_outdoors",
     "toys_and_games",
-    "video_games",
-    "pet_supplies",
 )
 RUN_ID_RE = re.compile(r"^(sasrec_[A-Za-z0-9_]+)$")
 METRIC_RE = re.compile(

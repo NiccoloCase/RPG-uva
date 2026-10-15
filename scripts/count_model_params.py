@@ -17,22 +17,17 @@ PAPER_DATASETS = (
     "Toys_and_Games",
     "CDs_and_Vinyl",
 )
-EXTRA_DATASETS = (
-    "Video_Games",
-    "Pet_Supplies",
-)
+EXTRA_DATASETS = ()
 
 RPG_CONFIGS = {
     "Sports_and_Outdoors": REPO_ROOT / "configs/rpg/repro/sports_and_outdoors.yaml",
     "Beauty": REPO_ROOT / "configs/rpg/repro/beauty.yaml",
     "Toys_and_Games": REPO_ROOT / "configs/rpg/repro/toys_and_games.yaml",
     "CDs_and_Vinyl": REPO_ROOT / "configs/rpg/repro/cds_and_vinyl.yaml",
-    "Video_Games": REPO_ROOT / "configs/rpg/new_datasets/video_games.yaml",
-    "Pet_Supplies": REPO_ROOT / "configs/rpg/new_datasets/pet_supplies.yaml",
 }
 
 SASREC_SUMMARY_DIR = REPO_ROOT / "artifacts/sasrec/data"
-RPG_MODEL_CONFIG = REPO_ROOT / "third_party/genrec/models/RPG/config.yaml"
+RPG_MODEL_CONFIG = REPO_ROOT / "third_party/RPG_KDD2025/genrec/models/RPG/config.yaml"
 SASREC_MODEL_CONFIG = REPO_ROOT / "models/sasrec/config.yaml"
 PARAM_MATCHED_DIR = REPO_ROOT / "configs/sasrec/param_matched"
 
@@ -43,7 +38,7 @@ def load_yaml(path: Path) -> dict:
 
 
 def count_rpg_params(config: dict) -> tuple[int, int, int]:
-    """Match third_party/genrec/models/RPG/model.py."""
+    """Match third_party/RPG_KDD2025/genrec/models/RPG/model.py."""
     n_embd = int(config["n_embd"])
     n_layer = int(config["n_layer"])
     n_inner = int(config["n_inner"])

@@ -5,7 +5,7 @@
 # decoding graph on the GPU and runs graph decoding on the test split with one
 # eval seed. Run from this folder:
 #
-#   cd jobs/new_datasets/rpg/books
+#   cd jobs/books
 #   GPU=7 RUN_TAG=m32 bash ./budget_sweep.sh --n_codebook 32
 #
 # Optional env vars:
@@ -25,7 +25,7 @@ if [[ "$(pwd -P)" != "${SCRIPT_DIR}" ]]; then
   exit 2
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/jobs/lib/local_gpu.sh"
 
 : "${GPU:?Set GPU to the index of a GPU.}"
@@ -41,7 +41,7 @@ fi
 
 BUDGETS="${BUDGETS:-50:500:5 100:500:5 200:500:5 100:1000:5 200:1000:5 200:2000:5}"
 EVAL_SEED="${EVAL_SEED:-2024}"
-EVAL_CONFIG="${REPO_ROOT}/configs/rpg/new_datasets/books.yaml"
+EVAL_CONFIG="${REPO_ROOT}/configs/rpg/books.yaml"
 RESULT_ROOT="${REPO_ROOT}/artifacts/rpg/eval_seeds/new_datasets/books${RUN_TAG:+_${RUN_TAG}}/budget"
 OUTPUT_DIR="${REPO_ROOT}/output/new_datasets/rpg/books"
 mkdir -p "${RESULT_ROOT}" "${OUTPUT_DIR}"

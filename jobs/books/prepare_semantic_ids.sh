@@ -4,7 +4,7 @@
 # text with OpenAI text-embedding-3-large, and run OPQ to get semantic IDs.
 # CPU only. Runs directly on a shared server (no Slurm). Run from this folder:
 #
-#   cd jobs/new_datasets/rpg/books
+#   cd jobs/books
 #   bash ./prepare_semantic_ids.sh
 #
 # Needs `openai_api_key` in configs/rpg/local.yaml unless the embeddings file
@@ -19,7 +19,7 @@ if [[ "$(pwd -P)" != "${SCRIPT_DIR}" ]]; then
   exit 2
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/jobs/lib/local_gpu.sh"
 PYTHON_BIN="$(local_gpu_python "${REPO_ROOT}")"
 

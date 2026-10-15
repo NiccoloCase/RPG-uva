@@ -3,7 +3,7 @@
 # Train RPG on Amazon Books on one GPU of a shared server (no Slurm).
 # Run from this folder:
 #
-#   cd jobs/new_datasets/rpg/books
+#   cd jobs/books
 #   GPU=0 bash ./train.sh
 #
 # Differences from the small-dataset jobs, both because of catalogue size:
@@ -23,7 +23,7 @@ if [[ "$(pwd -P)" != "${SCRIPT_DIR}" ]]; then
   exit 2
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/jobs/lib/local_gpu.sh"
 source "${REPO_ROOT}/jobs/lib/runtime_stats.sh"
 

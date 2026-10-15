@@ -7,12 +7,11 @@ import ast
 import sys
 from pathlib import Path
 
-from genrec_repo_support import (
-    REPO_ROOT,
-    prepare_genrec_runtime,
-)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
+from perf.config import THIRD_PARTY_ROOT, ensure_submodule_available  # noqa: E402
 ROOT_CONFIG = REPO_ROOT / "configs" / "rpg" / "root.yaml"
 LOCAL_CONFIG = REPO_ROOT / "configs" / "rpg" / "local.yaml"
 PRESET_CONFIGS = {
@@ -20,23 +19,21 @@ PRESET_CONFIGS = {
     "beauty": REPO_ROOT / "configs" / "rpg" / "repro" / "beauty.yaml",
     "toys_and_games": REPO_ROOT / "configs" / "rpg" / "repro" / "toys_and_games.yaml",
     "cds_and_vinyl": REPO_ROOT / "configs" / "rpg" / "repro" / "cds_and_vinyl.yaml",
-    "video_games": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "video_games.yaml",
-    "pet_supplies": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "pet_supplies.yaml",
-    "books": REPO_ROOT / "configs" / "rpg" / "new_datasets" / "books.yaml",
+    "books": REPO_ROOT / "configs" / "rpg" / "books.yaml",
 }
 
 
 def parse_args() -> tuple[argparse.Namespace, list[str]]:
     parser = argparse.ArgumentParser(
-        description="Run a GenRec model from the repository root without modifying third_party/.",
+        description="Train and test RPG from the repository root without modifying the upstream code.",
         epilog=(
             "Config precedence: CLI overrides > --config files > --preset file > "
-            "configs/rpg/local.yaml > configs/rpg/root.yaml > third_party defaults. "
+            "configs/rpg/local.yaml > configs/rpg/root.yaml > upstream defaults. "
             "Forwarded config overrides accept both '--key=value' and '--key value'."
         ),
     )
-    parser.add_argument("--model", default="RPG", help="Model name exposed by the vendored or repo-owned GenRec registry.")
-    parser.add_argument("--dataset", default="AmazonReviews2014", help="Dataset name exposed by third_party/genrec.")
+    parser.add_argument("--model", default="RPG", help="Model name exposed by the upstream RPG code (genrec).")
+    parser.add_argument("--dataset", default="AmazonReviews2014", help="Dataset name exposed by the upstream RPG code (genrec).")
     parser.add_argument("--checkpoint", default=None, help="Optional checkpoint path.")
     parser.add_argument(
         "--preset",
@@ -214,7 +211,9 @@ def main() -> int:
     args, override_tokens = parse_args()
     if args.val_max_users is not None and not args.train_only:
         raise SystemExit("--val-max-users requires --train-only.")
-    prepare_genrec_runtime(args.model)
+    ensure_submodule_available()
+    if str(THIRD_PARTY_ROOT) not in sys.path:
+        sys.path.insert(0, str(THIRD_PARTY_ROOT))
 
     config_files = build_config_files(args)
     overrides = parse_override_args(override_tokens)

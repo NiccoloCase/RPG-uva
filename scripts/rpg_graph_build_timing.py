@@ -17,7 +17,7 @@ not need, so the timing covers graph construction only.
 Usage:
   python scripts/rpg_graph_build_timing.py \\
       --checkpoint artifacts/rpg/ckpt/<run>.pth \\
-      --config configs/rpg/new_datasets/books.yaml --repeats 3 [--n_codebook 32]
+      --config configs/rpg/books.yaml --repeats 3 [--n_codebook 32]
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ from pathlib import Path
 import torch
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
+THIRD_PARTY_ROOT = REPO_ROOT / "third_party" / "RPG_KDD2025"
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 

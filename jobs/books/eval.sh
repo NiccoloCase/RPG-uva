@@ -3,7 +3,7 @@
 # Evaluate the Books RPG checkpoint on one GPU of a shared server (no Slurm).
 # Run from this folder:
 #
-#   cd jobs/new_datasets/rpg/books
+#   cd jobs/books
 #   GPU=0 bash ./eval.sh
 #
 # Runs graph decoding (graph built in row blocks on the GPU, never the dense matrix) and
@@ -25,7 +25,7 @@ if [[ "$(pwd -P)" != "${SCRIPT_DIR}" ]]; then
   exit 2
 fi
 
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 source "${REPO_ROOT}/jobs/lib/local_gpu.sh"
 
 : "${GPU:?Set GPU to the index of an idle GPU.}"
@@ -41,7 +41,7 @@ fi
 
 GRAPH_BACKEND="${GRAPH_BACKEND:-exact_gpu}"
 EVAL_SEEDS="${EVAL_SEEDS:-2024,2025,2026}"
-EVAL_CONFIG="${REPO_ROOT}/configs/rpg/new_datasets/books.yaml"
+EVAL_CONFIG="${REPO_ROOT}/configs/rpg/books.yaml"
 RESULT_DIR="${REPO_ROOT}/artifacts/rpg/eval_seeds/new_datasets/books${RUN_TAG:+_${RUN_TAG}}"
 OUTPUT_DIR="${REPO_ROOT}/output/new_datasets/rpg/books"
 mkdir -p "${RESULT_DIR}" "${OUTPUT_DIR}"

@@ -21,7 +21,7 @@ fixed subset as scripts/rpg_eval_seeds.py --max-users):
 Usage:
   python scripts/rpg_verify_decoding.py --name books_m32 \
       --checkpoint artifacts/rpg/ckpt/<run>.pth \
-      --config configs/rpg/new_datasets/books.yaml --n_codebook 32
+      --config configs/rpg/books.yaml --n_codebook 32
 Writes artifacts/rpg/verification/<name>.json.
 """
 

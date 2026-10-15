@@ -6,16 +6,16 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-THIRD_PARTY_ROOT = REPO_ROOT / "third_party"
+THIRD_PARTY_ROOT = REPO_ROOT / "third_party" / "RPG_KDD2025"
 ROOT_CONFIG = REPO_ROOT / "configs" / "rpg" / "root.yaml"
 LOCAL_CONFIG = REPO_ROOT / "configs" / "rpg" / "local.yaml"
 
 
 def ensure_submodule_available() -> None:
-    """Validate that the upstream `third_party` checkout is present.
+    """Validate that the upstream RPG checkout (third_party/RPG_KDD2025) is present.
 
     The perf utilities import and instantiate the original RPG code from the
-    vendored `third_party/genrec` tree. This helper checks for a couple of
+    vendored `third_party/RPG_KDD2025/genrec` tree. This helper checks for a couple of
     representative files that should exist when the submodule has been
     initialized correctly.
 
@@ -34,7 +34,7 @@ def ensure_submodule_available() -> None:
     if missing_paths:
         missing_str = ", ".join(str(path.relative_to(REPO_ROOT)) for path in missing_paths)
         raise SystemExit(
-            f"Missing third_party sources: {missing_str}. "
+            f"Missing RPG sources: {missing_str}. "
             "Run 'git submodule update --init --recursive'."
         )
 

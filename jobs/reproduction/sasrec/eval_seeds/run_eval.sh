@@ -102,7 +102,7 @@ trap runtime_stats_finish EXIT
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python scripts/sasrec_eval.py \
+runtime_stats_run python scripts/sasrec/eval.py \
   --checkpoint "${CHECKPOINT_PATH}" \
   --eval-mode "${SASREC_EVAL_MODE}" \
   --eval-seed "${SASREC_EVAL_SEED}" \

@@ -39,7 +39,7 @@ repo_env_activate "${REPO_ROOT}"
 
 cd "${REPO_ROOT}"
 
-python scripts/rpg.py \
+python scripts/rpg/train.py \
   --preset sports_and_outdoors \
   --n_codebook "${M}" \
   --run_id "${RUN_ID}"

@@ -92,7 +92,7 @@ trap runtime_stats_finish EXIT
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python scripts/sasrec_cold_start.py \
+runtime_stats_run python scripts/sasrec/cold_start.py \
   run \
   --checkpoint "${CHECKPOINT_PATH}" \
   --preset "${COLD_START_PRESET}" \

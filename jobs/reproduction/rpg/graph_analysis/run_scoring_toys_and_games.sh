@@ -78,7 +78,7 @@ mkdir -p "${MPLCONFIGDIR}"
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python scripts/rpg_graph_analysis.py \
+runtime_stats_run python scripts/rpg/graph_analysis.py \
   scoring \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${GRAPH_CONFIG}" \

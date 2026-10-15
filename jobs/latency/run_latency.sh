@@ -71,7 +71,7 @@ for dataset in ${DATASETS}; do
     continue
   fi
   echo "LATENCY_START ${dataset} $(date -Is) checkpoint=${checkpoint}"
-  "${PYTHON_BIN}" scripts/rpg_latency.py \
+  "${PYTHON_BIN}" scripts/rpg/latency.py \
     --checkpoint "${checkpoint}" \
     --config "${config}" \
     --devices cuda,cpu \

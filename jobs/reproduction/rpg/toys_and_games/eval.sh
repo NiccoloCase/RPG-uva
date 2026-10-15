@@ -73,7 +73,7 @@ echo "Evaluating checkpoint: ${CHECKPOINT_PATH}"
 echo "Eval seed: ${EVAL_SEED}"
 
 cmd=(
-  python3 scripts/rpg_eval.py
+  python3 scripts/rpg/eval.py
   --preset toys_and_games
   --checkpoint "${CHECKPOINT_PATH}"
   --eval-seed "${EVAL_SEED}"

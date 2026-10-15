@@ -46,7 +46,7 @@ CFG="configs/rpg/repro/${DS}.yaml"
 
 if [[ ! -f "${CLUSTER_CSV}" ]]; then
   echo "ERROR: cluster CSV not found: ${CLUSTER_CSV}" >&2
-  echo "       Run run_decode_grid.sh then scripts/collect_grid_results.py first." >&2
+  echo "       Run run_decode_grid.sh then scripts/results/collect_grid.py first." >&2
   exit 3
 fi
 mkdir -p "${OUT_ROOT}"
@@ -104,7 +104,7 @@ for cell in "${CELLS[@]}"; do
   fi
 
   echo "  CELL b=${b} k=${k} q=${q} split=test topk=${TOPK} -> ${OUT_DIR}"
-  python scripts/rpg_eval_seeds.py \
+  python scripts/rpg/eval_seeds.py \
     --checkpoint "${CKPT}" \
     --config "${CFG}" \
     --split test \

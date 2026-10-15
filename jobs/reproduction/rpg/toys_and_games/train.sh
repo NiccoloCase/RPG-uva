@@ -46,4 +46,4 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/rpg.py --preset toys_and_games
+runtime_stats_run python3 scripts/rpg/train.py --preset toys_and_games

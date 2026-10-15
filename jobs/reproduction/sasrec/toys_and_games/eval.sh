@@ -52,4 +52,4 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py --preset toys_and_games --dataset Toys_and_Games --eval-only --checkpoint "${CHECKPOINT_PATH}"
+runtime_stats_run python3 scripts/sasrec/train.py --preset toys_and_games --dataset Toys_and_Games --eval-only --checkpoint "${CHECKPOINT_PATH}"

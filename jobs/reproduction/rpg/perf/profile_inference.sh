@@ -72,7 +72,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 cd "${REPO_ROOT}"
 
-python scripts/rpg_perf.py \
+python scripts/rpg/perf.py \
   profile \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${PERF_CONFIG}" \

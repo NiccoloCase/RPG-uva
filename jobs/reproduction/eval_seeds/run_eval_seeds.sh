@@ -92,7 +92,7 @@ repo_env_activate "${REPO_ROOT}"
 cd "${REPO_ROOT}"
 
 cmd=(
-  python scripts/rpg_eval_seeds.py
+  python scripts/rpg/eval_seeds.py
   --checkpoint "${CHECKPOINT_PATH}"
   --config "${EVAL_CONFIG}"
   --eval-seeds "${EVAL_SEEDS}"

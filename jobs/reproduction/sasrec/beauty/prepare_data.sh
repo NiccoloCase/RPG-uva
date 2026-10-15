@@ -38,4 +38,4 @@ trap runtime_stats_finish EXIT
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec_prepare_data.py --categories Beauty
+runtime_stats_run python3 scripts/sasrec/prepare_data.py --categories Beauty

@@ -83,7 +83,7 @@ fi
 
 for item_chunk_size in ${CHUNK_SIZES}; do
   echo "Running RPG brute-force chunk sweep: pool_sizes=${POOL_SIZES}, item_chunk_size=${item_chunk_size}"
-  python scripts/rpg_perf.py \
+  python scripts/rpg/perf.py \
     profile-bruteforce \
     --checkpoint "${CHECKPOINT_PATH}" \
     --config "${PERF_CONFIG}" \

@@ -2,7 +2,7 @@
 
 # RQ3: graph-constrained decoding with the exact graph, with the approximate
 # HNSW graph, and exhaustive scoring, on the same trained RPG checkpoints and
-# the same evaluation seeds. Runs scripts/rpg_eval_seeds.py once per variant.
+# the same evaluation seeds. Runs scripts/rpg/eval_seeds.py once per variant.
 # CPU is enough for the four paper datasets (the HNSW graph is built on CPU in
 # under a second; graph decoding takes a few ms per user). Run from this folder:
 #
@@ -62,7 +62,7 @@ for dataset in ${DATASETS}; do
       extra=(--decoding graph --graph-backend "${variant}" --eval-seeds "${EVAL_SEEDS}")
     fi
     log "  ${variant}"
-    "${PYTHON_BIN}" "${REPO_ROOT}/scripts/rpg_eval_seeds.py" \
+    "${PYTHON_BIN}" "${REPO_ROOT}/scripts/rpg/eval_seeds.py" \
       --checkpoint "${checkpoint}" --config "${DATASET_CONFIG}" --no-local-config \
       --output-dir "${result_dir}" --no-per-user-output "${extra[@]}" \
       > "${OUTPUT_DIR}/${dataset}_${variant}.out" 2>&1 \

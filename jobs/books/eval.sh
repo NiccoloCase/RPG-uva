@@ -54,7 +54,7 @@ exec > >(tee -a "${LOG_FILE}") 2>&1
 
 cd "${REPO_ROOT}"
 
-"${PYTHON_BIN}" scripts/rpg_eval_seeds.py \
+"${PYTHON_BIN}" scripts/rpg/eval_seeds.py \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${EVAL_CONFIG}" \
   --eval-seeds "${EVAL_SEEDS}" \
@@ -64,7 +64,7 @@ cd "${REPO_ROOT}"
   --output-dir "${RESULT_DIR}/graph" \
   "$@"
 
-"${PYTHON_BIN}" scripts/rpg_eval_seeds.py \
+"${PYTHON_BIN}" scripts/rpg/eval_seeds.py \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${EVAL_CONFIG}" \
   --eval-seeds 2024 \

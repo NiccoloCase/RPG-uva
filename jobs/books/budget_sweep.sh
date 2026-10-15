@@ -59,7 +59,7 @@ for budget in ${BUDGETS}; do
     continue
   fi
   echo "BUDGET_START b=${beams} k=${edges} q=${steps} $(date -Is)"
-  "${PYTHON_BIN}" scripts/rpg_eval_seeds.py \
+  "${PYTHON_BIN}" scripts/rpg/eval_seeds.py \
     --checkpoint "${CHECKPOINT_PATH}" \
     --config "${EVAL_CONFIG}" \
     --eval-seeds "${EVAL_SEED}" \

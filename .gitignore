@@ -10,4 +10,3 @@ logs/
 tensorboard/
 configs/rpg/local.yaml
 results/figures/
-docs/

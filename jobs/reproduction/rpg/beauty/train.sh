@@ -70,4 +70,4 @@ echo "Using cache: ${DATA_DIR}"
 echo "Reusing sentence embeddings: ${SENT_EMB_PATH}"
 echo "RESET_SEM_IDS=${RESET_SEM_IDS}"
 
-runtime_stats_run python3 scripts/rpg.py --preset beauty
+runtime_stats_run python3 scripts/rpg/train.py --preset beauty

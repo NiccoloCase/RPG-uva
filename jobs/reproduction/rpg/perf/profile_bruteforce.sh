@@ -86,7 +86,7 @@ if [[ "${SKIP_PARITY_CHECK}" == "1" || "${SKIP_PARITY_CHECK}" == "true" ]]; then
   extra_args+=(--skip-parity-check)
 fi
 
-python scripts/rpg_perf.py \
+python scripts/rpg/perf.py \
   profile-bruteforce \
   --checkpoint "${CHECKPOINT_PATH}" \
   --config "${PERF_CONFIG}" \

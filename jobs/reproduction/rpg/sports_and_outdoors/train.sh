@@ -46,4 +46,4 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/rpg.py --preset sports_and_outdoors
+runtime_stats_run python3 scripts/rpg/train.py --preset sports_and_outdoors

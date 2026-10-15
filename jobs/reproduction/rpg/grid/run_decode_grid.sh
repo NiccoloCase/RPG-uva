@@ -86,7 +86,7 @@ if [[ -z "${CKPT}" ]]; then
   exit 4
 fi
 if [[ ! -f "${SEMIDS}" ]]; then
-  echo "ERROR: missing sem_ids cache ${SEMIDS} (run scripts/rpg_prepare_semantic_ids.py first)" >&2
+  echo "ERROR: missing sem_ids cache ${SEMIDS} (run scripts/rpg/prepare_semantic_ids.py first)" >&2
   exit 5
 fi
 echo "checkpoint=$(basename "${CKPT}")"
@@ -107,7 +107,7 @@ for b in "${BEAM_LIST[@]}"; do
     fi
 
     echo "  CELL b=${b} k=${K} q=${q} split=val topk=${TOPK} -> ${OUT_DIR}"
-    python scripts/rpg_eval_seeds.py \
+    python scripts/rpg/eval_seeds.py \
       --checkpoint "${CKPT}" \
       --config "${CFG}" \
       --split val \

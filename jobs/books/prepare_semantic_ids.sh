@@ -35,5 +35,5 @@ cd "${REPO_ROOT}"
 # Embeddings first, with the resumable script: every request is saved as it
 # returns, so an interruption never loses paid work. It is a no-op when the
 # embeddings file already exists.
-"${PYTHON_BIN}" scripts/rpg_embed_items.py --preset books --tokens-per-minute "${TOKENS_PER_MINUTE:-900000}"
-"${PYTHON_BIN}" scripts/rpg_prepare_semantic_ids.py --preset books "$@"
+"${PYTHON_BIN}" scripts/rpg/embed_items.py --preset books --tokens-per-minute "${TOKENS_PER_MINUTE:-900000}"
+"${PYTHON_BIN}" scripts/rpg/prepare_semantic_ids.py --preset books "$@"

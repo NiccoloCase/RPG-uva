@@ -73,7 +73,7 @@ echo "Using cache: ${DATA_DIR}"
 echo "Eval seed: ${EVAL_SEED}"
 echo "README decode params: num_beams=20 n_edges=200 propagation_steps=3"
 
-runtime_stats_run python3 scripts/rpg_eval.py \
+runtime_stats_run python3 scripts/rpg/eval.py \
   --preset beauty \
   --checkpoint "${CHECKPOINT_PATH}" \
   --eval-seed "${EVAL_SEED}" \

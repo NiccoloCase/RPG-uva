@@ -65,7 +65,7 @@ cd "${REPO_ROOT}"
 
 echo "Evaluating checkpoint: ${CHECKPOINT_PATH}"
 echo "Eval seed: ${EVAL_SEED}"
-runtime_stats_run python3 scripts/rpg_eval.py \
+runtime_stats_run python3 scripts/rpg/eval.py \
   --preset sports_and_outdoors \
   --checkpoint "${CHECKPOINT_PATH}" \
   --eval-seed "${EVAL_SEED}"

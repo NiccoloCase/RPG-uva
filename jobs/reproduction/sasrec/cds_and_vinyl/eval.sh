@@ -52,4 +52,4 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py --preset cds_and_vinyl --dataset CDs_and_Vinyl --eval-only --checkpoint "${CHECKPOINT_PATH}"
+runtime_stats_run python3 scripts/sasrec/train.py --preset cds_and_vinyl --dataset CDs_and_Vinyl --eval-only --checkpoint "${CHECKPOINT_PATH}"

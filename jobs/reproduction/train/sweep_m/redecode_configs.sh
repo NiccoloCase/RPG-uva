@@ -65,7 +65,7 @@ for M in "${M_LIST[@]}"; do
     continue
   fi
   if [[ ! -f "${SEMIDS}" ]]; then
-    echo "  SKIP m=${M}: missing sem_ids cache ${SEMIDS} (run scripts/rpg_prepare_semantic_ids.py first)" >&2
+    echo "  SKIP m=${M}: missing sem_ids cache ${SEMIDS} (run scripts/rpg/prepare_semantic_ids.py first)" >&2
     continue
   fi
   echo "  m=${M} checkpoint=$(basename "${CKPT}")"
@@ -83,7 +83,7 @@ for M in "${M_LIST[@]}"; do
     fi
 
     echo "    [${TAG}] config=${CFG} -> ${OUT_DIR}"
-    python scripts/rpg_eval_seeds.py \
+    python scripts/rpg/eval_seeds.py \
       --checkpoint "${CKPT}" \
       --config "${CFG}" \
       --eval-seeds "${EVAL_SEEDS}" \

@@ -46,4 +46,4 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py --preset beauty --dataset Beauty
+runtime_stats_run python3 scripts/sasrec/train.py --preset beauty --dataset Beauty

@@ -65,7 +65,7 @@ mkdir -p "$(dirname "${PLOT_OUTPUT_PATH}")"
 
 cd "${REPO_ROOT}"
 
-python scripts/rpg_cold_start.py \
+python scripts/rpg/cold_start.py \
   plot \
   --input "${SUMMARY_PATH}" \
   --output "${PLOT_OUTPUT_PATH}" \

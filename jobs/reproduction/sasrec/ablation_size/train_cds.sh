@@ -47,7 +47,7 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py \
+runtime_stats_run python3 scripts/sasrec/train.py \
   --preset cds_and_vinyl \
   --dataset CDs_and_Vinyl \
   --ckpt_dir artifacts/sasrec/ckpt/ablation_size \

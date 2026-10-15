@@ -47,7 +47,7 @@ runtime_stats_start_gpu_monitor
 trap runtime_stats_finish EXIT
 
 cd "${REPO_ROOT}"
-runtime_stats_run "${PYTHON_BIN}" scripts/rpg.py \
+runtime_stats_run "${PYTHON_BIN}" scripts/rpg/train.py \
   --preset books \
   --train-only \
   --val-max-users "${VAL_MAX_USERS:-20000}" \

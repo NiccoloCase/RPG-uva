@@ -56,7 +56,7 @@ fi
 
 cd "${REPO_ROOT}"
 
-runtime_stats_run python3 scripts/sasrec.py \
+runtime_stats_run python3 scripts/sasrec/train.py \
   --preset sports_and_outdoors \
   --dataset Sports_and_Outdoors \
   --epochs 300 \

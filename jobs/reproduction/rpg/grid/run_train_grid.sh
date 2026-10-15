@@ -3,7 +3,7 @@
 # Joint RPG training sweep over semantic-ID length m x learning rate x temperature.
 # Mirrors the original paper's tuning (lr x temp x #digit = 3 x 3 x 5 = 45 cells) and
 # runs the whole grid in one job array, like the decode/inference sweeps. Each cell
-# logs val + test metrics (parsed by scripts/collect_grid_results.py) and keeps its
+# logs val + test metrics (parsed by scripts/results/collect_grid.py) and keeps its
 # checkpoint, so the inference sweeps can re-decode the selected one.
 #
 # Sweep a new dataset (5 m x 3 lr x 3 temp x 1 seed = 45 cells):
@@ -75,7 +75,7 @@ repo_env_activate "${REPO_ROOT}"
 
 cd "${REPO_ROOT}"
 
-python scripts/rpg.py \
+python scripts/rpg/train.py \
   --preset "${DS}" \
   --n_codebook "${M}" \
   --lr "${LR}" \

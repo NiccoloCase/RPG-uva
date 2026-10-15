@@ -52,7 +52,7 @@ for item in ${QUEUE}; do
   fi
   run_id="memgen_$(tr '[:upper:]' '[:lower:]' <<< "${model}")_${preset}_seed${SEED}"
   log "train ${model} ${preset} run_id=${run_id} ${overrides[*]:-}"
-  CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/memgen_train.py" \
+  CUDA_VISIBLE_DEVICES="${GPU}" "${PYTHON_BIN}" "${REPO_ROOT}/scripts/memgen/train.py" \
     --model "${model}" --preset "${preset}" --seed "${SEED}" "${overrides[@]}" \
     > "${OUTPUT_DIR}/${run_id}.out" 2>&1
   status=$?

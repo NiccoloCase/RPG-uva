@@ -29,7 +29,7 @@ repo_env_activate "${REPO_ROOT}"
 COLD_START_DATASET_SLUG="beauty"
 COLD_START_OUTPUT_DIR="${REPO_ROOT}/artifacts/sasrec/cold_start/reproduction/${COLD_START_DATASET_SLUG}_param_matched"
 
-BEST_INFO="$("${PYTHON_BIN}" "${REPO_ROOT}/scripts/find_best_sasrec_ablation_checkpoint.py" --dataset "${COLD_START_DATASET_SLUG}" --format shell)"
+BEST_INFO="$("${PYTHON_BIN}" "${REPO_ROOT}/scripts/sasrec/find_best_ablation_checkpoint.py" --dataset "${COLD_START_DATASET_SLUG}" --format shell)"
 eval "${BEST_INFO}"
 
 if [[ ! -f "${CHECKPOINT_PATH}" ]]; then
@@ -57,7 +57,7 @@ mkdir -p "${COLD_START_OUTPUT_DIR}"
 
 cd "${REPO_ROOT}"
 
-"${PYTHON_BIN}" scripts/sasrec_cold_start.py \
+"${PYTHON_BIN}" scripts/sasrec/cold_start.py \
   run \
   --checkpoint "${CHECKPOINT_PATH}" \
   --model-family sasrec \

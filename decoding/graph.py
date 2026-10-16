@@ -98,6 +98,15 @@ def build_hnsw_adjacency(
     index.add(item_embs_np)
     _, neighbours = index.search(item_embs_np, topk + 1)
     neighbours = neighbours[:, 1:]  # drop the query item itself
+    # On large catalogues the HNSW search can return fewer than topk results and
+    # pads the rest with -1. Those slots are filled with the item itself, which
+    # the decoder treats as no extra neighbour (candidates are de-duplicated).
+    missing = neighbours < 0
+    if missing.any():
+        rows = np.broadcast_to(np.arange(neighbours.shape[0])[:, None], neighbours.shape)
+        neighbours = np.where(missing, rows, neighbours)
+        print(f"[hnsw] {int(missing.sum())} of {missing.size} neighbour slots unfilled "
+              f"({int(missing.any(axis=1).sum())} items); filled with the item itself", flush=True)
 
     adjacency = torch.zeros((n_items, topk), dtype=torch.long)
     adjacency[1:] = torch.from_numpy(neighbours.astype(np.int64) + 1)

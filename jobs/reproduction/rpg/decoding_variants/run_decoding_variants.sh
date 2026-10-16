@@ -12,7 +12,7 @@
 # Env vars:
 #   DATASETS     space-separated dataset slugs (default: the four paper datasets)
 #   CKPT_GLOB    how to find a dataset's checkpoint under artifacts/rpg/ckpt
-#                (default "rpg_repro_<dataset>-*.pth"; "*<dataset>*" also works)
+#                ("{dataset}" is replaced by the slug; default "rpg_repro_{dataset}-*.pth")
 #   EVAL_SEEDS   comma-separated eval seeds for graph decoding (default 2024,2025,2026)
 #   VARIANTS     subset of "exact_gpu hnsw exhaustive" (default all)
 #   GPU          optional GPU index; unset = CPU
@@ -45,9 +45,13 @@ LOG_FILE="${OUTPUT_DIR}/run-$(date +%Y%m%dT%H%M%S).log"
 exec > >(tee -a "${LOG_FILE}") 2>&1
 log() { printf '[%s] %s\n' "$(date -Is)" "$*"; }
 
+cd "${REPO_ROOT}"   # configs use repository-relative paths (artifacts/rpg/cache)
+
 for dataset in ${DATASETS}; do
   local_gpu_resolve_dataset "${REPO_ROOT}" "${dataset}" || exit 1
-  pattern="${CKPT_GLOB:-rpg_repro_${dataset}-*.pth}"
+  default_glob="rpg_repro_{dataset}-*.pth"
+  pattern="${CKPT_GLOB:-${default_glob}}"
+  pattern="${pattern//\{dataset\}/${dataset}}"
   checkpoint="$(ls -t "${REPO_ROOT}"/artifacts/rpg/ckpt/${pattern} 2>/dev/null | head -1)"
   if [[ -z "${checkpoint}" ]]; then
     log "SKIP ${dataset}: no checkpoint matching ${pattern}"

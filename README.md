@@ -53,16 +53,27 @@ paper. Place them under `artifacts/` with the layout used below.
 
 ## Experiments
 
-Run each job from its own folder (`cd jobs/...; bash ./x.sh`, or `sbatch ./x.sh`
-on a cluster). Jobs that run on a shared GPU server take `GPU=<index>` and refuse
-a GPU that is already in use. Scripts print `--help`. Outputs go to `artifacts/`
-and `output/`; the collectors in the last table turn them into `results/`.
+Run each job from its own folder. Jobs with an `#SBATCH` header run with
+`sbatch ./x.sh` on a Slurm cluster or `bash ./x.sh` on any machine. Jobs without
+one (`jobs/books/*.sh`, `jobs/latency/run_latency.sh`,
+`jobs/reproduction/rpg/decoding_variants/`, `jobs/baselines/memgen/run_queue.sh`)
+were written for a shared GPU server: they take `GPU=<index>` and refuse a GPU
+that is already in use. On Slurm, wrap them, for example
+`sbatch -p gpu_a100 --gpus=1 --chdir=jobs/books --wrap "GPU=0 bash ./eval.sh"`.
+Scripts print `--help`. Outputs go to `artifacts/` and `output/`; the
+collectors in the last table turn them into `results/`.
+
+Before the first GPU job, `cd jobs/data && sbatch ./prepare_data.sh` downloads
+and preprocesses the five datasets once (shared cache for RPG, MemGen-GR and
+SASRec), caches the sentence-T5 model used by TIGER, and reports how often a
+test item already appears in the user's history (never, on these datasets).
 
 ### RQ1: reproducibility of RPG
 
 | What | Job | Script |
 | --- | --- | --- |
 | Train and test RPG with the released hyperparameters | `jobs/reproduction/rpg/<dataset>/train.sh`, `eval.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval.py` |
+| Extra training seeds (2025, 2026), then one evaluation of every dataset and seed with the same settings, past items kept and removed | `jobs/reproduction/rpg/seeds/train.sh`, `eval.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval_seeds.py`, `scripts/rpg/history_masking.py` |
 | Test with 10 evaluation seeds and bootstrap confidence intervals, released-code and paper-appendix decoding settings | `jobs/reproduction/eval_seeds/{released_readme,paper_appendix}/run_<dataset>.sh` | `scripts/rpg/eval_seeds.py` |
 | Semantic ID length sweep (m = 4 to 64) and re-decoding | `jobs/reproduction/train/sweep_m/<dataset>.sh`, `redecode_configs.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval_seeds.py` |
 | Training and decoding hyperparameter grids | `jobs/reproduction/rpg/grid/run_train_grid.sh`, `run_decode_grid.sh`, `run_decode_confirm.sh`, `run_infer_grid.sh`, `run_fig6_repro.sh` | `scripts/rpg/train.py`, `scripts/rpg/eval_seeds.py` |
@@ -78,8 +89,9 @@ The RPG settings are in `configs/rpg/repro/<dataset>.yaml` (released code) and
 | --- | --- | --- |
 | SASRec, S3-Rec recipe (BCE), original width 64 | `jobs/reproduction/sasrec/<dataset>/prepare_data.sh`, `train.sh`, `eval.sh` | `scripts/sasrec/prepare_data.py`, `scripts/sasrec/train.py` |
 | SASRec, parameter-matched to RPG (hidden size 326/540/396/328) with learning-rate and depth grids | `jobs/reproduction/sasrec/ablation_size/` | `scripts/sasrec/train.py`, `scripts/sasrec/find_best_ablation_checkpoint.py` |
+| SASRec and parameter-matched SASRec, seeds 2024/2025/2026, each tested with past items removed and kept | `jobs/reproduction/sasrec/seeds/train_eval.sh` | `scripts/sasrec/train.py --mask_history {true,false}` |
 | SASRec multi-seed test and cold start | `jobs/reproduction/sasrec/eval_seeds/`, `jobs/reproduction/sasrec/cold_start/` | `scripts/sasrec/eval.py`, `scripts/sasrec/cold_start.py` |
-| SASRec with full-softmax loss and TIGER (MemGen-GR implementations) | `jobs/baselines/memgen/run_queue.sh` with `QUEUE="SASRec:sports TIGER:sports ..."` | `scripts/memgen/train.py` |
+| SASRec with full-softmax loss and TIGER (MemGen-GR implementations), seeds 2024/2025/2026 | `jobs/baselines/memgen/train.sh SASRec sports "2024 2025 2026"` (Slurm), or `run_queue.sh` | `scripts/memgen/train.py` |
 | Parameter counts of RPG and the SASRec variants | | `scripts/results/count_model_params.py` |
 | RPG with and without the user's past items in the ranking (the SASRec protocol removes them) | | `scripts/rpg/history_masking.py` |
 
@@ -111,7 +123,7 @@ embeddings (a different similarity from upstream, without self-loops).
 | --- | --- | --- |
 | Amazon Books: embeddings, semantic IDs, training, graph and exhaustive evaluation | `jobs/books/prepare_semantic_ids.sh`, `train.sh`, `eval.sh` | `scripts/rpg/embed_items.py`, `scripts/rpg/prepare_semantic_ids.py`, `scripts/rpg/train.py --train-only`, `scripts/rpg/eval_seeds.py` |
 | Books at larger decoding budgets (beams, edges, steps) | `jobs/books/budget_sweep.sh` | `scripts/rpg/eval_seeds.py` |
-| Per-query latency, graph decoding vs exhaustive, GPU and CPU, batch 1/16/128 | `jobs/latency/run_latency.sh` | `scripts/rpg/latency.py`, `scripts/sasrec/latency.py`, `scripts/memgen/latency.py` |
+| Per-query latency, graph decoding vs exhaustive, GPU and CPU, batch 1/16/128 | `jobs/latency/run_latency.sh` (RPG), `jobs/latency/run_baselines.sh` (SASRec, full-softmax SASRec, TIGER) | `scripts/rpg/latency.py`, `scripts/sasrec/latency.py`, `scripts/memgen/latency.py` |
 | Graph construction time and memory, dense vs row-blocked | | `scripts/rpg/graph_build_timing.py` |
 | Inference time and memory with the item pool enlarged by dummy items (the original paper's experiment) | `jobs/reproduction/rpg/perf/` | `scripts/rpg/perf.py` |
 | SASRec on Books (BCE and sampled softmax, width 64) | `jobs/sasrec_audit/run_queue.sh` | `scripts/sasrec/train.py --loss_type {bce,sampled_ce}` |

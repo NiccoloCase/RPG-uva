@@ -103,6 +103,7 @@ def main(argv: list[str] | None = None) -> int:
     if not (memgen_root / "genrec" / "default.yaml").is_file():
         raise SystemExit(f"MemGen-GR not found at {memgen_root}. Run `git submodule update --init` or set --memgen-root.")
     preset_file = REPO_ROOT / "configs" / "memgen" / args.model.lower() / f"{args.preset}.yaml"
+    checkpoint = str(Path(args.checkpoint).resolve())  # before changing into the MemGen-GR folder
     artifacts = Path(args.artifacts_dir).resolve()
     config = {
         "cache_dir": str(artifacts / "rpg" / "cache"),
@@ -124,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     pipeline = get_pipeline(args.model)(
         model_name=args.model,
         dataset_name="AmazonReviews2014",
-        checkpoint_path=str(Path(args.checkpoint).resolve()),
+        checkpoint_path=checkpoint,
         config_file=str(preset_file),
         config_dict=config,
     )
@@ -152,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         writer.writerows(rows)
     (session / "summary.json").write_text(json.dumps({
         "model": args.model,
-        "checkpoint_path": str(Path(args.checkpoint).resolve()),
+        "checkpoint_path": checkpoint,
         "category": pipeline.config.get("category"),
         "n_items": int(pipeline.raw_dataset.n_items) - 1,
         "cpu_threads": args.cpu_threads,

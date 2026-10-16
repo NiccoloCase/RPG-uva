@@ -118,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(f"Missing preset {preset_file}")
 
     artifacts = Path(args.artifacts_dir).resolve()
+    checkpoint = str(Path(args.checkpoint).resolve()) if args.checkpoint else None  # before changing directory
     run_id = f"memgen_{args.model.lower()}_{args.preset}_seed{args.seed}" + (f"_{args.run_tag}" if args.run_tag else "")
     config = {
         "cache_dir": str(artifacts / "rpg" / "cache"),
@@ -150,7 +151,7 @@ def main(argv: list[str] | None = None) -> int:
     pipeline = get_pipeline(args.model)(
         model_name=args.model,
         dataset_name="AmazonReviews2014",
-        checkpoint_path=args.checkpoint,
+        checkpoint_path=checkpoint,
         config_file=str(preset_file),
         config_dict=config,
     )

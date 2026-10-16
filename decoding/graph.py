@@ -82,8 +82,13 @@ def build_hnsw_adjacency(
         ef_search = max(topk + 1, 50)
     with torch.no_grad():
         token_embs = model.gpt2.wte.weight[1:-1]
-        token_ids = model.item_id2tokens[1:] - 1
-        item_embs = token_embs[token_ids.to(token_embs.device)].mean(dim=1)
+        token_ids = (model.item_id2tokens[1:] - 1).to(token_embs.device)
+        # Mean over the item's token embeddings, in chunks of items: gathering all
+        # items at once needs n_items x n_digit x hidden floats (39 GB on Books).
+        item_embs = torch.cat([
+            token_embs[token_ids[start:start + 8192]].mean(dim=1)
+            for start in range(0, token_ids.shape[0], 8192)
+        ])
         item_embs = torch.nn.functional.normalize(item_embs, dim=-1)
     item_embs_np = item_embs.detach().cpu().float().numpy()
 

@@ -23,6 +23,9 @@ Usage:
   python scripts/memgen/train.py --model TIGER --preset beauty --seed 2025
   python scripts/memgen/train.py --model SASRec --preset books --train_batch_size=32
 
+  python scripts/memgen/train.py --model SASRec --preset sports --eval-only \
+      --checkpoint artifacts/memgen/ckpt/<run>.pth --mask-history --run-tag removed
+
 Extra ``--key=value`` tokens are forwarded to MemGen-GR as config overrides.
 Test metrics are the ``Test Results`` line at the end of
 artifacts/memgen/logs/AmazonReviews2014/<model>/<run_id>-*.log.
@@ -52,6 +55,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--memgen-root", default=os.environ.get("MEMGEN_ROOT", str(DEFAULT_MEMGEN_ROOT)), help="MemGen-GR checkout.")
     parser.add_argument("--artifacts-dir", default=str(REPO_ROOT / "artifacts"), help="Root for cache/, memgen/ckpt, memgen/logs.")
     parser.add_argument("--fine-grained-eval", action="store_true", help="Keep MemGen-GR's memorisation/generalisation evaluation.")
+    parser.add_argument("--eval-only", action="store_true", help="Test --checkpoint without training (MemGen-GR always trains otherwise).")
+    parser.add_argument("--mask-history", action="store_true",
+                        help="SASRec only: remove the items of the input sequence from the ranking before the top 10 "
+                             "(the S3-Rec protocol). Default keeps them, as MemGen-GR does.")
     parser.add_argument("--dry-run", action="store_true", help="Print the resolved configuration and exit.")
     return parser
 
@@ -71,6 +78,22 @@ def parse_overrides(tokens: list[str]) -> dict:
     return overrides
 
 
+def _masked_sasrec_topk(model, batch, k):
+    """SASRec ``generate`` with the input items removed from the ranking.
+
+    Same logits as ``SASRec.generate`` (last position of the GPT-2 output);
+    the item ids present in the input sequence are set to -inf before the top-k.
+    """
+    import torch
+
+    model = getattr(model, "module", model)
+    outputs = model.gpt2(input_ids=batch["input_ids"], attention_mask=batch["attention_mask"])
+    logits = model.gather_index(outputs.logits, batch["seq_lens"] - 1)
+    seen = batch["input_ids"].masked_fill(batch["attention_mask"] == 0, 0)
+    logits = logits.scatter(1, seen, float("-inf"))
+    return logits.topk(k, dim=-1).indices.unsqueeze(-1)
+
+
 def plain_evaluate(self, dataloader, split="test", step=None, epoch=None):
     """MemGen-GR ``Trainer.evaluate`` without the fine-grained pattern statistics.
 
@@ -85,7 +108,9 @@ def plain_evaluate(self, dataloader, split="test", step=None, epoch=None):
     for batch in tqdm(dataloader, total=len(dataloader), desc=f"Eval - {split}"):
         with torch.no_grad():
             batch = {k: v.to(self.accelerator.device) for k, v in batch.items()}
-            if self.config["use_ddp"]:
+            if self.config.get("mask_history"):
+                all_preds, all_labels = _masked_sasrec_topk(self.model, batch, 10), batch["labels"]
+            elif self.config["use_ddp"]:
                 preds = self.model.module.generate(batch, n_return_sequences=10)
                 all_preds, all_labels = self.accelerator.gather_for_metrics((preds, batch["labels"]))
             else:
@@ -131,6 +156,14 @@ def main(argv: list[str] | None = None) -> int:
         "run_id": run_id,
     }
     config.update(parse_overrides(override_tokens))
+    if args.mask_history:
+        if args.model != "SASRec":
+            raise SystemExit("--mask-history is only defined for SASRec.")
+        if args.fine_grained_eval:
+            raise SystemExit("--mask-history needs the plain evaluation loop.")
+        config["mask_history"] = True
+    if args.eval_only and not args.checkpoint:
+        raise SystemExit("--eval-only needs --checkpoint.")
 
     if args.dry_run:
         print(f"memgen_root: {memgen_root}\npreset: {preset_file}\nconfig_dict: {config}")
@@ -155,7 +188,20 @@ def main(argv: list[str] | None = None) -> int:
         config_file=str(preset_file),
         config_dict=config,
     )
-    pipeline.run()
+    if args.eval_only:
+        from torch.utils.data import DataLoader
+
+        loader = DataLoader(
+            pipeline.tokenized_datasets["test"],
+            batch_size=pipeline.config["eval_batch_size"],
+            shuffle=False,
+            collate_fn=pipeline.tokenizer.collate_fn["test"],
+        )
+        pipeline.model, loader = pipeline.accelerator.prepare(pipeline.model, loader)
+        results = pipeline.trainer.evaluate(loader, split="test")
+        pipeline.log(f"Test Results: {results}")
+    else:
+        pipeline.run()
     return 0
 
 

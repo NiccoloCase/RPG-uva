@@ -92,6 +92,7 @@ The RPG settings are in `configs/rpg/repro/<dataset>.yaml` (released code) and
 | SASRec and parameter-matched SASRec, seeds 2024/2025/2026, each tested with past items removed and kept | `jobs/reproduction/sasrec/seeds/train_eval.sh` | `scripts/sasrec/train.py --mask_history {true,false}` |
 | SASRec multi-seed test and cold start | `jobs/reproduction/sasrec/eval_seeds/`, `jobs/reproduction/sasrec/cold_start/` | `scripts/sasrec/eval.py`, `scripts/sasrec/cold_start.py` |
 | SASRec with full-softmax loss and TIGER (MemGen-GR implementations), seeds 2024/2025/2026 | `jobs/baselines/memgen/train.sh SASRec sports "2024 2025 2026"` (Slurm), or `run_queue.sh` | `scripts/memgen/train.py` |
+| Full-softmax SASRec tested again with past items removed (evaluation only) | `jobs/baselines/memgen/eval_removed.sh` | `scripts/memgen/train.py --eval-only --mask-history` |
 | Parameter counts of RPG and the SASRec variants | | `scripts/results/count_model_params.py` |
 | RPG with and without the user's past items in the ranking (the SASRec protocol removes them) | | `scripts/rpg/history_masking.py` |
 

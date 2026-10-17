@@ -152,10 +152,6 @@ def normalize_config(config: dict[str, object], checkpoint_override: str | None)
     normalized["no_cuda"] = bool(normalized.get("no_cuda", False))
     normalized["val_metric"] = str(normalized.get("val_metric", "ndcg@20")).lower()
     normalized["mask_history"] = bool(normalized.get("mask_history", True))
-    normalized["loss_type"] = str(normalized.get("loss_type", "bce")).lower()
-    if normalized["loss_type"] not in {"bce", "ce", "sampled_ce"}:
-        raise ValueError(f"loss_type must be 'bce', 'ce' or 'sampled_ce', got {normalized['loss_type']!r}.")
-    normalized["n_negatives"] = int(normalized.get("n_negatives", 4096))
     val_max_users = normalized.get("val_max_users")
     normalized["val_max_users"] = None if val_max_users in (None, "") else int(val_max_users)
 

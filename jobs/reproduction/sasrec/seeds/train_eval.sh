@@ -21,7 +21,8 @@
 # Parameter-matched cells: sports_and_outdoors 326/2, beauty 540/3, toys_and_games 396/2, cds_and_vinyl 328/2.
 # Arguments: PRESET, DATASET, HIDDEN_SIZE, NUM_HIDDEN_LAYERS, SEEDS.
 # Env vars: RUN_PREFIX (default sasrec_<preset>_h<hidden>_L<layers>_e300_lr0p0003),
-#           CKPT_DIR (default artifacts/sasrec/ckpt/seeds), LR (default 0.0003).
+#           CKPT_DIR (default artifacts/sasrec/ckpt/seeds), LR (default 0.0003),
+#           EXTRA_ARGS (more config overrides for training, e.g. "--val_max_users 20000" on Books).
 # Test metrics: last line of artifacts/sasrec/logs/<run_id>_{removed,kept}.log
 
 set -euo pipefail
@@ -60,7 +61,7 @@ for seed in ${SEEDS}; do
   CHECKPOINT="${CKPT_DIR}/${RUN_ID}.pt"
   if [[ ! -f "${CHECKPOINT}" ]]; then
     runtime_stats_run python scripts/sasrec/train.py "${common[@]}" --epochs 300 --lr "${LR}" --seed "${seed}" \
-      --ckpt_dir "${CKPT_DIR}" --run_id "${RUN_ID}"
+      --ckpt_dir "${CKPT_DIR}" --run_id "${RUN_ID}" ${EXTRA_ARGS:-}
   fi
   for protocol in removed kept; do
     mask=true; [[ "${protocol}" == kept ]] && mask=false

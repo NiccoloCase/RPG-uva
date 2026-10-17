@@ -54,11 +54,7 @@ for dataset in ${DATASETS}; do
     books)  preset=books;               users=1000 ;;
     *) echo "ERROR: unknown dataset ${dataset}" >&2; exit 1 ;;
   esac
-  if [[ "${dataset}" == books ]]; then
-    sasrec_ckpt="artifacts/sasrec/ckpt/sasrec_audit_books_bce_h64_lr0p0003.pt"
-  else
-    sasrec_ckpt="artifacts/sasrec/ckpt/seeds/sasrec_${preset}_h64_L2_e300_lr0p0003_s2024.pt"
-  fi
+  sasrec_ckpt="artifacts/sasrec/ckpt/seeds/sasrec_${preset}_h64_L2_e300_lr0p0003_s2024.pt"
   runtime_stats_log "SASRec ${dataset}: ${sasrec_ckpt}"
   runtime_stats_run python scripts/sasrec/latency.py --preset "${preset}" --checkpoint "${sasrec_ckpt}" \
     --hidden_size 64 --max-users "${users}" "${timing[@]}"

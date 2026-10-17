@@ -146,7 +146,6 @@ def main(argv: list[str] | None = None) -> int:
         "dataset": args.data_name,
         "n_items": max_item,
         "hidden_size": args.hidden_size,
-        "loss_type": args.loss_type,
         "cpu_threads": cli.cpu_threads,
         "max_users": cli.max_users,
         "rows": rows,

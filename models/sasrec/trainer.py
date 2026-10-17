@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from collections import OrderedDict
 
 import numpy as np
@@ -67,59 +66,6 @@ class SASRecTrainer:
         ) / torch.sum(istarget)
         return loss
 
-    def full_softmax_cross_entropy(
-        self,
-        seq_out: torch.Tensor,
-        pos_ids: torch.Tensor,
-    ) -> torch.Tensor:
-        """Softmax cross-entropy over the whole catalogue at every target position.
-
-        The objective of the "modern" SASRec recipe: each position's hidden
-        state is scored against every item embedding and the next item is the
-        softmax target. Padding (id 0) and the unused mask id are excluded from
-        the softmax. Memory grows with positions x catalogue size, so this is
-        meant for catalogues up to tens of thousands of items.
-        """
-        target_mask = pos_ids.view(-1) > 0
-        hidden = seq_out.reshape(-1, seq_out.size(-1))[target_mask]
-        logits = torch.matmul(hidden, self.model.item_embeddings.weight.transpose(0, 1))
-        logits[:, 0] = float("-inf")
-        if 0 <= self.args.mask_id < logits.shape[1]:
-            logits[:, self.args.mask_id] = float("-inf")
-        return nn.functional.cross_entropy(logits, pos_ids.view(-1)[target_mask])
-
-    def sampled_softmax_cross_entropy(
-        self,
-        seq_out: torch.Tensor,
-        pos_ids: torch.Tensor,
-    ) -> torch.Tensor:
-        """Sampled estimate of the full-catalogue softmax cross-entropy.
-
-        For catalogues too large for ``full_softmax_cross_entropy``. Each batch
-        draws ``n_negatives`` items uniformly from the real items (ids
-        1..max_item), shared by all target positions. Every position is scored
-        against its target and these negatives; a negative equal to the target
-        is masked out. Negative logits get the logQ correction
-        ``log(n_items / n_negatives)``, so the sampled denominator is an
-        unbiased estimate of the full softmax denominator.
-        """
-        target_mask = pos_ids.view(-1) > 0
-        hidden = seq_out.reshape(-1, seq_out.size(-1))[target_mask]
-        targets = pos_ids.view(-1)[target_mask]
-        n_real_items = self.args.item_size - 2
-        n_negatives = self.args.n_negatives
-        negatives = torch.randint(1, n_real_items + 1, (n_negatives,), device=hidden.device)
-
-        embeddings = self.model.item_embeddings.weight
-        positive_logits = (hidden * embeddings[targets]).sum(-1, keepdim=True)
-        negative_logits = hidden @ embeddings[negatives].T
-        negative_logits = negative_logits + math.log(n_real_items / n_negatives)
-        negative_logits = negative_logits.masked_fill(negatives.unsqueeze(0) == targets.unsqueeze(1), float("-inf"))
-
-        logits = torch.cat([positive_logits, negative_logits], dim=1)
-        zeros = torch.zeros(logits.shape[0], dtype=torch.long, device=logits.device)
-        return nn.functional.cross_entropy(logits, zeros)
-
     def predict_full(self, seq_out: torch.Tensor) -> torch.Tensor:
         test_item_emb = self.model.item_embeddings.weight
         return torch.matmul(seq_out, test_item_emb.transpose(0, 1))
@@ -169,12 +115,7 @@ class SASRecTrainer:
                 batch = tuple(t.to(self.device) for t in batch)
                 _, input_ids, target_pos, target_neg, _ = batch
                 sequence_output = self.model(input_ids)
-                if self.args.loss_type == "ce":
-                    loss = self.full_softmax_cross_entropy(sequence_output, target_pos)
-                elif self.args.loss_type == "sampled_ce":
-                    loss = self.sampled_softmax_cross_entropy(sequence_output, target_pos)
-                else:
-                    loss = self.cross_entropy(sequence_output, target_pos, target_neg)
+                loss = self.cross_entropy(sequence_output, target_pos, target_neg)
                 self.optim.zero_grad()
                 loss.backward()
                 self.optim.step()

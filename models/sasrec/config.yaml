@@ -30,8 +30,5 @@ user_core: 5
 item_core: 5
 
 # Repo-owned options.
-loss_type: bce        # bce: one sampled negative per position (S3-Rec / original SASRec); ce: softmax over all items;
-                      # sampled_ce: softmax over the target plus n_negatives uniform items (for large catalogues)
-n_negatives: 4096     # negatives per batch for sampled_ce
 val_max_users: ~      # validate on a fixed random subset of this many users; None = all users
 mask_history: true     # remove the user's past items from the ranking at evaluation (S3-Rec protocol); RPG does not

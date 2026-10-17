@@ -56,7 +56,7 @@ paper. Place them under `artifacts/` with the layout used below.
 Run each job from its own folder. Jobs with an `#SBATCH` header run with
 `sbatch ./x.sh` on a Slurm cluster or `bash ./x.sh` on any machine. Jobs without
 one (`jobs/books/*.sh`, `jobs/latency/run_latency.sh`,
-`jobs/reproduction/rpg/decoding_variants/`, `jobs/baselines/memgen/run_queue.sh`)
+`jobs/reproduction/rpg/decoding_variants/`)
 were written for a shared GPU server: they take `GPU=<index>` and refuse a GPU
 that is already in use. On Slurm, wrap them, for example
 `sbatch -p gpu_a100 --gpus=1 --chdir=jobs/books --wrap "GPU=0 bash ./eval.sh"`.
@@ -90,8 +90,8 @@ The RPG settings are in `configs/rpg/repro/<dataset>.yaml` (released code) and
 | SASRec, S3-Rec recipe (BCE), original width 64 | `jobs/reproduction/sasrec/<dataset>/prepare_data.sh`, `train.sh`, `eval.sh` | `scripts/sasrec/prepare_data.py`, `scripts/sasrec/train.py` |
 | SASRec, parameter-matched to RPG (hidden size 326/540/396/328) with learning-rate and depth grids | `jobs/reproduction/sasrec/ablation_size/` | `scripts/sasrec/train.py`, `scripts/sasrec/find_best_ablation_checkpoint.py` |
 | SASRec and parameter-matched SASRec, seeds 2024/2025/2026, each tested with past items removed and kept | `jobs/reproduction/sasrec/seeds/train_eval.sh` | `scripts/sasrec/train.py --mask_history {true,false}` |
-| SASRec multi-seed test and cold start | `jobs/reproduction/sasrec/eval_seeds/`, `jobs/reproduction/sasrec/cold_start/` | `scripts/sasrec/eval.py`, `scripts/sasrec/cold_start.py` |
-| SASRec with full-softmax loss and TIGER (MemGen-GR implementations), seeds 2024/2025/2026 | `jobs/baselines/memgen/train.sh SASRec sports "2024 2025 2026"` (Slurm), or `run_queue.sh` | `scripts/memgen/train.py` |
+| SASRec cold start | `jobs/reproduction/sasrec/cold_start/` | `scripts/sasrec/cold_start.py` |
+| SASRec with full-softmax loss and TIGER (MemGen-GR implementations), seeds 2024/2025/2026 | `jobs/baselines/memgen/train.sh SASRec sports "2024 2025 2026"` | `scripts/memgen/train.py` |
 | Full-softmax SASRec tested again with past items removed (evaluation only) | `jobs/baselines/memgen/eval_removed.sh` | `scripts/memgen/train.py --eval-only --mask-history` |
 | Parameter counts of RPG and the SASRec variants | | `scripts/results/count_model_params.py` |
 | RPG with and without the user's past items in the ranking (the SASRec protocol removes them) | | `scripts/rpg/history_masking.py` |
@@ -127,11 +127,12 @@ embeddings (a different similarity from upstream, without self-loops).
 | Per-query latency, graph decoding vs exhaustive, GPU and CPU, batch 1/16/128 | `jobs/latency/run_latency.sh` (RPG), `jobs/latency/run_baselines.sh` (SASRec, full-softmax SASRec, TIGER) | `scripts/rpg/latency.py`, `scripts/sasrec/latency.py`, `scripts/memgen/latency.py` |
 | Graph construction time and memory, dense vs row-blocked | | `scripts/rpg/graph_build_timing.py` |
 | Inference time and memory with the item pool enlarged by dummy items (the original paper's experiment) | `jobs/reproduction/rpg/perf/` | `scripts/rpg/perf.py` |
-| SASRec on Books (BCE and sampled softmax, width 64) | `jobs/sasrec_audit/run_queue.sh` | `scripts/sasrec/train.py --loss_type {bce,sampled_ce}` |
+| Baselines on Books, one seed: SASRec (S3-Rec recipe, width 64) and full-softmax SASRec | `EXTRA_ARGS="--val_max_users 20000" sbatch jobs/reproduction/sasrec/seeds/train_eval.sh books Books 64 2 "2024"`, `sbatch jobs/baselines/memgen/train.sh SASRec books "2024"` | `scripts/sasrec/train.py`, `scripts/memgen/train.py` |
 
 Books settings: `configs/rpg/books.yaml` (the CDs settings, untuned),
 `configs/sasrec/books.yaml`, `configs/memgen/sasrec/books.yaml` (batch sizes
-reduced to fit 24 GB). Training uses `--train-only` because the upstream
+reduced to fit a 40 GB GPU, learning rate 3e-4, validation every epoch with
+patience 5). Training uses `--train-only` because the upstream
 end-of-training test builds the dense graph, which would need 504 GB on Books,
 and early-stops on a fixed 20,000-user validation subset.
 
@@ -142,8 +143,9 @@ and early-stops on a fixed 20,000-user validation subset.
 | `results/train_grid.csv`, `infer_grid.csv`, `decode_val_grid.csv`, `decode_val_selected.csv`, `decode_val_cluster.csv`, `decode_test_selected.csv`, `decode_test_confirm.csv`, `fig6_grid.csv` | `scripts/results/collect_grid.py` | RQ1 grids |
 | `results/redecode_compare.csv` | `scripts/results/collect_redecode.py` | RQ1 semantic ID length |
 | `results/sasrec_train_grid.csv` | `scripts/results/collect_grid.py` | RQ2 |
-| `results/sasrec_audit.csv` | `scripts/results/collect_sasrec_audit.py` | RQ2, RQ4 (Books) |
-| `results/decoding_variants_logs.csv` | `scripts/results/collect_memgen_rpg_logs.py` | RQ3 (HNSW runs of the second code base) |
+| `results/main_results.csv` | `scripts/results/collect_main.py` | RQ1, RQ2: every model, dataset, seed and protocol (Tables 2, 3) |
+| `results/decoding_variants.csv` | `scripts/results/collect_main.py` | RQ3: exhaustive vs exact graph vs HNSW graph (Table 4) |
+| `results/latency.csv` | `scripts/results/collect_main.py` | RQ4: ms per user, all models, GPU and CPU |
 | `results/books_scaling.csv` | `scripts/results/collect_books.py` | RQ4 |
 | `results/figures/*.pdf` | `scripts/results/plot_books_scaling.py` | RQ3 reachability, RQ4 budget and latency figures |
 | `results/tables/*.csv` | summaries of the multi-seed evaluation outputs (`artifacts/*/eval_seeds/*/summary.json`) and of the grids above | RQ1, RQ2 headline tables |
@@ -168,8 +170,14 @@ training logs.
   negative) in `models/sasrec`, at the original width and parameter-matched to
   RPG, and MemGen-GR's SASRec (GPT-2 blocks, full softmax over all items). On
   Books the full softmax does not fit at the default batch size, so MemGen-GR's
-  SASRec uses batch 64 and `models/sasrec` offers a sampled softmax
-  (4,096 uniform negatives, logQ correction).
+  SASRec uses batch 64 and learning rate 3e-4 (`configs/memgen/sasrec/books.yaml`).
+- All models are trained with seeds 2024, 2025 and 2026. Two TIGER runs did not
+  converge (Sports and CDs, seed 2025); Sports was rerun with seed 2027, and
+  `scripts/results/collect_main.py` flags both and leaves them out of the means.
+- MemGen-GR's evaluation keeps past items in the ranking;
+  `scripts/memgen/train.py --eval-only --mask-history` tests a SASRec checkpoint
+  with them removed, as in the S3-Rec code. Both RPG and MemGen-GR masks cover
+  the items in the model's input window (the last 50 interactions).
 - MemGen-GR's evaluation loop computes memorisation statistics per prediction in
   Python; `scripts/memgen/train.py` swaps in a plain loop with identical metrics.
 - The HNSW graph follows the second code base: FAISS `IndexHNSWFlat(d, 32)`,

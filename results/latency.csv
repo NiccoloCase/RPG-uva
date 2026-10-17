@@ -1,0 +1,109 @@
+model,dataset,n_codebook,device,batch_size,decoding,num_beams,n_edges,propagation_steps,ms_per_user,ndcg@10,source
+RPG,Books,32,cuda,1,exhaustive,,,,11.1451,0.02229,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,1,graph,20,500,5,14.381,0.00975,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,1,graph,200,2000,5,65.5035,0.01871,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,16,exhaustive,,,,1.1571,0.02269,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,16,graph,20,500,5,5.7012,0.0104,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,16,graph,200,2000,5,59.2664,0.01802,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,128,exhaustive,,,,0.6241,0.02264,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,128,graph,20,500,5,5.6463,0.00847,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cuda,128,graph,200,2000,5,56.2945,0.02246,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,1,exhaustive,,,,18.2223,0.02139,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,1,graph,20,500,5,20.0501,0.01011,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,1,graph,200,2000,5,98.372,0.01919,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,16,exhaustive,,,,11.6266,0.02175,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,16,graph,20,500,5,10.87,0.01043,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,16,graph,200,2000,5,91.7997,0.01949,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,128,exhaustive,,,,10.2774,0.02142,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,128,graph,20,500,5,10.1251,0.00873,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,32,cpu,128,graph,200,2000,5,84.1192,0.01848,artifacts/rpg/latency/Books_20261016T090535Z/summary.json
+RPG,Books,64,cuda,1,exhaustive,,,,14.9417,0.02668,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,1,graph,20,500,5,18.0397,0.00878,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,1,graph,200,2000,5,69.0224,0.02106,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,16,exhaustive,,,,1.8076,0.02751,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,16,graph,20,500,5,5.7865,0.01134,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,16,graph,200,2000,5,59.6605,0.02351,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,128,exhaustive,,,,1.1144,0.02973,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,128,graph,20,500,5,5.6394,0.01106,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cuda,128,graph,200,2000,5,56.9908,0.02452,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,1,exhaustive,,,,31.2952,0.02564,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,1,graph,20,500,5,25.9517,0.01217,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,1,graph,200,2000,5,121.7435,0.02136,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,16,exhaustive,,,,21.2017,0.02643,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,16,graph,20,500,5,12.4828,0.01254,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,16,graph,200,2000,5,107.7063,0.02202,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,128,exhaustive,,,,19.7458,0.02833,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,128,graph,20,500,5,11.1206,0.0119,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,Books,64,cpu,128,graph,200,2000,5,99.2343,0.02343,artifacts/rpg/latency/Books_20261016T094043Z/summary.json
+RPG,CDs_and_Vinyl,64,cuda,1,exhaustive,,,,13.3363,0.04596,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cuda,1,graph,20,500,5,18.6143,0.04383,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cuda,16,exhaustive,,,,0.9681,0.04545,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cuda,16,graph,20,500,5,6.5057,0.04252,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cuda,128,exhaustive,,,,0.3518,0.04754,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cuda,128,graph,20,500,5,6.7438,0.04444,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cpu,1,exhaustive,,,,19.7558,0.04596,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cpu,1,graph,20,500,5,27.0545,0.04407,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cpu,16,exhaustive,,,,6.4334,0.04545,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cpu,16,graph,20,500,5,13.5424,0.04353,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cpu,128,exhaustive,,,,5.2601,0.04754,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,CDs_and_Vinyl,64,cpu,128,graph,20,500,5,12.2458,0.04558,artifacts/rpg/latency/CDs_and_Vinyl_20261016T083558Z/summary.json
+RPG,Sports_and_Outdoors,16,cuda,1,exhaustive,,,,7.7553,0.02388,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cuda,1,graph,100,30,5,10.2549,0.02217,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cuda,16,exhaustive,,,,0.4883,0.02374,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cuda,16,graph,100,30,5,2.931,0.02332,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cuda,128,exhaustive,,,,0.1053,0.02361,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cuda,128,graph,100,30,5,2.768,0.02299,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cpu,1,exhaustive,,,,9.0374,0.02378,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cpu,1,graph,100,30,5,11.9809,0.0242,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cpu,16,exhaustive,,,,1.5746,0.02363,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cpu,16,graph,100,30,5,4.4301,0.02406,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cpu,128,exhaustive,,,,1.1129,0.02344,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+RPG,Sports_and_Outdoors,16,cpu,128,graph,100,30,5,4.0547,0.0238,artifacts/rpg/latency/Sports_and_Outdoors_20261016T082901Z/summary.json
+SASRec (full softmax),Books,,cuda,1,,,,,5.3129,0.01355,artifacts/memgen/latency/SASRec_Books_20261016T184827Z/summary.json
+SASRec (full softmax),Books,,cuda,16,,,,,0.4843,0.01379,artifacts/memgen/latency/SASRec_Books_20261016T184827Z/summary.json
+SASRec (full softmax),Books,,cuda,128,,,,,0.1879,0.01312,artifacts/memgen/latency/SASRec_Books_20261016T184827Z/summary.json
+SASRec (full softmax),Books,,cpu,1,,,,,15.658,0.01355,artifacts/memgen/latency/SASRec_Books_20261016T184827Z/summary.json
+SASRec (full softmax),Books,,cpu,16,,,,,5.1917,0.01379,artifacts/memgen/latency/SASRec_Books_20261016T184827Z/summary.json
+SASRec (full softmax),Books,,cpu,128,,,,,3.9917,0.01312,artifacts/memgen/latency/SASRec_Books_20261016T184827Z/summary.json
+SASRec (full softmax),CDs_and_Vinyl,,cuda,1,,,,,5.3771,0.04073,artifacts/memgen/latency/SASRec_CDs_and_Vinyl_20261016T183939Z/summary.json
+SASRec (full softmax),CDs_and_Vinyl,,cuda,16,,,,,0.3656,0.04005,artifacts/memgen/latency/SASRec_CDs_and_Vinyl_20261016T183939Z/summary.json
+SASRec (full softmax),CDs_and_Vinyl,,cuda,128,,,,,0.0695,0.04584,artifacts/memgen/latency/SASRec_CDs_and_Vinyl_20261016T183939Z/summary.json
+SASRec (full softmax),CDs_and_Vinyl,,cpu,1,,,,,5.6203,0.04073,artifacts/memgen/latency/SASRec_CDs_and_Vinyl_20261016T183939Z/summary.json
+SASRec (full softmax),CDs_and_Vinyl,,cpu,16,,,,,1.2157,0.04005,artifacts/memgen/latency/SASRec_CDs_and_Vinyl_20261016T183939Z/summary.json
+SASRec (full softmax),CDs_and_Vinyl,,cpu,128,,,,,0.713,0.04584,artifacts/memgen/latency/SASRec_CDs_and_Vinyl_20261016T183939Z/summary.json
+SASRec (full softmax),Sports_and_Outdoors,,cuda,1,,,,,5.4342,0.02343,artifacts/memgen/latency/SASRec_Sports_and_Outdoors_20261016T183321Z/summary.json
+SASRec (full softmax),Sports_and_Outdoors,,cuda,16,,,,,0.3469,0.02365,artifacts/memgen/latency/SASRec_Sports_and_Outdoors_20261016T183321Z/summary.json
+SASRec (full softmax),Sports_and_Outdoors,,cuda,128,,,,,0.0508,0.02588,artifacts/memgen/latency/SASRec_Sports_and_Outdoors_20261016T183321Z/summary.json
+SASRec (full softmax),Sports_and_Outdoors,,cpu,1,,,,,5.0881,0.02343,artifacts/memgen/latency/SASRec_Sports_and_Outdoors_20261016T183321Z/summary.json
+SASRec (full softmax),Sports_and_Outdoors,,cpu,16,,,,,0.6188,0.02365,artifacts/memgen/latency/SASRec_Sports_and_Outdoors_20261016T183321Z/summary.json
+SASRec (full softmax),Sports_and_Outdoors,,cpu,128,,,,,0.2425,0.02588,artifacts/memgen/latency/SASRec_Sports_and_Outdoors_20261016T183321Z/summary.json
+SASRec,Books,,cuda,1,,,,,1.4787,0.00999,artifacts/sasrec/latency/Books_20261016T184530Z/summary.json
+SASRec,Books,,cuda,16,,,,,0.104,0.00997,artifacts/sasrec/latency/Books_20261016T184530Z/summary.json
+SASRec,Books,,cuda,128,,,,,0.0238,0.01178,artifacts/sasrec/latency/Books_20261016T184530Z/summary.json
+SASRec,Books,,cpu,1,,,,,3.2461,0.00999,artifacts/sasrec/latency/Books_20261016T184530Z/summary.json
+SASRec,Books,,cpu,16,,,,,0.4956,0.00997,artifacts/sasrec/latency/Books_20261016T184530Z/summary.json
+SASRec,Books,,cpu,128,,,,,0.3058,0.01178,artifacts/sasrec/latency/Books_20261016T184530Z/summary.json
+SASRec,CDs_and_Vinyl,,cuda,1,,,,,1.4215,0.021,artifacts/sasrec/latency/CDs_and_Vinyl_20261016T183841Z/summary.json
+SASRec,CDs_and_Vinyl,,cuda,16,,,,,0.0928,0.02095,artifacts/sasrec/latency/CDs_and_Vinyl_20261016T183841Z/summary.json
+SASRec,CDs_and_Vinyl,,cuda,128,,,,,0.0147,0.02235,artifacts/sasrec/latency/CDs_and_Vinyl_20261016T183841Z/summary.json
+SASRec,CDs_and_Vinyl,,cpu,1,,,,,1.3288,0.021,artifacts/sasrec/latency/CDs_and_Vinyl_20261016T183841Z/summary.json
+SASRec,CDs_and_Vinyl,,cpu,16,,,,,0.1417,0.02095,artifacts/sasrec/latency/CDs_and_Vinyl_20261016T183841Z/summary.json
+SASRec,CDs_and_Vinyl,,cpu,128,,,,,0.0535,0.02235,artifacts/sasrec/latency/CDs_and_Vinyl_20261016T183841Z/summary.json
+SASRec,Sports_and_Outdoors,,cuda,1,,,,,1.3707,0.01634,artifacts/sasrec/latency/Sports_and_Outdoors_20261016T183236Z/summary.json
+SASRec,Sports_and_Outdoors,,cuda,16,,,,,0.091,0.01659,artifacts/sasrec/latency/Sports_and_Outdoors_20261016T183236Z/summary.json
+SASRec,Sports_and_Outdoors,,cuda,128,,,,,0.0128,0.01639,artifacts/sasrec/latency/Sports_and_Outdoors_20261016T183236Z/summary.json
+SASRec,Sports_and_Outdoors,,cpu,1,,,,,1.1342,0.01634,artifacts/sasrec/latency/Sports_and_Outdoors_20261016T183236Z/summary.json
+SASRec,Sports_and_Outdoors,,cpu,16,,,,,0.1092,0.01659,artifacts/sasrec/latency/Sports_and_Outdoors_20261016T183236Z/summary.json
+SASRec,Sports_and_Outdoors,,cpu,128,,,,,0.0355,0.01639,artifacts/sasrec/latency/Sports_and_Outdoors_20261016T183236Z/summary.json
+TIGER,CDs_and_Vinyl,,cuda,1,,,,,41.8666,0.0336,artifacts/memgen/latency/TIGER_CDs_and_Vinyl_20261016T184510Z/summary.json
+TIGER,CDs_and_Vinyl,,cuda,16,,,,,2.9836,0.03259,artifacts/memgen/latency/TIGER_CDs_and_Vinyl_20261016T184510Z/summary.json
+TIGER,CDs_and_Vinyl,,cuda,128,,,,,1.1623,0.03417,artifacts/memgen/latency/TIGER_CDs_and_Vinyl_20261016T184510Z/summary.json
+TIGER,CDs_and_Vinyl,,cpu,1,,,,,53.2591,0.0336,artifacts/memgen/latency/TIGER_CDs_and_Vinyl_20261016T184510Z/summary.json
+TIGER,CDs_and_Vinyl,,cpu,16,,,,,22.0403,0.03259,artifacts/memgen/latency/TIGER_CDs_and_Vinyl_20261016T184510Z/summary.json
+TIGER,CDs_and_Vinyl,,cpu,128,,,,,16.3999,0.03417,artifacts/memgen/latency/TIGER_CDs_and_Vinyl_20261016T184510Z/summary.json
+TIGER,Sports_and_Outdoors,,cuda,1,,,,,42.3553,0.02215,artifacts/memgen/latency/TIGER_Sports_and_Outdoors_20261016T183828Z/summary.json
+TIGER,Sports_and_Outdoors,,cuda,16,,,,,3.0138,0.0219,artifacts/memgen/latency/TIGER_Sports_and_Outdoors_20261016T183828Z/summary.json
+TIGER,Sports_and_Outdoors,,cuda,128,,,,,1.1626,0.02248,artifacts/memgen/latency/TIGER_Sports_and_Outdoors_20261016T183828Z/summary.json
+TIGER,Sports_and_Outdoors,,cpu,1,,,,,54.432,0.02215,artifacts/memgen/latency/TIGER_Sports_and_Outdoors_20261016T183828Z/summary.json
+TIGER,Sports_and_Outdoors,,cpu,16,,,,,22.3197,0.0219,artifacts/memgen/latency/TIGER_Sports_and_Outdoors_20261016T183828Z/summary.json
+TIGER,Sports_and_Outdoors,,cpu,128,,,,,16.7307,0.02248,artifacts/memgen/latency/TIGER_Sports_and_Outdoors_20261016T183828Z/summary.json

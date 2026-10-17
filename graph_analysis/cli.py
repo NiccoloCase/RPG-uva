@@ -6,7 +6,6 @@ import argparse
 
 from .dynamic import run_dynamic
 from .frontier_memory import run_frontier_memory
-from .inference_perf import run_inference_perf
 from .prepare import prepare_graph
 from .scoring import run_scoring
 
@@ -76,12 +75,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common_inputs(scoring_parser)
 
-    perf_parser = subparsers.add_parser(
-        "perf-inference",
-        help="Run no-trace inference timing for graph decoding vs brute-force scoring.",
-    )
-    add_common_inputs(perf_parser)
-
     return parser
 
 
@@ -100,7 +93,5 @@ def main(argv: list[str] | None = None) -> int:
         return run_frontier_memory(args)
     if args.command == "scoring":
         return run_scoring(args)
-    if args.command == "perf-inference":
-        return run_inference_perf(args)
     parser.error(f"Unsupported command: {args.command}")
     return 2

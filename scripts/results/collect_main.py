@@ -136,7 +136,7 @@ def decoding_variant_rows():
                 "decoding": variant,
                 "eval_seeds": len(summary.get("eval_seeds", [])),
                 **{m: round(metrics[m], 5) for m in METRICS},
-                "visited_items_per_user": round(metrics.get("n_visited_items", 0)),
+                "visited_items_per_user": round(statistics.mean(r["n_visited_items"] for r in summary["per_seed_summary"])) if variant != "exhaustive" else "",
                 "source": str(Path(sessions[-1]).relative_to(REPO_ROOT)),
             })
     return rows

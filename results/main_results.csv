@@ -83,6 +83,8 @@ SASRec (parameter-matched),CDs,2025,kept,,0.0163,0.0243,0.0327,0.0574,True,artif
 SASRec (parameter-matched),CDs,2025,removed,,0.0268,0.034,0.0417,0.0638,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2025_removed.log
 SASRec (parameter-matched),CDs,2026,kept,,0.0166,0.0243,0.0332,0.0569,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2026_kept.log
 SASRec (parameter-matched),CDs,2026,removed,,0.0273,0.0344,0.0422,0.0642,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2026_removed.log
+SASRec,Books,2024,kept,,0.0076,0.0112,0.0144,0.0256,True,artifacts/sasrec/logs/sasrec_books_h64_L2_e300_lr0p0003_s2024_kept.log
+SASRec,Books,2024,removed,,0.0115,0.0148,0.0177,0.0282,True,artifacts/sasrec/logs/sasrec_books_h64_L2_e300_lr0p0003_s2024_removed.log
 SASRec (full softmax),Sports,2024,kept,,0.01872,0.02368,0.02961,0.04506,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-34-b9251f.log
 SASRec (full softmax),Sports,2024,removed,,0.0228,0.02769,0.03273,0.04792,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2024_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-10-e9ec87.log
 SASRec (full softmax),Sports,2025,kept,,0.01856,0.02385,0.02857,0.04495,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-44-c02916.log

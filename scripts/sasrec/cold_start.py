@@ -157,6 +157,8 @@ def _mask_invalid_and_seen_items(
     batch_user_index: np.ndarray,
 ) -> None:
     rating_pred[:, 0] = -np.inf
+    if not getattr(args, "mask_history", True):  # --mask_history false keeps past items, as RPG does
+        return
     seen = args.train_matrix[batch_user_index].toarray() > 0
     rating_pred[:, : seen.shape[1]][seen] = -np.inf
 

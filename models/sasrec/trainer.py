@@ -135,7 +135,7 @@ class SASRecTrainer:
             }
 
         if not full_sort:
-            raise NotImplementedError("Only full-sort SASRec evaluation is supported in RPG-uva.")
+            raise NotImplementedError("Only full-sort SASRec evaluation is supported in this repository.")
 
         self.model.eval()
         pred_list = None

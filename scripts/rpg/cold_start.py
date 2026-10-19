@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""Cold-start evaluation of an RPG checkpoint: test NDCG@10 and Recall@10 of
+exhaustive scoring, grouped by how often the test item occurs in training
+(buckets 0-5, 6-10, 11-15, 16-20 as in the original paper).
+
+Usage:
+  python scripts/rpg/cold_start.py run --checkpoint <ckpt> --config configs/rpg/repro/<dataset>.yaml --output-dir <dir>
+  python scripts/rpg/cold_start.py plot --input <dir>/.../cold_start_summary.json --output fig.png
+"""
 
 from __future__ import annotations
 

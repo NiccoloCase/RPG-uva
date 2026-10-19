@@ -92,7 +92,7 @@ def _synchronize(device: torch.device) -> None:
 
 def _exhaustive_topk(model: Any, batch: dict[str, torch.Tensor], topk: int, chunk_size: int) -> torch.Tensor:
     from decoding.bruteforce import _chunked_topk_from_logits
-    from graph_analysis.dynamic_trace import compute_decoding_context
+    from decoding.trace import compute_decoding_context
 
     context = compute_decoding_context(model, batch)
     item_ids, _ = _chunked_topk_from_logits(

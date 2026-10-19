@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""Evaluate an RPG checkpoint on the test split with our decoders.
+
+--decoding graph uses graph-constrained decoding over a graph built by
+--graph-backend {dense,exact_gpu,hnsw}; --decoding exhaustive scores every item.
+Runs once per --eval-seeds value (the seed of the random initial beam) and
+writes summary.json (metrics per seed, mean, bootstrap CI, items visited) and
+optional per-user outputs to --output-dir/<session>/.
+
+Usage:
+  python scripts/rpg/eval_seeds.py --checkpoint <ckpt> --config configs/rpg/repro/beauty.yaml \
+      --decoding graph --graph-backend exact_gpu --eval-seeds 2024,2025,2026 --output-dir artifacts/rpg/eval_seeds/x
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Build and cache the decoding graphs for the enlarged Sports item pools (20k to 500k items with
+# dummy items), before profile_inference.sh. Settings: configs/rpg/perf/sports.yaml.
+#   cd jobs/reproduction/rpg/perf && sbatch ./build_graphs.sh [checkpoint]
 
 # Submit from jobs/reproduction/rpg/perf so these relative output paths resolve correctly.
 #SBATCH --job-name=rpg_perf_graphs

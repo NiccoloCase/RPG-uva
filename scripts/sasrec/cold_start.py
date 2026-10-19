@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""Cold-start evaluation of a SASRec checkpoint, same buckets and output format as
+scripts/rpg/cold_start.py.
+
+Usage:
+  python scripts/sasrec/cold_start.py run --checkpoint <ckpt> --preset beauty --dataset Beauty \
+      --hidden_size 64 --num_hidden_layers 2 --mask_history false --output-dir <dir>
+"""
 
 from __future__ import annotations
 

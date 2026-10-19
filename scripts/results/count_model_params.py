@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Print the number of trainable parameters of RPG and of the SASRec variants per
+dataset (used to set the hidden size of parameter-matched SASRec).
+
+Usage:
+  python scripts/results/count_model_params.py
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,7 @@
 #!/bin/bash
+# Train and test RPG on CDs with the released settings (configs/rpg/repro/cds_and_vinyl.yaml), seed 2024.
+#   cd jobs/reproduction/rpg/cds_and_vinyl && sbatch ./train.sh
+# Checkpoint: artifacts/rpg/ckpt/, log with the test metrics: artifacts/rpg/logs/AmazonReviews2014/RPG/
 
 # Submit from jobs/reproduction/rpg/cds_and_vinyl so these relative output paths resolve correctly.
 #SBATCH --partition=gpu_a100

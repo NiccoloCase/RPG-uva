@@ -44,7 +44,7 @@ def main(argv: list[str] | None = None) -> int:
     args, override_tokens = parser.parse_known_args(argv)
     ensure_submodule_available()
     from decoding.harness import EvaluationHarness
-    from graph_analysis.dynamic_trace import compute_decoding_context
+    from decoding.trace import compute_decoding_context
 
     harness = EvaluationHarness.build(
         checkpoint_path=args.checkpoint,

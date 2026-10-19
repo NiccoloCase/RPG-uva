@@ -1,4 +1,6 @@
 #!/bin/bash
+# Same as profile_inference.sh for exhaustive scoring (no graph).
+#   cd jobs/reproduction/rpg/perf && sbatch ./profile_bruteforce.sh [checkpoint]
 
 # Submit from jobs/reproduction/rpg/perf so these relative output paths resolve correctly.
 # This profiles exact no-graph RPG scoring over enlarged Sports candidate pools.

@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""Train and test SASRec with the S3-Rec recipe (models/sasrec: binary
+cross-entropy with one sampled negative). Settings: configs/sasrec/root.yaml,
+--preset configs/sasrec/<preset>.yaml, optional --config files and `--key value`
+overrides (hidden_size, num_hidden_layers, lr, epochs, seed, mask_history, ...).
+
+Usage:
+  python scripts/sasrec/train.py --preset beauty --dataset Beauty --hidden_size 64 --num_hidden_layers 2 --seed 2024
+  python scripts/sasrec/train.py --preset beauty --dataset Beauty --checkpoint <ckpt> --eval-only --mask_history false
+"""
 
 from __future__ import annotations
 

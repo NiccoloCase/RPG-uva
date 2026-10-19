@@ -40,7 +40,7 @@ from decoding.bruteforce import _chunked_topk_from_logits
 from decoding.config import build_repo_config_files, parse_override_args
 from decoding.graph import build_chunked_exact_adjacency
 from decoding.harness import EvaluationHarness
-from graph_analysis.dynamic_trace import compute_decoding_context, traced_generate
+from decoding.trace import compute_decoding_context, traced_generate
 from torch.utils.data import DataLoader
 
 parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)

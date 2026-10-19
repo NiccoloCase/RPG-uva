@@ -1,6 +1,8 @@
 [submodule "third_party"]
 	path = third_party/RPG_KDD2025
 	url = https://github.com/facebookresearch/RPG_KDD2025.git
+	ignore = untracked
 [submodule "MemGen-GR"]
 	path = third_party/MemGen-GR
 	url = https://github.com/Jamesding000/MemGen-GR.git
+	ignore = untracked

@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Convert the shared Amazon Reviews 2014 cache into the S3-Rec text format
+(one line per user: user id followed by the item ids in time order), 5-core.
+
+Usage:
+  python scripts/sasrec/prepare_data.py --dataset Beauty [--force]
+"""
 
 from __future__ import annotations
 

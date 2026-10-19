@@ -9,8 +9,8 @@ from typing import Any
 import torch
 from tqdm import tqdm
 
-from graph_analysis.dynamic_trace import compute_decoding_context
-from graph_analysis.candidates import rpg_candidate_scores
+from decoding.trace import compute_decoding_context
+from decoding.candidates import rpg_candidate_scores
 
 from .config import checkpoint_signature
 from .harness import EvaluationHarness

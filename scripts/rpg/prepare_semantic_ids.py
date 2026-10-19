@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""Build the semantic ID caches (OPQ over the item text embeddings) for a dataset
+with the upstream tokenizer, without training. Used for Books, whose
+embeddings come from scripts/rpg/embed_items.py.
+
+Usage:
+  python scripts/rpg/prepare_semantic_ids.py --preset books [--n_codebook 32]
+"""
 
 from __future__ import annotations
 

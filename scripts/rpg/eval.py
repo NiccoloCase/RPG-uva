@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Test an RPG checkpoint with the upstream evaluation (dense graph, released decoder).
+
+Usage:
+  python scripts/rpg/eval.py --checkpoint artifacts/rpg/ckpt/<file>.pth --preset sports_and_outdoors
+"""
 
 from __future__ import annotations
 

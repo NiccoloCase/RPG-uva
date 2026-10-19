@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""Train and test RPG with the upstream code, from the repository root.
+
+Loads configs/rpg/root.yaml, then --preset configs/rpg/repro/<preset>.yaml (or
+configs/rpg/books.yaml), then any --config files and `--key value` overrides.
+--train-only skips the end-of-training test (needed on Books, where the upstream
+test would build the dense N x N graph).
+
+Usage:
+  python scripts/rpg/train.py --preset sports_and_outdoors [--rand_seed 2025] [--run_id NAME]
+  python scripts/rpg/train.py --preset books --train-only
+"""
 
 from __future__ import annotations
 

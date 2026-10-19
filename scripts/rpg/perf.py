@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""Inference cost of RPG on item pools enlarged with dummy items (the scaling
+experiment of the original paper): graph decoding (`profile`) and exhaustive
+scoring (`brute-force`), with time and peak GPU memory per pool size.
+
+Usage:
+  python scripts/rpg/perf.py profile --checkpoint <ckpt> --config configs/rpg/perf/sports.yaml [--prepare-only]
+  python scripts/rpg/perf.py brute-force --checkpoint <ckpt> --config configs/rpg/perf/sports.yaml
+  python scripts/rpg/perf.py plot --input <session>/summaries/profile_summary.csv --output fig.png
+"""
 
 from __future__ import annotations
 

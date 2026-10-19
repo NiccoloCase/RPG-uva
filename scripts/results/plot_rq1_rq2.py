@@ -49,6 +49,14 @@ def _style(ax):
     ax.set_axisbelow(True)
 
 
+def _shared_xlabel(fig, axes, text):
+    """One x label for a row of panels, placed just below the lowest tick labels."""
+    fig.canvas.draw()
+    bottom = min(ax.get_tightbbox(fig.canvas.get_renderer()).y0 for ax in axes)
+    y = fig.transFigure.inverted().transform((0, bottom))[1]
+    fig.text(0.5, y - 0.02, text, ha="center", va="top", fontsize=7, color=INK)
+
+
 def plot_length():
     rows = list(csv.DictReader(open(REPO_ROOT / "results/redecode_compare.csv")))
     fig, axes = plt.subplots(1, 4, figsize=(4.8, 1.45))
@@ -62,12 +70,12 @@ def plot_length():
         ax.set_xticks(ms)
         ax.set_xticklabels([str(m) for m in ms])
         ax.set_title(name, color=INK)
-        ax.set_xlabel("$m$")
         _style(ax)
     axes[0].set_ylabel("NDCG@10")
     fig.tight_layout(w_pad=0.6)
+    _shared_xlabel(fig, axes, "semantic ID length $m$")
     for ext in ("pdf", "png"):
-        fig.savefig(OUT / f"semantic_id_length.{ext}", dpi=200)
+        fig.savefig(OUT / f"semantic_id_length.{ext}", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -98,14 +106,15 @@ def plot_cold_start():
             ax.plot(xs, list(means.values()), "-" + marker, color=color, markersize=3.5,
                     markeredgecolor="white", markeredgewidth=0.6, label=label)
             ax.set_xticks(xs)
-            ax.set_xticklabels([b.strip("[]").replace("0, 5", "0-5").replace(", ", "-") for b in means], fontsize=5.5)
+            ax.set_xticklabels([b.strip("[]").replace("0, 5", "0-5").replace(", ", "-") for b in means],
+                               fontsize=5.5, rotation=35, ha="right", rotation_mode="anchor")
         ax.set_title(name, color=INK)
-        ax.set_xlabel("training interactions")
         _style(ax)
     axes[0].set_ylabel("NDCG@10")
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.04))
     fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=0.6)
+    _shared_xlabel(fig, axes, "training interactions of the test item")
     for ext in ("pdf", "png"):
         fig.savefig(OUT / f"cold_start.{ext}", dpi=200, bbox_inches="tight")
     plt.close(fig)

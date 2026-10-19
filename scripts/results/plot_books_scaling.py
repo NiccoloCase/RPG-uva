@@ -4,7 +4,6 @@
 Reads the collected results and writes three figures to results/figures/,
 as PDF for the paper and PNG for previews:
 
-  reachability.pdf   per dataset, the share of the catalogue that graph
                      decoding scores and the share of the exhaustive top-10
                      hits it returns, at the released decoding settings.
                      Source: artifacts/rpg/verification/*.json
@@ -59,36 +58,21 @@ def _grid(ax):
     ax.set_axisbelow(True)
 
 
-def _save(fig, out_dir, name):
+def _shared_xlabel(fig, axes, text):
+    """One x label for a row of panels, placed just below the lowest tick labels."""
+    fig.canvas.draw()
+    bottom = min(ax.get_tightbbox(fig.canvas.get_renderer()).y0 for ax in axes)
+    y = fig.transFigure.inverted().transform((0, bottom))[1]
+    fig.text(0.5, y - 0.02, text, ha="center", va="top", fontsize=7, color=INK)
+
+
+def _save(fig, out_dir, name, fixed=False):
+    """fixed=True keeps the canvas size, so paired panels come out the same size."""
+    if fixed:
+        fig.tight_layout(pad=0.4)
     for ext in ("pdf", "png"):
-        fig.savefig(out_dir / f"{name}.{ext}", dpi=200, bbox_inches="tight")
+        fig.savefig(out_dir / f"{name}.{ext}", dpi=200, bbox_inches=None if fixed else "tight")
     plt.close(fig)
-
-
-def plot_reachability(out_dir: Path) -> None:
-    entries = [("sports", "Sports"), ("beauty", "Beauty"), ("toys", "Toys"), ("cds", "CDs"),
-               ("books_m32", "Books\n$m$=32"), ("books_m64", "Books\n$m$=64")]
-    data = []
-    for name, label in entries:
-        path = REPO_ROOT / "artifacts/rpg/verification" / f"{name}.json"
-        if path.is_file():
-            d = json.loads(path.read_text())
-            data.append((label, d["D_share_of_catalogue_visited"], d["D_of_exhaustive_hits_kept_by_graph"]))
-    fig, ax = plt.subplots(figsize=(3.4, 1.7))
-    width, gap = 0.36, 0.03
-    xs = list(range(len(data)))
-    ax.bar([x - width / 2 - gap / 2 for x in xs], [v for _, v, _ in data], width, color=CONTEXT, label="catalogue scored")
-    ax.bar([x + width / 2 + gap / 2 for x in xs], [k for _, _, k in data], width, color=BLUE, label="top-10 hits found")
-    for x, (_, _, k) in zip(xs, data):
-        ax.text(x + width / 2 + gap / 2, k + 0.02, f"{100 * k:.0f}%", ha="center", va="bottom", fontsize=6, color=INK)
-    ax.set_xticks(xs)
-    ax.set_xticklabels([label for label, _, _ in data], fontsize=6)
-    ax.set_ylim(0, 1.12)
-    ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0])
-    ax.set_yticklabels(["0", "25%", "50%", "75%", "100%"])
-    ax.legend(frameon=False, loc="upper right", ncol=2, bbox_to_anchor=(1.0, 1.14))
-    _grid(ax)
-    _save(fig, out_dir, "reachability")
 
 
 def plot_budget(out_dir: Path) -> None:
@@ -105,7 +89,7 @@ def plot_budget(out_dir: Path) -> None:
         exhaustive = [float(r["ndcg@10"]) for r in rows if r["run"] == run and r["decoding"] == "exhaustive"][0]
         ax.plot([x for x, _ in graph], [y for _, y in graph], "-" + marker, color=color, label=f"graph decoding, {label}", **MARK)
         ax.axhline(exhaustive, color=color, linestyle="--", linewidth=1.0)
-        ax.text(1.0, exhaustive, f" exhaustive, {label}", color=INK, fontsize=6, va="center", ha="left")
+        ax.text(0.01, exhaustive, f"exhaustive, {label}", color=INK, fontsize=6, va="bottom", ha="left")
     ax.set_xlim(0, 1.0)
     ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
     ax.set_xticklabels(["0", "25%", "50%", "75%", "100%"])
@@ -113,7 +97,7 @@ def plot_budget(out_dir: Path) -> None:
     ax.set_ylabel("NDCG@10")
     ax.legend(frameon=False, loc="lower right")
     _grid(ax)
-    _save(fig, out_dir, "books_budget")
+    _save(fig, out_dir, "books_budget", fixed=True)
 
 
 def plot_latency(out_dir: Path, books_digits: int) -> None:
@@ -154,12 +138,12 @@ def plot_latency(out_dir: Path, books_digits: int) -> None:
         ax.yaxis.set_major_locator(matplotlib.ticker.LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
         ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
         ax.set_title(f"{'GPU' if device == 'cuda' else 'CPU'}, batch {batch}", color=INK)
-        ax.set_xlabel("catalogue size")
         _grid(ax)
     axes[0].set_ylabel("ms per user")
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False, bbox_to_anchor=(0.5, 1.06))
     fig.tight_layout(rect=(0, 0, 1, 0.9), w_pad=0.5)
+    _shared_xlabel(fig, axes, "catalogue size")
     _save(fig, out_dir, "latency")
 
 
@@ -189,7 +173,7 @@ def plot_graph_memory(out_dir: Path) -> None:
     ax.set_ylabel("peak GPU memory (GB)")
     ax.legend(frameon=False, loc="upper left", bbox_to_anchor=(0.0, 1.02))
     _grid(ax)
-    _save(fig, out_dir, "graph_memory")
+    _save(fig, out_dir, "graph_memory", fixed=True)
 
 
 def main() -> int:
@@ -201,11 +185,10 @@ def main() -> int:
     if not out_dir.is_absolute():
         out_dir = REPO_ROOT / out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
-    plot_reachability(out_dir)
     plot_budget(out_dir)
     plot_latency(out_dir, args.books_digits)
     plot_graph_memory(out_dir)
-    for name in ("reachability.pdf", "books_budget.pdf", "latency.pdf", "graph_memory.pdf"):
+    for name in ("books_budget.pdf", "latency.pdf", "graph_memory.pdf"):
         print(out_dir / name)
     return 0
 

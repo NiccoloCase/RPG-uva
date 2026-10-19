@@ -1,4 +1,7 @@
 #!/bin/bash
+# Train and test RPG on Toys with the released settings (configs/rpg/repro/toys_and_games.yaml), seed 2024.
+#   cd jobs/reproduction/rpg/toys_and_games && sbatch ./train.sh
+# Checkpoint: artifacts/rpg/ckpt/, log with the test metrics: artifacts/rpg/logs/AmazonReviews2014/RPG/
 
 # Submit from jobs/reproduction/rpg/toys_and_games so these relative output paths resolve correctly.
 #SBATCH --partition=gpu_a100

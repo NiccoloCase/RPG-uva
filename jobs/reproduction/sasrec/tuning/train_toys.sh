@@ -1,0 +1,56 @@
+#!/bin/bash
+# Parameter-matched SASRec on Toys (hidden size 396, the size of RPG) with the default learning rate.
+#   cd jobs/reproduction/sasrec/tuning && sbatch ./train_toys.sh
+
+# Submit from jobs/reproduction/sasrec/tuning so these relative output paths resolve correctly.
+#SBATCH --partition=gpu_a100
+#SBATCH --job-name=sasrec_toys_size_train
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=18
+#SBATCH --mem=120G
+#SBATCH --time=48:00:00
+#SBATCH --gpus=1
+#SBATCH --output=../../../../output/reproduction/sasrec/ablation_size/%x-%j.out
+#SBATCH --error=../../../../output/reproduction/sasrec/ablation_size/%x-%j.err
+
+set -euo pipefail
+
+if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+  SCRIPT_DIR="$(cd "${SLURM_SUBMIT_DIR}" && pwd -P)"
+else
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  PWD_REAL="$(pwd -P)"
+  if [[ "${PWD_REAL}" != "${SCRIPT_DIR}" ]]; then
+    echo "ERROR: run this script from ${SCRIPT_DIR}" >&2
+    echo "Run:" >&2
+    echo "  cd ${SCRIPT_DIR}" >&2
+    echo "  bash ./train_toys.sh" >&2
+    exit 2
+  fi
+fi
+
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../../.." && pwd)"
+OUTPUT_DIR="${REPO_ROOT}/output/reproduction/sasrec/ablation_size"
+DATA_FILE="${REPO_ROOT}/artifacts/sasrec/data/Toys_and_Games/Toys_and_Games.txt"
+source "${REPO_ROOT}/jobs/lib/env.sh"
+repo_env_activate "${REPO_ROOT}"
+
+mkdir -p "${OUTPUT_DIR}"
+source "${REPO_ROOT}/jobs/lib/runtime_stats.sh"
+runtime_stats_init "${OUTPUT_DIR}" "sasrec_toys_size_train"
+runtime_stats_start_gpu_monitor
+trap runtime_stats_finish EXIT
+
+if [[ ! -f "${DATA_FILE}" ]]; then
+  echo "ERROR: missing SASRec data file: ${DATA_FILE}" >&2
+  exit 3
+fi
+
+cd "${REPO_ROOT}"
+
+runtime_stats_run python3 scripts/sasrec/train.py \
+  --preset toys_and_games \
+  --dataset Toys_and_Games \
+  --ckpt_dir artifacts/sasrec/ckpt/ablation_size \
+  --run_id sasrec_toys_and_games_size_match \
+  --hidden_size 396

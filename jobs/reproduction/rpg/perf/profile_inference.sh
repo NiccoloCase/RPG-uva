@@ -1,4 +1,8 @@
 #!/bin/bash
+# Inference time and GPU memory of graph decoding when the Sports item pool is enlarged with dummy
+# items (the scaling experiment of the original paper). Run build_graphs.sh first.
+#   cd jobs/reproduction/rpg/perf && sbatch ./profile_inference.sh [checkpoint]
+# Results: artifacts/rpg/perf/sports/<session>/summaries/profile_summary.csv
 
 # Submit from jobs/reproduction/rpg/perf so these relative output paths resolve correctly.
 #SBATCH --job-name=rpg_perf_profile

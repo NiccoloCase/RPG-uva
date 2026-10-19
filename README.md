@@ -40,8 +40,11 @@ OpenAI key in `configs/rpg/local.yaml` (copy `local.example.yaml`; git-ignored)
 and they are computed on first use. For Books, `jobs/books/prepare_semantic_ids.sh`
 embeds the 368k items (about 63M tokens).
 
-Our checkpoints and result files are available from the link in the paper.
-Unpack them into `artifacts/` and the collectors below reproduce every table.
+Our checkpoints and evaluation outputs are available at
+https://osf.io/hnmdu/overview?view_only=861c95035c114a25b73ca2b8b4b2ac0f
+(`rpg_repro_results.zip`, 9 MB, and `rpg_repro_checkpoints.zip`, 2.4 GB).
+Unzip them in the repository root; the collectors below then rebuild every
+table without a GPU. Each zip has a README listing its contents.
 
 ## Running the experiments
 

@@ -11,10 +11,10 @@
 #SBATCH --error=../../../../output/reproduction/sasrec/seeds/%x-%j.err
 
 # Train SASRec (S3-Rec recipe, BCE loss) for several seeds and test every
-# checkpoint under both evaluation protocols: past items removed from the
-# ranking (S3-Rec code, as during training) and past items kept (as RPG,
-# TIGER and full-softmax SASRec). Seeds whose checkpoint already exists are
-# only evaluated. Usage:
+# checkpoint with the user's past items kept in the ranking, as for RPG, TIGER
+# and full-softmax SASRec (the S3-Rec code removes them by default and still
+# does so for early stopping). Seeds whose checkpoint already exists are only
+# evaluated. Usage:
 #   cd jobs/reproduction/sasrec/seeds
 #   sbatch --job-name=sasrec_seeds_beauty_h64 ./train_eval.sh beauty Beauty 64 2 "2024 2025 2026"
 #   sbatch --job-name=sasrec_seeds_beauty_pm ./train_eval.sh beauty Beauty 540 3 "2024 2025 2026"
@@ -23,7 +23,7 @@
 # Env vars: RUN_PREFIX (default sasrec_<preset>_h<hidden>_L<layers>_e300_lr0p0003),
 #           CKPT_DIR (default artifacts/sasrec/ckpt/seeds), LR (default 0.0003),
 #           EXTRA_ARGS (more config overrides for training, e.g. "--val_max_users 20000" on Books).
-# Test metrics: last line of artifacts/sasrec/logs/<run_id>_{removed,kept}.log
+# Test metrics: last line of artifacts/sasrec/logs/<run_id>_kept.log
 
 set -euo pipefail
 
@@ -63,10 +63,7 @@ for seed in ${SEEDS}; do
     runtime_stats_run python scripts/sasrec/train.py "${common[@]}" --epochs 300 --lr "${LR}" --seed "${seed}" \
       --ckpt_dir "${CKPT_DIR}" --run_id "${RUN_ID}" ${EXTRA_ARGS:-}
   fi
-  for protocol in removed kept; do
-    mask=true; [[ "${protocol}" == kept ]] && mask=false
-    runtime_stats_run python scripts/sasrec/train.py "${common[@]}" --eval-only --checkpoint "${CHECKPOINT}" \
-      --mask_history "${mask}" --run_id "${RUN_ID}_${protocol}"
-  done
+  runtime_stats_run python scripts/sasrec/train.py "${common[@]}" --eval-only --checkpoint "${CHECKPOINT}" \
+    --mask_history false --run_id "${RUN_ID}_kept"
 done
 echo "SASREC_SEEDS_DONE"

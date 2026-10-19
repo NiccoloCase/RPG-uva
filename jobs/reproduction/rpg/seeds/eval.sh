@@ -12,15 +12,13 @@
 
 # Evaluate the RPG checkpoints of every dataset and training seed the same way:
 # graph-constrained decoding with the released settings (exact graph built in
-# row blocks), one fixed evaluation seed, all test users; then exhaustive
-# scoring with past items kept and removed (scripts/rpg/history_masking.py).
+# row blocks), one fixed evaluation seed, all test users.
 #   cd jobs/reproduction/rpg/seeds && sbatch ./eval.sh
 # Env vars: DATASETS (default: the four paper datasets), SEEDS (2024 2025 2026),
 #           EVAL_SEED (2024).
 # Checkpoints: seed 2024 is rpg_loss_token_ce_<dataset>-*, other seeds
 # rpg_loss_token_ce_<dataset>_s<seed>-* or rpg_repro_<dataset>_s<seed>-* (newest match).
 # Results: artifacts/rpg/eval_seeds/seeds/<dataset>/s<seed>/<session>/summary.json
-#          artifacts/rpg/history_masking/<dataset>_s<seed>.json
 
 set -uo pipefail
 
@@ -63,8 +61,6 @@ for dataset in ${DATASETS}; do
       --config "configs/rpg/repro/${dataset}.yaml" --no-local-config \
       --decoding graph --graph-backend exact_gpu --eval-seeds "${EVAL_SEED}" \
       --output-dir "artifacts/rpg/eval_seeds/seeds/${dataset}/s${seed}" --no-per-user-output
-    runtime_stats_run python scripts/rpg/history_masking.py --name "${dataset}_s${seed}" \
-      --checkpoint "${checkpoint}" --config "configs/rpg/repro/${dataset}.yaml"
   done
 done
 echo "RPG_SEEDS_EVAL_DONE"

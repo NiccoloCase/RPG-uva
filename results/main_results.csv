@@ -1,125 +1,64 @@
-model,dataset,seed,protocol,decoding,ndcg@5,ndcg@10,recall@5,recall@10,converged,source
-RPG,Sports,2024,kept,graph,0.02046,0.02503,0.02972,0.04396,True,artifacts/rpg/eval_seeds/seeds/sports_and_outdoors/s2024/20261016T173614996203Z_job28127791/summary.json
-RPG,Sports,2024,kept,exhaustive,,0.02563,,0.04503,True,artifacts/rpg/history_masking/sports_and_outdoors_s2024.json
-RPG,Sports,2024,removed,exhaustive,,0.02757,,0.04725,True,artifacts/rpg/history_masking/sports_and_outdoors_s2024.json
-RPG,Sports,2025,kept,graph,0.01966,0.02459,0.02848,0.04382,True,artifacts/rpg/eval_seeds/seeds/sports_and_outdoors/s2025/20261016T174018157136Z_job28127791/summary.json
-RPG,Sports,2025,kept,exhaustive,,0.02473,,0.04413,True,artifacts/rpg/history_masking/sports_and_outdoors_s2025.json
-RPG,Sports,2025,removed,exhaustive,,0.02688,,0.0468,True,artifacts/rpg/history_masking/sports_and_outdoors_s2025.json
-RPG,Sports,2026,kept,graph,0.02052,0.02541,0.03051,0.04587,True,artifacts/rpg/eval_seeds/seeds/sports_and_outdoors/s2026/20261016T174419062036Z_job28127791/summary.json
-RPG,Sports,2026,kept,exhaustive,,0.02552,,0.04618,True,artifacts/rpg/history_masking/sports_and_outdoors_s2026.json
-RPG,Sports,2026,removed,exhaustive,,0.02762,,0.04894,True,artifacts/rpg/history_masking/sports_and_outdoors_s2026.json
-RPG,Beauty,2024,kept,graph,0.03824,0.04658,0.05558,0.08161,True,artifacts/rpg/eval_seeds/seeds/beauty/s2024/20261016T174713753692Z_job28127791/summary.json
-RPG,Beauty,2024,kept,exhaustive,,0.04651,,0.08147,True,artifacts/rpg/history_masking/beauty_s2024.json
-RPG,Beauty,2024,removed,exhaustive,,0.05175,,0.08639,True,artifacts/rpg/history_masking/beauty_s2024.json
-RPG,Beauty,2025,kept,graph,0.03849,0.04723,0.05599,0.08299,True,artifacts/rpg/eval_seeds/seeds/beauty/s2025/20261016T174943617638Z_job28127791/summary.json
-RPG,Beauty,2025,kept,exhaustive,,0.04739,,0.08317,True,artifacts/rpg/history_masking/beauty_s2025.json
-RPG,Beauty,2025,removed,exhaustive,,0.05271,,0.08863,True,artifacts/rpg/history_masking/beauty_s2025.json
-RPG,Beauty,2026,kept,graph,0.03652,0.04497,0.05357,0.07982,True,artifacts/rpg/eval_seeds/seeds/beauty/s2026/20261016T175214551705Z_job28127791/summary.json
-RPG,Beauty,2026,kept,exhaustive,,0.04516,,0.08031,True,artifacts/rpg/history_masking/beauty_s2026.json
-RPG,Beauty,2026,removed,exhaustive,,0.05083,,0.08671,True,artifacts/rpg/history_masking/beauty_s2026.json
-RPG,Toys,2024,kept,graph,0.03913,0.04859,0.05919,0.08881,True,artifacts/rpg/eval_seeds/seeds/toys_and_games/s2024/20261016T175430661664Z_job28127791/summary.json
-RPG,Toys,2024,kept,exhaustive,,0.04884,,0.08902,True,artifacts/rpg/history_masking/toys_and_games_s2024.json
-RPG,Toys,2024,removed,exhaustive,,0.05584,,0.09556,True,artifacts/rpg/history_masking/toys_and_games_s2024.json
-RPG,Toys,2025,kept,graph,0.03843,0.0474,0.05661,0.08459,True,artifacts/rpg/eval_seeds/seeds/toys_and_games/s2025/20261016T175639039409Z_job28127791/summary.json
-RPG,Toys,2025,kept,exhaustive,,0.04779,,0.08557,True,artifacts/rpg/history_masking/toys_and_games_s2025.json
-RPG,Toys,2025,removed,exhaustive,,0.0542,,0.09221,True,artifacts/rpg/history_masking/toys_and_games_s2025.json
-RPG,Toys,2026,kept,graph,0.03986,0.04869,0.05842,0.08582,True,artifacts/rpg/eval_seeds/seeds/toys_and_games/s2026/20261016T175846737546Z_job28127791/summary.json
-RPG,Toys,2026,kept,exhaustive,,0.04878,,0.08608,True,artifacts/rpg/history_masking/toys_and_games_s2026.json
-RPG,Toys,2026,removed,exhaustive,,0.05521,,0.09257,True,artifacts/rpg/history_masking/toys_and_games_s2026.json
-RPG,CDs,2024,kept,graph,0.03345,0.04084,0.04916,0.07211,True,artifacts/rpg/eval_seeds/seeds/cds_and_vinyl/s2024/20261016T181030197354Z_job28127791/summary.json
-RPG,CDs,2024,kept,exhaustive,,0.04202,,0.07389,True,artifacts/rpg/history_masking/cds_and_vinyl_s2024.json
-RPG,CDs,2024,removed,exhaustive,,0.04732,,0.08022,True,artifacts/rpg/history_masking/cds_and_vinyl_s2024.json
-RPG,CDs,2025,kept,graph,0.03338,0.04066,0.04896,0.07159,True,artifacts/rpg/eval_seeds/seeds/cds_and_vinyl/s2025/20261016T182409748366Z_job28127791/summary.json
-RPG,CDs,2025,kept,exhaustive,,0.04195,,0.07369,True,artifacts/rpg/history_masking/cds_and_vinyl_s2025.json
-RPG,CDs,2025,removed,exhaustive,,0.04724,,0.07999,True,artifacts/rpg/history_masking/cds_and_vinyl_s2025.json
-RPG,CDs,2026,kept,graph,0.03302,0.04048,0.04825,0.07145,True,artifacts/rpg/eval_seeds/seeds/cds_and_vinyl/s2026/20261016T183752155762Z_job28127791/summary.json
-RPG,CDs,2026,kept,exhaustive,,0.04182,,0.07369,True,artifacts/rpg/history_masking/cds_and_vinyl_s2026.json
-RPG,CDs,2026,removed,exhaustive,,0.04701,,0.07978,True,artifacts/rpg/history_masking/cds_and_vinyl_s2026.json
-SASRec,Sports,2024,kept,,0.0106,0.0147,0.0207,0.0335,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2024_kept.log
-SASRec,Sports,2024,removed,,0.0162,0.0199,0.0247,0.0364,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2024_removed.log
-SASRec,Sports,2025,kept,,0.0103,0.0147,0.0202,0.0338,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2025_kept.log
-SASRec,Sports,2025,removed,,0.0158,0.0199,0.0242,0.0369,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2025_removed.log
-SASRec,Sports,2026,kept,,0.0086,0.0136,0.0167,0.0321,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2026_kept.log
-SASRec,Sports,2026,removed,,0.0134,0.0175,0.0219,0.0348,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2026_removed.log
-SASRec (parameter-matched),Sports,2024,kept,,0.0115,0.0165,0.0227,0.0382,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2024_kept.log
-SASRec (parameter-matched),Sports,2024,removed,,0.0184,0.0227,0.0282,0.0415,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2024_removed.log
-SASRec (parameter-matched),Sports,2025,kept,,0.0119,0.0166,0.0234,0.038,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2025_kept.log
-SASRec (parameter-matched),Sports,2025,removed,,0.0185,0.0229,0.0275,0.0412,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2025_removed.log
-SASRec (parameter-matched),Sports,2026,kept,,0.0114,0.0159,0.0227,0.0364,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2026_kept.log
-SASRec (parameter-matched),Sports,2026,removed,,0.0176,0.0219,0.0268,0.04,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2026_removed.log
-SASRec,Beauty,2024,kept,,0.0164,0.0243,0.0315,0.0561,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2024_kept.log
-SASRec,Beauty,2024,removed,,0.0272,0.0352,0.0413,0.0662,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2024_removed.log
-SASRec,Beauty,2025,kept,,0.0156,0.0229,0.0299,0.0526,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2025_kept.log
-SASRec,Beauty,2025,removed,,0.0251,0.0324,0.0393,0.0621,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2025_removed.log
-SASRec,Beauty,2026,kept,,0.0153,0.023,0.0294,0.0533,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2026_kept.log
-SASRec,Beauty,2026,removed,,0.0248,0.032,0.0392,0.0617,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2026_removed.log
-SASRec (parameter-matched),Beauty,2024,kept,,0.0207,0.0295,0.0402,0.0673,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2024_kept.log
-SASRec (parameter-matched),Beauty,2024,removed,,0.0356,0.043,0.0518,0.0747,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2024_removed.log
-SASRec (parameter-matched),Beauty,2025,kept,,0.0217,0.0303,0.0418,0.0686,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2025_kept.log
-SASRec (parameter-matched),Beauty,2025,removed,,0.0368,0.0446,0.053,0.0773,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2025_removed.log
-SASRec (parameter-matched),Beauty,2026,kept,,0.0204,0.0289,0.0402,0.0664,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2026_kept.log
-SASRec (parameter-matched),Beauty,2026,removed,,0.0343,0.042,0.051,0.075,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2026_removed.log
-SASRec,Toys,2024,kept,,0.0212,0.0297,0.0417,0.0678,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2024_kept.log
-SASRec,Toys,2024,removed,,0.0348,0.0421,0.0518,0.0744,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2024_removed.log
-SASRec,Toys,2025,kept,,0.0214,0.0294,0.0421,0.0672,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2025_kept.log
-SASRec,Toys,2025,removed,,0.0346,0.0417,0.0503,0.0721,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2025_removed.log
-SASRec,Toys,2026,kept,,0.0202,0.0287,0.0396,0.0659,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2026_kept.log
-SASRec,Toys,2026,removed,,0.0325,0.0404,0.0489,0.0734,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2026_removed.log
-SASRec (parameter-matched),Toys,2024,kept,,0.0269,0.0346,0.0536,0.0776,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2024_kept.log
-SASRec (parameter-matched),Toys,2024,removed,,0.0433,0.05,0.062,0.0831,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2024_removed.log
-SASRec (parameter-matched),Toys,2025,kept,,0.0259,0.0345,0.0513,0.0777,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2025_kept.log
-SASRec (parameter-matched),Toys,2025,removed,,0.0425,0.0499,0.061,0.0839,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2025_removed.log
-SASRec (parameter-matched),Toys,2026,kept,,0.0257,0.0344,0.0506,0.0775,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2026_kept.log
-SASRec (parameter-matched),Toys,2026,removed,,0.0425,0.05,0.061,0.0842,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2026_removed.log
-SASRec,CDs,2024,kept,,0.0137,0.0206,0.0269,0.0482,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2024_kept.log
-SASRec,CDs,2024,removed,,0.0223,0.0287,0.0345,0.0543,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2024_removed.log
-SASRec,CDs,2025,kept,,0.0131,0.02,0.0259,0.0474,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2025_kept.log
-SASRec,CDs,2025,removed,,0.0213,0.0276,0.0335,0.0533,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2025_removed.log
-SASRec,CDs,2026,kept,,0.013,0.0195,0.0255,0.0458,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2026_kept.log
-SASRec,CDs,2026,removed,,0.0207,0.0271,0.0322,0.0522,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2026_removed.log
-SASRec (parameter-matched),CDs,2024,kept,,0.0168,0.0246,0.0336,0.0577,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2024_kept.log
-SASRec (parameter-matched),CDs,2024,removed,,0.0274,0.0346,0.0425,0.0649,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2024_removed.log
-SASRec (parameter-matched),CDs,2025,kept,,0.0163,0.0243,0.0327,0.0574,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2025_kept.log
-SASRec (parameter-matched),CDs,2025,removed,,0.0268,0.034,0.0417,0.0638,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2025_removed.log
-SASRec (parameter-matched),CDs,2026,kept,,0.0166,0.0243,0.0332,0.0569,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2026_kept.log
-SASRec (parameter-matched),CDs,2026,removed,,0.0273,0.0344,0.0422,0.0642,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2026_removed.log
-SASRec,Books,2024,kept,,0.0076,0.0112,0.0144,0.0256,True,artifacts/sasrec/logs/sasrec_books_h64_L2_e300_lr0p0003_s2024_kept.log
-SASRec,Books,2024,removed,,0.0115,0.0148,0.0177,0.0282,True,artifacts/sasrec/logs/sasrec_books_h64_L2_e300_lr0p0003_s2024_removed.log
-SASRec (full softmax),Sports,2024,kept,,0.01872,0.02368,0.02961,0.04506,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-34-b9251f.log
-SASRec (full softmax),Sports,2024,removed,,0.0228,0.02769,0.03273,0.04792,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2024_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-10-e9ec87.log
-SASRec (full softmax),Sports,2025,kept,,0.01856,0.02385,0.02857,0.04495,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-44-c02916.log
-SASRec (full softmax),Sports,2025,removed,,0.02258,0.02742,0.03304,0.04804,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2025_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-11-7a4590.log
-SASRec (full softmax),Sports,2026,kept,,0.01822,0.02346,0.02818,0.04447,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2026-AmazonReviews2014_SASRec_default-Oct-15-2026_23-54-f6ab94.log
-SASRec (full softmax),Sports,2026,removed,,0.02252,0.02749,0.03219,0.04773,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2026_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-11-c7ca82.log
-TIGER,Sports,2024,kept,,0.01684,0.02204,0.02638,0.04261,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-44-afb77d.log
-TIGER,Sports,2025,kept,,0.00423,0.0052,0.0066,0.00961,False,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_03-46-94aa16.log
-TIGER,Sports,2026,kept,,0.01735,0.02245,0.02607,0.04194,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_04-28-c547c2.log
-TIGER,Sports,2027,kept,,0.01595,0.02076,0.02464,0.03964,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2027-AmazonReviews2014_TIGER_default-Oct-16-2026_08-36-7d516e.log
-SASRec (full softmax),Beauty,2024,kept,,0.03479,0.04213,0.05147,0.0741,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-35-c8b34f.log
-SASRec (full softmax),Beauty,2024,removed,,0.04227,0.04955,0.05876,0.08138,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2024_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-12-b7dccf.log
-SASRec (full softmax),Beauty,2025,kept,,0.03545,0.0437,0.05245,0.07808,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-43-58ce0f.log
-SASRec (full softmax),Beauty,2025,removed,,0.04334,0.05135,0.06028,0.08505,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2025_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-12-3e60f3.log
-SASRec (full softmax),Beauty,2026,kept,,0.03427,0.04198,0.04981,0.0736,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2026-AmazonReviews2014_SASRec_default-Oct-15-2026_23-52-551fb7.log
-SASRec (full softmax),Beauty,2026,removed,,0.04123,0.0488,0.0571,0.08062,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2026_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-12-528d98.log
-TIGER,Beauty,2024,kept,,0.02922,0.03668,0.044,0.06716,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_beauty_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-44-f16dd6.log
-TIGER,Beauty,2025,kept,,0.02795,0.03565,0.04257,0.06667,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_beauty_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_02-40-2ad545.log
-TIGER,Beauty,2026,kept,,0.03118,0.03903,0.04615,0.07061,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_beauty_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_04-19-6f44a4.log
-SASRec (full softmax),Toys,2024,kept,,0.04145,0.0491,0.06022,0.08402,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-35-17efe8.log
-SASRec (full softmax),Toys,2024,removed,,0.05064,0.05773,0.06784,0.08979,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2024_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-13-49cbc6.log
-SASRec (full softmax),Toys,2025,kept,,0.04065,0.04823,0.05826,0.08186,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-43-840a3d.log
-SASRec (full softmax),Toys,2025,removed,,0.04816,0.05557,0.06517,0.08824,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2025_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-13-0374cd.log
-SASRec (full softmax),Toys,2026,kept,,0.04078,0.04881,0.05868,0.08351,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2026-AmazonReviews2014_SASRec_default-Oct-15-2026_23-51-84db99.log
-SASRec (full softmax),Toys,2026,removed,,0.04877,0.05565,0.06717,0.0885,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2026_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-13-f52327.log
-TIGER,Toys,2024,kept,,0.02921,0.037,0.04518,0.06949,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_toys_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-47-cddc41.log
-TIGER,Toys,2025,kept,,0.02664,0.03483,0.04111,0.06656,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_toys_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_02-16-6cd0b9.log
-TIGER,Toys,2026,kept,,0.02726,0.03569,0.04286,0.06913,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_toys_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_03-56-903303.log
-SASRec (full softmax),CDs,2024,kept,,0.03194,0.04115,0.05029,0.07897,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-36-9eea6a.log
-SASRec (full softmax),CDs,2024,removed,,0.04203,0.05125,0.06189,0.09057,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2024_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-14-f35742.log
-SASRec (full softmax),CDs,2025,kept,,0.03161,0.04113,0.04984,0.07939,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2025-AmazonReviews2014_SASRec_default-Oct-16-2026_01-28-d1a730.log
-SASRec (full softmax),CDs,2025,removed,,0.0422,0.05134,0.06232,0.09075,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2025_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-15-9b2829.log
-SASRec (full softmax),CDs,2026,kept,,0.0313,0.04102,0.04964,0.07989,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2026-AmazonReviews2014_SASRec_default-Oct-16-2026_03-10-a41272.log
-SASRec (full softmax),CDs,2026,removed,,0.04189,0.05148,0.06185,0.09171,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2026_removed-AmazonReviews2014_SASRec_default-Oct-16-2026_21-16-571503.log
-TIGER,CDs,2024,kept,,0.02516,0.03243,0.03896,0.06159,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_cds_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-47-d395ae.log
-TIGER,CDs,2025,kept,,0.01083,0.0145,0.01701,0.02838,False,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_cds_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_20-52-5e2af5.log
-TIGER,CDs,2026,kept,,0.02703,0.03433,0.04148,0.06418,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_cds_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_08-36-61e9fc.log
-SASRec (full softmax),Books,2024,kept,,0.01919,0.02377,0.02901,0.04329,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_books_seed2024-AmazonReviews2014_SASRec_default-Oct-16-2026_15-41-796ea3.log
+model,dataset,seed,decoding,ndcg@5,ndcg@10,recall@5,recall@10,converged,source
+RPG,Sports,2024,graph,0.02046,0.02503,0.02972,0.04396,True,artifacts/rpg/eval_seeds/seeds/sports_and_outdoors/s2024/20261016T173614996203Z_job28127791/summary.json
+RPG,Sports,2025,graph,0.01966,0.02459,0.02848,0.04382,True,artifacts/rpg/eval_seeds/seeds/sports_and_outdoors/s2025/20261016T174018157136Z_job28127791/summary.json
+RPG,Sports,2026,graph,0.02052,0.02541,0.03051,0.04587,True,artifacts/rpg/eval_seeds/seeds/sports_and_outdoors/s2026/20261016T174419062036Z_job28127791/summary.json
+RPG,Beauty,2024,graph,0.03824,0.04658,0.05558,0.08161,True,artifacts/rpg/eval_seeds/seeds/beauty/s2024/20261016T174713753692Z_job28127791/summary.json
+RPG,Beauty,2025,graph,0.03849,0.04723,0.05599,0.08299,True,artifacts/rpg/eval_seeds/seeds/beauty/s2025/20261016T174943617638Z_job28127791/summary.json
+RPG,Beauty,2026,graph,0.03652,0.04497,0.05357,0.07982,True,artifacts/rpg/eval_seeds/seeds/beauty/s2026/20261016T175214551705Z_job28127791/summary.json
+RPG,Toys,2024,graph,0.03913,0.04859,0.05919,0.08881,True,artifacts/rpg/eval_seeds/seeds/toys_and_games/s2024/20261016T175430661664Z_job28127791/summary.json
+RPG,Toys,2025,graph,0.03843,0.0474,0.05661,0.08459,True,artifacts/rpg/eval_seeds/seeds/toys_and_games/s2025/20261016T175639039409Z_job28127791/summary.json
+RPG,Toys,2026,graph,0.03986,0.04869,0.05842,0.08582,True,artifacts/rpg/eval_seeds/seeds/toys_and_games/s2026/20261016T175846737546Z_job28127791/summary.json
+RPG,CDs,2024,graph,0.03345,0.04084,0.04916,0.07211,True,artifacts/rpg/eval_seeds/seeds/cds_and_vinyl/s2024/20261016T181030197354Z_job28127791/summary.json
+RPG,CDs,2025,graph,0.03338,0.04066,0.04896,0.07159,True,artifacts/rpg/eval_seeds/seeds/cds_and_vinyl/s2025/20261016T182409748366Z_job28127791/summary.json
+RPG,CDs,2026,graph,0.03302,0.04048,0.04825,0.07145,True,artifacts/rpg/eval_seeds/seeds/cds_and_vinyl/s2026/20261016T183752155762Z_job28127791/summary.json
+SASRec,Sports,2024,,0.0106,0.0147,0.0207,0.0335,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2024_kept.log
+SASRec,Sports,2025,,0.0103,0.0147,0.0202,0.0338,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2025_kept.log
+SASRec,Sports,2026,,0.0086,0.0136,0.0167,0.0321,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h64_L2_e300_lr0p0003_s2026_kept.log
+SASRec (parameter-matched),Sports,2024,,0.0115,0.0165,0.0227,0.0382,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2024_kept.log
+SASRec (parameter-matched),Sports,2025,,0.0119,0.0166,0.0234,0.038,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2025_kept.log
+SASRec (parameter-matched),Sports,2026,,0.0114,0.0159,0.0227,0.0364,True,artifacts/sasrec/logs/sasrec_sports_and_outdoors_h326_L2_e300_lr0p0003_s2026_kept.log
+SASRec,Beauty,2024,,0.0164,0.0243,0.0315,0.0561,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2024_kept.log
+SASRec,Beauty,2025,,0.0156,0.0229,0.0299,0.0526,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2025_kept.log
+SASRec,Beauty,2026,,0.0153,0.023,0.0294,0.0533,True,artifacts/sasrec/logs/sasrec_beauty_h64_L2_e300_lr0p0003_s2026_kept.log
+SASRec (parameter-matched),Beauty,2024,,0.0207,0.0295,0.0402,0.0673,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2024_kept.log
+SASRec (parameter-matched),Beauty,2025,,0.0217,0.0303,0.0418,0.0686,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2025_kept.log
+SASRec (parameter-matched),Beauty,2026,,0.0204,0.0289,0.0402,0.0664,True,artifacts/sasrec/logs/sasrec_beauty_h540_L3_e300_lr0p0003_s2026_kept.log
+SASRec,Toys,2024,,0.0212,0.0297,0.0417,0.0678,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2024_kept.log
+SASRec,Toys,2025,,0.0214,0.0294,0.0421,0.0672,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2025_kept.log
+SASRec,Toys,2026,,0.0202,0.0287,0.0396,0.0659,True,artifacts/sasrec/logs/sasrec_toys_and_games_h64_L2_e300_lr0p0003_s2026_kept.log
+SASRec (parameter-matched),Toys,2024,,0.0269,0.0346,0.0536,0.0776,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2024_kept.log
+SASRec (parameter-matched),Toys,2025,,0.0259,0.0345,0.0513,0.0777,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2025_kept.log
+SASRec (parameter-matched),Toys,2026,,0.0257,0.0344,0.0506,0.0775,True,artifacts/sasrec/logs/sasrec_toys_and_games_h396_L2_e300_lr0p0003_s2026_kept.log
+SASRec,CDs,2024,,0.0137,0.0206,0.0269,0.0482,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2024_kept.log
+SASRec,CDs,2025,,0.0131,0.02,0.0259,0.0474,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2025_kept.log
+SASRec,CDs,2026,,0.013,0.0195,0.0255,0.0458,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h64_L2_e300_lr0p0003_s2026_kept.log
+SASRec (parameter-matched),CDs,2024,,0.0168,0.0246,0.0336,0.0577,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2024_kept.log
+SASRec (parameter-matched),CDs,2025,,0.0163,0.0243,0.0327,0.0574,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2025_kept.log
+SASRec (parameter-matched),CDs,2026,,0.0166,0.0243,0.0332,0.0569,True,artifacts/sasrec/logs/sasrec_cds_and_vinyl_h328_L2_e300_lr0p0003_s2026_kept.log
+SASRec,Books,2024,,0.0076,0.0112,0.0144,0.0256,True,artifacts/sasrec/logs/sasrec_books_h64_L2_e300_lr0p0003_s2024_kept.log
+SASRec (full softmax),Sports,2024,,0.01872,0.02368,0.02961,0.04506,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-34-b9251f.log
+SASRec (full softmax),Sports,2025,,0.01856,0.02385,0.02857,0.04495,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-44-c02916.log
+SASRec (full softmax),Sports,2026,,0.01822,0.02346,0.02818,0.04447,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_sports_seed2026-AmazonReviews2014_SASRec_default-Oct-15-2026_23-54-f6ab94.log
+TIGER,Sports,2024,,0.01684,0.02204,0.02638,0.04261,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-44-afb77d.log
+TIGER,Sports,2025,,0.00423,0.0052,0.0066,0.00961,False,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_03-46-94aa16.log
+TIGER,Sports,2026,,0.01735,0.02245,0.02607,0.04194,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_04-28-c547c2.log
+TIGER,Sports,2027,,0.01595,0.02076,0.02464,0.03964,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_sports_seed2027-AmazonReviews2014_TIGER_default-Oct-16-2026_08-36-7d516e.log
+SASRec (full softmax),Beauty,2024,,0.03479,0.04213,0.05147,0.0741,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-35-c8b34f.log
+SASRec (full softmax),Beauty,2025,,0.03545,0.0437,0.05245,0.07808,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-43-58ce0f.log
+SASRec (full softmax),Beauty,2026,,0.03427,0.04198,0.04981,0.0736,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_beauty_seed2026-AmazonReviews2014_SASRec_default-Oct-15-2026_23-52-551fb7.log
+TIGER,Beauty,2024,,0.02922,0.03668,0.044,0.06716,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_beauty_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-44-f16dd6.log
+TIGER,Beauty,2025,,0.02795,0.03565,0.04257,0.06667,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_beauty_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_02-40-2ad545.log
+TIGER,Beauty,2026,,0.03118,0.03903,0.04615,0.07061,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_beauty_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_04-19-6f44a4.log
+SASRec (full softmax),Toys,2024,,0.04145,0.0491,0.06022,0.08402,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-35-17efe8.log
+SASRec (full softmax),Toys,2025,,0.04065,0.04823,0.05826,0.08186,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2025-AmazonReviews2014_SASRec_default-Oct-15-2026_23-43-840a3d.log
+SASRec (full softmax),Toys,2026,,0.04078,0.04881,0.05868,0.08351,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_toys_seed2026-AmazonReviews2014_SASRec_default-Oct-15-2026_23-51-84db99.log
+TIGER,Toys,2024,,0.02921,0.037,0.04518,0.06949,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_toys_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-47-cddc41.log
+TIGER,Toys,2025,,0.02664,0.03483,0.04111,0.06656,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_toys_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_02-16-6cd0b9.log
+TIGER,Toys,2026,,0.02726,0.03569,0.04286,0.06913,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_toys_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_03-56-903303.log
+SASRec (full softmax),CDs,2024,,0.03194,0.04115,0.05029,0.07897,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2024-AmazonReviews2014_SASRec_default-Oct-15-2026_23-36-9eea6a.log
+SASRec (full softmax),CDs,2025,,0.03161,0.04113,0.04984,0.07939,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2025-AmazonReviews2014_SASRec_default-Oct-16-2026_01-28-d1a730.log
+SASRec (full softmax),CDs,2026,,0.0313,0.04102,0.04964,0.07989,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_cds_seed2026-AmazonReviews2014_SASRec_default-Oct-16-2026_03-10-a41272.log
+TIGER,CDs,2024,,0.02516,0.03243,0.03896,0.06159,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_cds_seed2024-AmazonReviews2014_TIGER_default-Oct-16-2026_00-47-d395ae.log
+TIGER,CDs,2025,,0.01083,0.0145,0.01701,0.02838,False,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_cds_seed2025-AmazonReviews2014_TIGER_default-Oct-16-2026_20-52-5e2af5.log
+TIGER,CDs,2026,,0.02703,0.03433,0.04148,0.06418,True,artifacts/memgen/logs/AmazonReviews2014/TIGER/memgen_tiger_cds_seed2026-AmazonReviews2014_TIGER_default-Oct-16-2026_08-36-61e9fc.log
+SASRec (full softmax),Books,2024,,0.01919,0.02377,0.02901,0.04329,True,artifacts/memgen/logs/AmazonReviews2014/SASRec/memgen_sasrec_books_seed2024-AmazonReviews2014_SASRec_default-Oct-16-2026_15-41-796ea3.log

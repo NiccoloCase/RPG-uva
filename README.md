@@ -55,27 +55,26 @@ server and take `GPU=<index>`; on Slurm wrap them, e.g.
 `sbatch -p gpu_a100 --gpus=1 --chdir=jobs/books --wrap "GPU=0 bash ./eval.sh"`.
 Each job's header says what it does, what it writes and which variables it takes.
 
-**RQ1: reproducibility of RPG** (Tables 2 and 1, Fig. 3)
+**RQ1: reproducibility of RPG** (Tables 1 and 2, Fig. 3)
 
 | Step | Job |
 | --- | --- |
 | Train RPG, released settings, seed 2024 | `jobs/reproduction/rpg/<dataset>/train.sh` |
 | Train seeds 2025 and 2026 | `jobs/reproduction/rpg/seeds/train.sh <dataset> "2025 2026"` |
-| Evaluate every checkpoint: graph decoding, then exhaustive scoring with past items kept and removed | `jobs/reproduction/rpg/seeds/eval.sh` |
+| Evaluate every checkpoint with graph decoding | `jobs/reproduction/rpg/seeds/eval.sh` |
 | Paper-appendix decoding settings and cold start (RPG and SASRec) | `jobs/reproduction/rpg/seeds/eval_rq1.sh` |
 | Semantic ID length m = 4 to 64, then re-decode | `jobs/reproduction/rpg/sweep_m/<dataset>.sh`, `redecode_configs.sh` |
 
 Settings: `configs/rpg/repro/<dataset>.yaml` (released code) and
 `configs/rpg/eval_seeds/paper_appendix/<dataset>.yaml` (paper appendix).
 
-**RQ2: baselines** (Table 3, Table 6, Fig. 4)
+**RQ2: baselines** (Table 3, Fig. 4)
 
 | Step | Job |
 | --- | --- |
-| SASRec and parameter-matched SASRec, seeds 2024/2025/2026, tested with past items kept and removed | `jobs/reproduction/sasrec/seeds/train_eval.sh <dataset> <Category> <hidden> <layers> "2024 2025 2026"` |
+| SASRec and parameter-matched SASRec, seeds 2024/2025/2026 | `jobs/reproduction/sasrec/seeds/train_eval.sh <dataset> <Category> <hidden> <layers> "2024 2025 2026"` |
 | Learning rate and depth selection of parameter-matched SASRec | `jobs/reproduction/sasrec/tuning/` |
 | Full-softmax SASRec and TIGER (MemGen-GR) | `jobs/baselines/memgen/train.sh {SASRec,TIGER} <dataset> "2024 2025 2026"` |
-| Full-softmax SASRec with past items removed (evaluation only) | `jobs/baselines/memgen/eval_removed.sh` |
 
 Hidden sizes of parameter-matched SASRec: 326 (Sports), 540 (Beauty, 3 blocks),
 396 (Toys), 328 (CDs); `scripts/results/count_model_params.py` prints the counts.
@@ -111,7 +110,7 @@ because the upstream end-of-training test builds the dense graph (540 GB).
 
 | File | Produced by | Paper |
 | --- | --- | --- |
-| `results/main_results.csv` | `scripts/results/collect_main.py` | Tables 2, 3 and 6 |
+| `results/main_results.csv` | `scripts/results/collect_main.py` | Tables 2 and 3 |
 | `results/decoding_variants.csv` | `scripts/results/collect_main.py` | Table 4 |
 | `results/latency.csv` | `scripts/results/collect_main.py` | Table 5, Fig. 2 |
 | `results/books_scaling.csv` | `scripts/results/collect_books.py` | Table 5, Fig. 1a |
@@ -128,10 +127,9 @@ CDs, seed 2025) and leaves them out of the means; Sports was rerun with seed 202
   decoding graph or score all items. `scripts/rpg/verify_decoding.py` checks that
   the row-blocked graph, the exhaustive scores and the traced decoder equal the
   upstream code.
-- Past items: RPG, TIGER and MemGen-GR's SASRec rank them; the S3-Rec code
-  removes them. `models/sasrec` keeps that default (`mask_history`),
-  `scripts/rpg/history_masking.py` and `scripts/memgen/train.py --mask-history`
-  evaluate the other models both ways.
+- Past items: all models are tested with the user's past items kept in the
+  ranking, as in the RPG code. The S3-Rec code removes them; `models/sasrec`
+  keeps that for early stopping and `--mask_history false` turns it off at test time.
 - `scripts/memgen/train.py` replaces MemGen-GR's per-prediction memorisation
   statistics by a plain evaluation loop with the same metrics.
 - Full-softmax SASRec on Books uses batch size 64 and learning rate 3e-4, the

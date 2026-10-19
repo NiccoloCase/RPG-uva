@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""Collect the main results of the paper into four CSV files.
+"""Collect the main results of the paper into three CSV files.
 
-  results/main_results.csv     one row per model, dataset, training seed and
-                               evaluation protocol (Tables 2 and 3): RPG (graph
-                               decoding and exhaustive scoring), SASRec and
-                               parameter-matched SASRec (S3-Rec recipe),
-                               full-softmax SASRec and TIGER (MemGen-GR)
+All models rank the full catalogue with the user's past items kept.
+
+  results/main_results.csv     one row per model, dataset and training seed
+                               (Tables 2, 3 and 5): RPG with graph decoding,
+                               SASRec and parameter-matched SASRec (S3-Rec
+                               recipe), full-softmax SASRec and TIGER (MemGen-GR)
   results/decoding_variants.csv  exhaustive scoring, exact graph and HNSW graph
                                on the same RPG checkpoints (Table 4)
   results/latency.csv          ms per user for every model, device and batch size
@@ -13,9 +14,8 @@
 
 Sources (written by the jobs listed in README.md):
   artifacts/rpg/eval_seeds/seeds/<dataset>/s<seed>/<session>/summary.json
-  artifacts/rpg/history_masking/<dataset>_s<seed>.json
-  artifacts/sasrec/logs/sasrec_<preset>_h<hidden>_L<layers>_e300_lr0p0003_s<seed>_{kept,removed}.log
-  artifacts/memgen/logs/AmazonReviews2014/<model>/memgen_<model>_<preset>_seed<seed>[_removed]-*.log
+  artifacts/sasrec/logs/sasrec_<preset>_h<hidden>_L<layers>_e300_lr0p0003_s<seed>_kept.log
+  artifacts/memgen/logs/AmazonReviews2014/<model>/memgen_<model>_<preset>_seed<seed>-*.log
   artifacts/rpg/eval_seeds/decoding_variants/<dataset>/<variant>/<session>/summary.json
   artifacts/{rpg,sasrec,memgen}/latency/<session>/summary.json
 
@@ -51,12 +51,11 @@ NOT_CONVERGED = {("TIGER", "sports_and_outdoors", 2025), ("TIGER", "cds_and_viny
 SASREC_LINE = re.compile(r"OrderedDict\(\[\('Epoch', 0\), (.*)\]\)")
 
 
-def _row(model, slug, seed, protocol, decoding, metrics, source):
+def _row(model, slug, seed, decoding, metrics, source):
     return {
         "model": model,
         "dataset": DATASETS[slug][1],
         "seed": seed,
-        "protocol": protocol,
         "decoding": decoding,
         **{m: round(float(metrics[m]), 5) if m in metrics else "" for m in METRICS},
         "converged": (model, slug, seed) not in NOT_CONVERGED,
@@ -72,12 +71,7 @@ def rpg_rows():
             if sessions:
                 summary = json.load(open(sessions[-1]))
                 metrics = {r["metric"]: r["final_user_avg"] for r in summary["metric_summary"]}
-                rows.append(_row("RPG", slug, seed, "kept", "graph", metrics, sessions[-1]))
-            masking = ART / f"rpg/history_masking/{slug}_s{seed}.json"
-            if masking.is_file():
-                data = json.load(open(masking))
-                rows.append(_row("RPG", slug, seed, "kept", "exhaustive", data["past_items_kept"], masking))
-                rows.append(_row("RPG", slug, seed, "removed", "exhaustive", data["past_items_removed"], masking))
+                rows.append(_row("RPG", slug, seed, "graph", metrics, sessions[-1]))
     return rows
 
 
@@ -89,16 +83,15 @@ def sasrec_rows():
             variants.append(("SASRec (parameter-matched)", MATCHED_HIDDEN[slug], 3 if slug == "beauty" else 2))
         for model, hidden, layers in variants:
             for seed in (2024, 2025, 2026):
-                for protocol in ("kept", "removed"):
-                    log = ART / f"sasrec/logs/sasrec_{slug}_h{hidden}_L{layers}_e300_lr0p0003_s{seed}_{protocol}.log"
-                    if not log.is_file():
-                        continue
-                    lines = [m.group(1) for m in map(SASREC_LINE.search, log.read_text().splitlines()) if m]
-                    if not lines:
-                        continue
-                    values = dict(ast.literal_eval("[" + lines[-1] + "]"))
-                    metrics = {k.lower(): v for k, v in values.items()}
-                    rows.append(_row(model, slug, seed, protocol, "", metrics, log))
+                log = ART / f"sasrec/logs/sasrec_{slug}_h{hidden}_L{layers}_e300_lr0p0003_s{seed}_kept.log"
+                if not log.is_file():
+                    continue
+                lines = [m.group(1) for m in map(SASREC_LINE.search, log.read_text().splitlines()) if m]
+                if not lines:
+                    continue
+                values = dict(ast.literal_eval("[" + lines[-1] + "]"))
+                metrics = {k.lower(): v for k, v in values.items()}
+                rows.append(_row(model, slug, seed, "", metrics, log))
     return rows
 
 
@@ -108,17 +101,16 @@ def memgen_rows():
         for model in ("SASRec", "TIGER"):
             name = "SASRec (full softmax)" if model == "SASRec" else "TIGER"
             for seed in (2024, 2025, 2026, 2027):
-                for protocol, tag in (("kept", ""), ("removed", "_removed")):
-                    logs = sorted(glob.glob(str(ART / f"memgen/logs/AmazonReviews2014/{model}/memgen_{model.lower()}_{preset}_seed{seed}{tag}-*.log")))
-                    for log in reversed(logs):  # newest log that has a test line
-                        text = Path(log).read_text(errors="replace")
-                        hits = re.findall(r"Test Results\s*:\s*(OrderedDict\(.*\)|\{.*\})", text)
-                        if not hits:
-                            continue
-                        raw = hits[-1]
-                        values = dict(ast.literal_eval(raw[len("OrderedDict("):-1])) if raw.startswith("OrderedDict(") else ast.literal_eval(raw)
-                        rows.append(_row(name, slug, seed, protocol, "", values, log))
-                        break
+                logs = sorted(glob.glob(str(ART / f"memgen/logs/AmazonReviews2014/{model}/memgen_{model.lower()}_{preset}_seed{seed}-*.log")))
+                for log in reversed(logs):  # newest log that has a test line
+                    text = Path(log).read_text(errors="replace")
+                    hits = re.findall(r"Test Results\s*:\s*(OrderedDict\(.*\)|\{.*\})", text)
+                    if not hits:
+                        continue
+                    raw = hits[-1]
+                    values = dict(ast.literal_eval(raw[len("OrderedDict("):-1])) if raw.startswith("OrderedDict(") else ast.literal_eval(raw)
+                    rows.append(_row(name, slug, seed, "", values, log))
+                    break
     return rows
 
 
@@ -180,16 +172,16 @@ def print_summary(rows):
     groups = defaultdict(list)
     for r in rows:
         if r["converged"]:
-            groups[(r["model"], r["decoding"], r["protocol"], r["dataset"])].append(r["ndcg@10"])
+            groups[(r["model"], r["decoding"], r["dataset"])].append(r["ndcg@10"])
     print("\nNDCG@10, mean over converged seeds (number of seeds):")
     datasets = [d for _, d in DATASETS.values()]
-    keys = sorted({k[:3] for k in groups})
-    for model, decoding, protocol in keys:
+    keys = sorted({k[:2] for k in groups})
+    for model, decoding in keys:
         cells = []
         for d in datasets:
-            v = groups.get((model, decoding, protocol, d))
+            v = groups.get((model, decoding, d))
             cells.append(f"{statistics.mean(v):.4f} ({len(v)})" if v else "      -    ")
-        label = f"{model}{' ' + decoding if decoding else ''}, {protocol}"
+        label = f"{model}{' ' + decoding if decoding else ''}"
         print(f"  {label:45s} " + "  ".join(cells))
 
 
